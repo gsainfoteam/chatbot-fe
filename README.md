@@ -99,35 +99,6 @@ npm run build
 
 ---
 
-☁️ Cloudflare Pages 배포 가이드
-
-1. GitHub 레포 연동
-
-   - Framework preset: Vite
-   - Build command: `npm run build`
-   - Output directory: `dist`
-
-2. Cache-Control 설정
-
-Cloudflare Pages는 `_headers` 파일을 통해 캐시 정책을 설정합니다.
-
-`public/_headers`:
-
-```
-/loader.js
-  Cache-Control: no-cache
-
-/assets/*
-  Cache-Control: public, max-age=31536000, immutable
-
-/*
-  Cache-Control: no-cache
-```
-
-`loader.js`는 항상 최신 버전을 받아야 하므로 `no-cache`를 권장합니다.
-
----
-
 📁 프로젝트 구조
 
 ```
@@ -146,6 +117,7 @@ Cloudflare Pages는 `_headers` 파일을 통해 캐시 정책을 설정합니다
 ❗ 주의사항
 
 - `loader.js`는 반드시 HTTPS 환경에서 사용하세요.
+- `loader.js`는 항상 최신 버전을 받아야 하므로 `no-cache`를 권장합니다.
 - CSP(Content-Security-Policy)가 강한 사이트에서는 `script-src` / `frame-src`에 위젯 도메인 허용이 필요할 수 있습니다.
 - 이 레포는 UI SDK이며, AI 서버는 포함하지 않습니다.
 
