@@ -14,8 +14,29 @@
     return Math.min(max, Math.max(min, val));
   }
 
+  // ---- utils: 색상 검증 ----
+  function validateColor(color, fallback) {
+    if (!color) return fallback;
+    // # 제거
+    const cleaned = color.replace(/^#/, "");
+    // hex 색상 검증 (3자리 또는 6자리)
+    if (/^[0-9A-Fa-f]{3}$|^[0-9A-Fa-f]{6}$/.test(cleaned)) {
+      return cleaned;
+    }
+    return fallback;
+  }
+
   // ---- 1) data-* 옵션 읽기 ----
   const ds = scriptEl.dataset;
+
+  // 디버깅: 받은 데이터 속성 확인
+  console.log(
+    "[loader.js] 받은 data-* 속성:",
+    Object.keys(ds).map(
+      (k) => `data-${k.replace(/([A-Z])/g, "-$1").toLowerCase()}`
+    )
+  );
+  console.log("[loader.js] dataset 객체:", ds);
 
   const config = {
     widgetKey: ds.widgetKey || "dev",
@@ -24,8 +45,19 @@
     width: clampInt(ds.width, 360, 280, 520),
     height: clampInt(ds.height, 520, 360, 860),
     theme: ds.theme || "light",
-    backgroundColor: ds.backgroundColor || "ff4500",
+    // 색상 옵션들
+    primaryColor: validateColor(ds.primaryColor, "ff4500"),
+    buttonColor: validateColor(ds.buttonColor, ds.primaryColor || "ff4500"),
+    backgroundColor: validateColor(ds.backgroundColor, "ffffff"),
+    textColor: validateColor(ds.textColor, "1e293b"),
+    textSecondaryColor: validateColor(ds.textSecondaryColor, "64748b"),
+    borderColor: validateColor(ds.borderColor, "e2e8f0"),
+    userMessageBg: validateColor(ds.userMessageBg, ds.primaryColor || "ff4500"),
+    assistantMessageBg: validateColor(ds.assistantMessageBg, "ffffff"),
   };
+
+  // 디버깅: 최종 config 확인
+  console.log("[loader.js] 최종 config:", config);
 
   const BTN_SIZE = 56;
 
@@ -43,7 +75,7 @@
     border:none;
 
     cursor:pointer;
-    background:#${config.backgroundColor};
+    background:#${config.buttonColor};
     box-shadow:0 12px 30px rgba(0,0,0,.18);
     z-index:${Z};
 
@@ -79,9 +111,7 @@
     position:fixed;
     inset:0;
 
-    background: rgba(15,23,42,0.18);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
+    background: transparent;
 
     opacity:0;
     pointer-events:none;
@@ -147,6 +177,40 @@
   let isOpen = false;
   let inited = false;
 
+  // ---- 이벤트 훅 시스템 ----
+  const eventHandlers = {
+    onOpen: [],
+    onClose: [],
+    onReady: [],
+    onMessage: [],
+    onMessageSent: [],
+    onMessageReceived: [],
+  };
+
+  // 이벤트 dispatch 함수
+  function dispatchEvent(eventName, data = {}) {
+    // CustomEvent로 dispatch
+    const event = new CustomEvent(`chatbot:${eventName}`, {
+      detail: {
+        widgetKey: config.widgetKey,
+        timestamp: Date.now(),
+        ...data,
+      },
+    });
+    window.dispatchEvent(event);
+
+    // 등록된 콜백 함수들 실행
+    if (eventHandlers[eventName]) {
+      eventHandlers[eventName].forEach((handler) => {
+        try {
+          handler(data);
+        } catch (error) {
+          console.error(`[ChatbotWidget] Error in ${eventName} handler:`, error);
+        }
+      });
+    }
+  }
+
   function safePost(payload) {
     iframe.contentWindow?.postMessage(payload, WIDGET_ORIGIN);
   }
@@ -158,6 +222,16 @@
       pageUrl: location.href,
       theme: config.theme,
       position: config.position,
+      colors: {
+        primary: config.primaryColor,
+        button: config.buttonColor,
+        background: config.backgroundColor,
+        text: config.textColor,
+        textSecondary: config.textSecondaryColor,
+        border: config.borderColor,
+        userMessageBg: config.userMessageBg,
+        assistantMessageBg: config.assistantMessageBg,
+      },
     });
   }
 
@@ -192,6 +266,10 @@
       requestAnimationFrame(() => {
         applyOpen();
         if (inited) sendInit();
+        dispatchEvent("onOpen", {
+          widgetKey: config.widgetKey,
+          pageUrl: location.href,
+        });
       });
     });
   }
@@ -201,6 +279,10 @@
     isOpen = false;
     applyClosed();
     safePost({ type: "WM_CLOSE" });
+    dispatchEvent("onClose", {
+      widgetKey: config.widgetKey,
+      pageUrl: location.href,
+    });
   }
 
   function toggle() {
@@ -214,6 +296,70 @@
     if (e.key === "Escape") close();
   });
 
+  // 색상 업데이트 함수
+  function updateColors(newColors) {
+    if (!newColors || typeof newColors !== "object") return;
+
+    // config 업데이트
+    if (newColors.button) {
+      config.buttonColor = validateColor(newColors.button, config.buttonColor);
+      btn.style.background = `#${config.buttonColor}`;
+    }
+    if (newColors.primary) {
+      config.primaryColor = validateColor(
+        newColors.primary,
+        config.primaryColor
+      );
+    }
+    if (newColors.background) {
+      config.backgroundColor = validateColor(
+        newColors.background,
+        config.backgroundColor
+      );
+    }
+    if (newColors.text) {
+      config.textColor = validateColor(newColors.text, config.textColor);
+    }
+    if (newColors.textSecondary) {
+      config.textSecondaryColor = validateColor(
+        newColors.textSecondary,
+        config.textSecondaryColor
+      );
+    }
+    if (newColors.border) {
+      config.borderColor = validateColor(newColors.border, config.borderColor);
+    }
+    if (newColors.userMessageBg) {
+      config.userMessageBg = validateColor(
+        newColors.userMessageBg,
+        config.userMessageBg
+      );
+    }
+    if (newColors.assistantMessageBg) {
+      config.assistantMessageBg = validateColor(
+        newColors.assistantMessageBg,
+        config.assistantMessageBg
+      );
+    }
+
+    // iframe에 색상 업데이트 전달 (열려있을 때만)
+    if (isOpen && inited) {
+      safePost({
+        type: "WM_UPDATE_COLORS",
+        colors: {
+          primary: config.primaryColor,
+          button: config.buttonColor,
+          background: config.backgroundColor,
+          text: config.textColor,
+          textSecondary: config.textSecondaryColor,
+          border: config.borderColor,
+          userMessageBg: config.userMessageBg,
+          assistantMessageBg: config.assistantMessageBg,
+        },
+      });
+    }
+  }
+
   // ---- postMessage (origin 검증) ----
   window.addEventListener("message", (e) => {
     if (e.origin !== WIDGET_ORIGIN) return;
@@ -224,12 +370,111 @@
     if (data.type === "WM_WIDGET_READY") {
       inited = true;
       if (isOpen) sendInit();
+      dispatchEvent("onReady", {
+        widgetKey: config.widgetKey,
+        pageUrl: location.href,
+      });
     }
 
     if (data.type === "WM_REQUEST_CLOSE") close();
+
+    // 외부에서 색상 업데이트 요청 (test.html 등에서 사용)
+    if (data.type === "WM_UPDATE_COLORS") {
+      updateColors(data.colors);
+    }
+
+    // 메시지 관련 이벤트 전달
+    if (data.type === "WM_MESSAGE_SENT") {
+      dispatchEvent("onMessageSent", {
+        message: data.message,
+        role: "user",
+      });
+      dispatchEvent("onMessage", {
+        message: data.message,
+        role: "user",
+      });
+    }
+
+    if (data.type === "WM_MESSAGE_RECEIVED") {
+      dispatchEvent("onMessageReceived", {
+        message: data.message,
+        role: "assistant",
+      });
+      dispatchEvent("onMessage", {
+        message: data.message,
+        role: "assistant",
+      });
+    }
   });
 
   document.body.appendChild(overlay);
   document.body.appendChild(btn);
   document.body.appendChild(wrap);
+
+  // ---- 전역 API 노출 ----
+  window.ChatbotWidget = {
+    // 색상 업데이트
+    updateColors: function (colors) {
+      updateColors(colors);
+    },
+
+    // 이벤트 핸들러 등록
+    on: function (eventName, handler) {
+      if (eventHandlers[eventName]) {
+        eventHandlers[eventName].push(handler);
+        return () => {
+          const index = eventHandlers[eventName].indexOf(handler);
+          if (index > -1) {
+            eventHandlers[eventName].splice(index, 1);
+          }
+        };
+      } else {
+        console.warn(
+          `[ChatbotWidget] Unknown event: ${eventName}. Available events:`,
+          Object.keys(eventHandlers).join(", ")
+        );
+        return () => {};
+      }
+    },
+
+    // 이벤트 핸들러 제거
+    off: function (eventName, handler) {
+      if (eventHandlers[eventName]) {
+        const index = eventHandlers[eventName].indexOf(handler);
+        if (index > -1) {
+          eventHandlers[eventName].splice(index, 1);
+        }
+      }
+    },
+
+    // 위젯 열기
+    open: function () {
+      open();
+    },
+
+    // 위젯 닫기
+    close: function () {
+      close();
+    },
+
+    // 위젯 상태 확인
+    isOpen: function () {
+      return isOpen;
+    },
+
+    // 위젯 준비 상태 확인
+    isReady: function () {
+      return inited;
+    },
+
+    // 설정 정보 가져오기
+    getConfig: function () {
+      return { ...config };
+    },
+  };
+
+  // 하위 호환성을 위한 별칭
+  window.updateWidgetColors = function (colors) {
+    updateColors(colors);
+  };
 })();

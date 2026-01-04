@@ -25,6 +25,8 @@
 
 ⚙️ Script 옵션 (data-\*)
 
+### 레이아웃 옵션
+
 | 옵션            | 설명                         | 기본값 |
 | --------------- | ---------------------------- | ------ |
 | data-widget-key | 위젯 식별 키                 | (필수) |
@@ -34,9 +36,25 @@
 | data-height     | 위젯 패널 높이(px)           | 520    |
 | data-theme      | 테마 식별자                  | light  |
 
+### 색상 커스터마이징 옵션
+
+| 옵션                      | 설명                                    | 기본값  | 예시     |
+| ------------------------- | --------------------------------------- | ------- | -------- |
+| data-primary-color        | 주요 색상 (아이콘, 전송 버튼 등)        | ff4500  | `3b82f6` |
+| data-button-color         | 런처 버튼 배경색                        | primary | `10b981` |
+| data-background-color     | 위젯 배경색                             | ffffff  | `ffffff` |
+| data-text-color           | 기본 텍스트 색상                        | 1e293b  | `1e293b` |
+| data-text-secondary-color | 보조 텍스트 색상 (설명 텍스트 등)       | 64748b  | `64748b` |
+| data-border-color         | 테두리 색상                             | e2e8f0  | `e2e8f0` |
+| data-user-message-bg      | 사용자 메시지 배경색 (투명도 자동 적용) | primary | `3b82f6` |
+| data-assistant-message-bg | 어시스턴트 메시지 배경색                | ffffff  | `ffffff` |
+
+> **참고**: 색상 값은 `#` 없이 6자리 hex 코드로 입력하세요. (예: `ff4500`, `3b82f6`)
+
 예시
 
 ```html
+<!-- 기본 설정 -->
 <script
   src="https://widget.yourdomain.com/loader.js"
   data-widget-key="wk_live_abc123"
@@ -44,6 +62,16 @@
   data-offset="20"
   data-width="380"
   data-height="560"
+></script>
+
+<!-- 색상 커스터마이징 예시 -->
+<script
+  src="https://widget.yourdomain.com/loader.js"
+  data-widget-key="wk_live_abc123"
+  data-primary-color="3b82f6"
+  data-button-color="2563eb"
+  data-user-message-bg="3b82f6"
+  data-text-color="1e293b"
 ></script>
 ```
 
