@@ -57,6 +57,7 @@ export default function App() {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const isComposingRef = useRef(false);
 
   const [ctx, setCtx] = useState<{
     widgetKey?: string;
@@ -306,8 +307,24 @@ export default function App() {
             placeholder="메시지를 입력하세요"
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onCompositionStart={() => {
+              isComposingRef.current = true;
+            }}
+            onCompositionEnd={() => {
+              // 조합이 완료된 후 약간의 지연을 두어 확실하게 처리
+              setTimeout(() => {
+                isComposingRef.current = false;
+              }, 0);
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
+                // 한글 입력 조합 중일 때는 전송하지 않음
+                if (
+                  isComposingRef.current ||
+                  (e.nativeEvent as KeyboardEvent).isComposing
+                ) {
+                  return;
+                }
                 e.preventDefault();
                 send();
               }
