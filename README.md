@@ -93,6 +93,119 @@ widgetKey는 공개 HTML에 포함되므로,
 
 ---
 
+## JavaScript API
+
+위젯 설치 후 `window.ChatbotWidget` 객체를 통해 위젯을 제어하고 이벤트를 감지할 수 있습니다.
+
+### 이벤트 훅
+
+위젯의 상태 변화와 메시지 송수신을 감지할 수 있습니다.
+
+```javascript
+// 이벤트 리스너 등록
+ChatbotWidget.on("onOpen", (data) => {
+  console.log("위젯이 열렸습니다", data);
+  // 예: Google Analytics 이벤트 전송
+  // gtag('event', 'chatbot_opened');
+});
+
+// 이벤트 리스너 제거 (unsubscribe 함수 반환)
+const unsubscribe = ChatbotWidget.on("onMessage", (data) => {
+  console.log("메시지 이벤트", data);
+});
+
+// 나중에 제거
+unsubscribe();
+
+// 또는 off 메서드 사용
+ChatbotWidget.off("onMessage", handler);
+```
+
+#### 사용 가능한 이벤트
+
+| 이벤트              | 설명                        | 데이터 구조                       |
+| ------------------- | --------------------------- | --------------------------------- |
+| `onOpen`            | 위젯이 열릴 때              | `{ widgetKey, pageUrl }`          |
+| `onClose`           | 위젯이 닫힐 때              | `{ widgetKey, pageUrl }`          |
+| `onReady`           | 위젯이 준비되었을 때        | `{ widgetKey, pageUrl }`          |
+| `onMessage`         | 메시지가 송수신될 때 (통합) | `{ message, role }`               |
+| `onMessageSent`     | 사용자가 메시지를 보낼 때   | `{ message: { id, text, role } }` |
+| `onMessageReceived` | 봇이 응답할 때              | `{ message: { id, text, role } }` |
+
+#### 이벤트 사용 예시
+
+```javascript
+// 위젯 열림 감지
+ChatbotWidget.on("onOpen", (data) => {
+  console.log("위젯 열림:", data.widgetKey, data.pageUrl);
+});
+
+// 메시지 전송 추적
+ChatbotWidget.on("onMessageSent", (data) => {
+  console.log("사용자 메시지:", data.message.text);
+  // 예: 사용자 행동 분석
+});
+
+// 메시지 수신 추적
+ChatbotWidget.on("onMessageReceived", (data) => {
+  console.log("봇 응답:", data.message.text);
+  // 예: 응답 품질 모니터링
+});
+```
+
+### 위젯 제어 API
+
+```javascript
+// 위젯 열기
+ChatbotWidget.open();
+
+// 위젯 닫기
+ChatbotWidget.close();
+
+// 위젯 상태 확인
+ChatbotWidget.isOpen(); // boolean
+ChatbotWidget.isReady(); // boolean
+
+// 설정 정보 가져오기
+const config = ChatbotWidget.getConfig();
+console.log(config); // { widgetKey, position, colors, ... }
+```
+
+### 색상 동적 업데이트
+
+위젯이 로드된 후에도 색상을 동적으로 변경할 수 있습니다.
+
+```javascript
+ChatbotWidget.updateColors({
+  primary: "3b82f6",
+  button: "2563eb",
+  background: "ffffff",
+  text: "1e293b",
+  textSecondary: "64748b",
+  border: "e2e8f0",
+  userMessageBg: "3b82f6",
+  assistantMessageBg: "ffffff",
+});
+```
+
+> **참고**: 색상 값은 `#` 없이 6자리 hex 코드로 입력하세요.
+
+### CustomEvent 방식
+
+`ChatbotWidget.on()` 외에도 브라우저의 `CustomEvent`를 직접 사용할 수 있습니다.
+
+```javascript
+window.addEventListener("chatbot:onOpen", (event) => {
+  console.log("위젯 열림:", event.detail);
+});
+
+window.addEventListener("chatbot:onMessage", (event) => {
+  console.log("메시지:", event.detail);
+});
+```
+
+---
+
 🔐 보안 구조 개요
 
 - 위젯 UI는 iframe에서 실행됩니다.
@@ -157,4 +270,3 @@ npm run build
 - AI 서버 연동 가이드
 - 스트리밍 응답(SSE)
 - 테마/브랜드 커스터마이징
-- 이벤트 훅(onOpen, onMessage 등)

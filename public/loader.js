@@ -205,7 +205,10 @@
         try {
           handler(data);
         } catch (error) {
-          console.error(`[ChatbotWidget] Error in ${eventName} handler:`, error);
+          console.error(
+            `[ChatbotWidget] Error in ${eventName} handler:`,
+            error
+          );
         }
       });
     }

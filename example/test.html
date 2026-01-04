@@ -389,7 +389,7 @@
               <code>onMessage</code>, <code>onMessageSent</code>,
               <code>onMessageReceived</code>
             </p>
-            <p style="margin-top: 12px;">
+            <p style="margin-top: 12px">
               <strong>사용 예제:</strong>
             </p>
             <pre
@@ -416,8 +416,15 @@ window.addEventListener('chatbot:onOpen', (e) => {
   console.log('위젯 열림:', e.detail);
 });</code></pre>
           </div>
-          <div id="eventLog" style="margin-top: 16px;">
-            <p style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--color-text);">
+          <div id="eventLog" style="margin-top: 16px">
+            <p
+              style="
+                font-size: 13px;
+                font-weight: 600;
+                margin-bottom: 8px;
+                color: var(--color-text);
+              "
+            >
               이벤트 로그:
             </p>
             <div
@@ -433,7 +440,7 @@ window.addEventListener('chatbot:onOpen', (e) => {
                 font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
               "
             >
-              <div style="color: var(--color-text-secondary);">
+              <div style="color: var(--color-text-secondary)">
                 이벤트가 발생하면 여기에 표시됩니다...
               </div>
             </div>
@@ -816,6 +823,45 @@ window.addEventListener('chatbot:onOpen', (e) => {
         }, 150);
       }
 
+      // 이벤트 로그 출력
+      function logEvent(eventName, data) {
+        const logContent = document.getElementById("eventLogContent");
+        if (!logContent) return;
+
+        const time = new Date().toLocaleTimeString("ko-KR");
+        const logEntry = document.createElement("div");
+        logEntry.style.cssText = `
+          margin-bottom: 8px;
+          padding: 8px;
+          background: white;
+          border-radius: 6px;
+          border-left: 3px solid var(--color-primary);
+        `;
+        logEntry.innerHTML = `
+          <div style="color: var(--color-primary); font-weight: 600; margin-bottom: 4px;">
+            [${time}] ${eventName}
+          </div>
+          <div style="color: var(--color-text-secondary); font-size: 11px; white-space: pre-wrap; word-break: break-all;">
+            ${JSON.stringify(data, null, 2)}
+          </div>
+        `;
+
+        // 첫 번째 항목이 placeholder인 경우 제거
+        if (
+          logContent.firstChild &&
+          logContent.firstChild.textContent.includes("이벤트가 발생하면")
+        ) {
+          logContent.innerHTML = "";
+        }
+
+        logContent.insertBefore(logEntry, logContent.firstChild);
+
+        // 최대 10개까지만 표시
+        while (logContent.children.length > 10) {
+          logContent.removeChild(logContent.lastChild);
+        }
+      }
+
       // 초기화
       function init() {
         // 기본 프리셋 적용
@@ -824,6 +870,45 @@ window.addEventListener('chatbot:onOpen', (e) => {
 
         // 위젯 로드
         loadWidget();
+
+        // 위젯이 로드된 후 이벤트 핸들러 등록
+        const checkWidget = setInterval(() => {
+          if (window.ChatbotWidget) {
+            clearInterval(checkWidget);
+
+            // 모든 이벤트 핸들러 등록
+            const events = [
+              "onOpen",
+              "onClose",
+              "onReady",
+              "onMessage",
+              "onMessageSent",
+              "onMessageReceived",
+            ];
+
+            events.forEach((eventName) => {
+              window.ChatbotWidget.on(eventName, (data) => {
+                logEvent(eventName, data);
+                console.log(`[ChatbotWidget Event] ${eventName}:`, data);
+              });
+            });
+
+            // CustomEvent 리스너도 등록 (예제)
+            events.forEach((eventName) => {
+              window.addEventListener(`chatbot:${eventName}`, (e) => {
+                console.log(
+                  `[ChatbotWidget CustomEvent] ${eventName}:`,
+                  e.detail
+                );
+              });
+            });
+          }
+        }, 100);
+
+        // 5초 후 타임아웃
+        setTimeout(() => {
+          clearInterval(checkWidget);
+        }, 5000);
       }
 
       // 페이지 로드 시 초기화
