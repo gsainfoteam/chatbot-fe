@@ -111,7 +111,7 @@ export default function LandingPage() {
           </div>
 
           <div className="max-w-5xl mx-auto">
-            <div className="bg-gradient-to-br from-red-50 to-orange-50 border border-red-100 rounded-2xl p-8 md:p-12 mb-12">
+            <div className="bg-linear-to-br from-red-50 to-orange-50 border border-red-100 rounded-2xl p-8 md:p-12 mb-12">
               <div className="flex items-start gap-6">
                 <div className="shrink-0 w-16 h-16 bg-[#df3326] rounded-xl flex items-center justify-center">
                   <svg
