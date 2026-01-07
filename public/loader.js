@@ -2,8 +2,8 @@
   const scriptEl = document.currentScript;
   if (!scriptEl) return;
 
-  const WIDGET_ORIGIN = `${import.meta.env.VITE_WIDGET_ORIGIN}/widget`;
-  const IFRAME_URL = WIDGET_ORIGIN + "/";
+  const WIDGET_ORIGIN = "http://localhost:5173";
+  const IFRAME_URL = WIDGET_ORIGIN + "/widget/";
 
   const Z = 2147483647;
 
@@ -46,13 +46,13 @@
     height: clampInt(ds.height, 520, 360, 860),
     theme: ds.theme || "light",
     // 색상 옵션들
-    primaryColor: validateColor(ds.primaryColor, "ff4500"),
-    buttonColor: validateColor(ds.buttonColor, ds.primaryColor || "ff4500"),
+    primaryColor: validateColor(ds.primaryColor, "df3326"),
+    buttonColor: validateColor(ds.buttonColor, ds.primaryColor || "df3326"),
     backgroundColor: validateColor(ds.backgroundColor, "ffffff"),
     textColor: validateColor(ds.textColor, "1e293b"),
     textSecondaryColor: validateColor(ds.textSecondaryColor, "64748b"),
     borderColor: validateColor(ds.borderColor, "e2e8f0"),
-    userMessageBg: validateColor(ds.userMessageBg, ds.primaryColor || "ff4500"),
+    userMessageBg: validateColor(ds.userMessageBg, ds.primaryColor || "df3326"),
     assistantMessageBg: validateColor(ds.assistantMessageBg, "ffffff"),
   };
 
@@ -87,9 +87,8 @@
   `;
 
   btn.innerHTML = `
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="26" height="26">
-      <path d="M8 12H8.009M11.991 12H12M15.991 12H16" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-      <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 13.5997 2.37562 15.1116 3.04346 16.4525C3.22094 16.8088 3.28001 17.2161 3.17712 17.6006L2.58151 19.8267C2.32295 20.793 3.20701 21.677 4.17335 21.4185L6.39939 20.8229C6.78393 20.72 7.19121 20.7791 7.54753 20.9565C8.88837 21.6244 10.4003 22 12 22Z" stroke="white" stroke-width="1.5"></path>
+    <svg viewBox="0 0 173 150" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 28px; height: auto;">
+      <path d="M83.7427 87.1014L109.873 87.108V114.663H78.4867C56.3773 114.663 38.456 96.74 38.456 74.632C38.456 52.524 56.3773 34.6014 78.4867 34.6014H137.464L172.871 4.57764e-05H74.632C33.4147 4.57764e-05 0 33.4134 0 74.632C0 115.849 33.4147 149.264 74.632 149.264H112.308H147.541H147.544V58.7254H147.541H112.779L83.7427 87.1014Z" fill="white"/>
     </svg>
   `;
 

@@ -104,7 +104,7 @@ export default function DashboardContent() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Panel - Widget Key List */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white rounded-lg" style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.05), 0 1px 2px 0 rgba(0,0,0,0.05)", border: "1px solid #e5e5e5" }}>
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-xl font-semibold text-gray-900">
                 내 위젯 키
@@ -138,11 +138,11 @@ export default function DashboardContent() {
                       handleGenerateKey();
                     }
                   }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#df3326] focus:border-transparent transition-all duration-150"
                 />
                 <button
                   onClick={handleGenerateKey}
-                  className="w-full px-6 py-2 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 active:scale-[0.98] transition"
+                  className="w-full px-6 py-2.5 bg-[#df3326] text-white font-medium rounded-md hover:bg-[#c72a1f] active:scale-[0.98] transition-all duration-150"
                 >
                   위젯 키 발급
                 </button>
@@ -161,9 +161,9 @@ export default function DashboardContent() {
                 widgetKeys.map((key) => (
                   <div
                     key={key.id}
-                    className={`p-4 cursor-pointer transition ${
+                    className={`p-4 cursor-pointer transition-colors duration-150 ${
                       selectedKey?.id === key.id
-                        ? "bg-orange-50 border-l-4 border-orange-500"
+                        ? "bg-red-50 border-l-4 border-[#df3326]"
                         : "hover:bg-gray-50"
                     }`}
                     onClick={() => setSelectedKey(key)}
@@ -197,7 +197,7 @@ export default function DashboardContent() {
           </div>
 
           {/* Right Panel - Key Details */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="bg-white rounded-lg" style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.05), 0 1px 2px 0 rgba(0,0,0,0.05)", border: "1px solid #e5e5e5" }}>
             {selectedKey ? (
               <>
                 <div className="p-6 border-b border-gray-200">
@@ -217,13 +217,13 @@ export default function DashboardContent() {
                         type="text"
                         value={selectedKey.widgetKey}
                         readOnly
-                        className="flex-1 px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg font-mono text-sm"
+                        className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-md font-mono text-sm"
                       />
                       <button
                         onClick={() =>
                           handleCopyWidgetKey(selectedKey.widgetKey)
                         }
-                        className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 active:scale-[0.98] transition"
+                        className="px-4 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-md hover:bg-gray-200 active:scale-[0.98] transition-all duration-150"
                       >
                         복사
                       </button>
@@ -263,11 +263,11 @@ export default function DashboardContent() {
                             handleAddDomain();
                           }
                         }}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        className="flex-1 px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#de3624] focus:border-transparent transition-all duration-150"
                       />
                       <button
                         onClick={handleAddDomain}
-                        className="px-4 py-2 bg-orange-500 text-white font-medium rounded-lg hover:bg-orange-600 active:scale-[0.98] transition"
+                        className="px-4 py-2.5 bg-[#df3326] text-white font-medium rounded-md hover:bg-[#c72a1f] active:scale-[0.98] transition-all duration-150"
                       >
                         추가
                       </button>

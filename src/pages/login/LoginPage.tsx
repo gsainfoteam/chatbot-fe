@@ -47,12 +47,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">관리자 로그인</h1>
+    <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="max-w-md w-full bg-white p-8" style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.05), 0 1px 2px 0 rgba(0,0,0,0.05)" }}>
+        <h1 className="text-2xl font-semibold text-gray-900 mb-6">관리자 로그인</h1>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+          <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md text-sm border border-red-100">
             {error}
           </div>
         )}
@@ -67,7 +67,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#df3326] focus:border-transparent transition-all duration-150"
               placeholder="admin@example.com"
             />
           </div>
@@ -81,7 +81,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#df3326] focus:border-transparent transition-all duration-150"
               placeholder="비밀번호를 입력하세요"
             />
           </div>
@@ -89,7 +89,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isDev ? false : loginMutation.isPending}
-            className="w-full px-4 py-2 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            className="w-full px-4 py-2.5 bg-[#df3326] text-white font-medium rounded-md hover:bg-[#c72a1f] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 active:scale-[0.98]"
           >
             {isDev ? "로그인" : loginMutation.isPending ? "로그인 중..." : "로그인"}
           </button>
