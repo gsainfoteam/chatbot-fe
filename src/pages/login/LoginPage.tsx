@@ -48,7 +48,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
-      <div className="max-w-md w-full bg-white p-8" style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.05), 0 1px 2px 0 rgba(0,0,0,0.05)" }}>
+      <div className="max-w-md w-full bg-white p-8 border border-gray-200 rounded-md">
         <h1 className="text-2xl font-semibold text-gray-900 mb-6">관리자 로그인</h1>
 
         {error && (

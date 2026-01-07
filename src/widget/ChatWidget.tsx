@@ -15,6 +15,10 @@ export default function ChatWidget() {
   const [ctx, setCtx] = useState<WidgetContext>({});
   const listRef = useRef<HTMLDivElement | null>(null);
 
+  // 미리보기 모드 확인 (URL 파라미터)
+  const isPreviewMode =
+    new URLSearchParams(window.location.search).get("preview") === "true";
+
   useEffect(() => {
     // iframe이 로드되면 부모에게 준비됨 알림
     window.parent?.postMessage({ type: "WM_WIDGET_READY" }, "*");
@@ -70,6 +74,9 @@ export default function ChatWidget() {
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
+
+    // 미리보기 모드에서는 전송 비활성화
+    if (isPreviewMode) return;
 
     const userMsg: ChatMessage = { id: uid(), role: "user", text };
     setMessages((prev) => [...prev, userMsg]);
@@ -242,10 +249,11 @@ export default function ChatWidget() {
               color: "var(--color-text, #1e293b)",
             }}
             onFocus={(e) => {
+              if (isPreviewMode) return;
               e.currentTarget.style.borderColor =
-                "var(--color-primary, #ff4500)";
+                "var(--color-primary, #df3326)";
               e.currentTarget.style.boxShadow =
-                "0 0 0 2px color-mix(in srgb, var(--color-primary, #ff4500) 30%, transparent)";
+                "0 0 0 2px color-mix(in srgb, var(--color-primary, #df3326) 30%, transparent)";
             }}
             onBlur={(e) => {
               e.currentTarget.style.borderColor =
@@ -255,7 +263,9 @@ export default function ChatWidget() {
             rows={1}
             placeholder="메시지를 입력하세요"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+            }}
             onCompositionStart={() => {
               isComposingRef.current = true;
             }}
@@ -267,6 +277,11 @@ export default function ChatWidget() {
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
+                // 미리보기 모드에서는 전송 비활성화
+                if (isPreviewMode) {
+                  e.preventDefault();
+                  return;
+                }
                 // 한글 입력 조합 중일 때는 전송하지 않음
                 if (
                   isComposingRef.current ||

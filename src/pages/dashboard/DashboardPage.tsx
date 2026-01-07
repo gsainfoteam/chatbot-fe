@@ -20,7 +20,7 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <img src="/logo.svg" alt="logo" className="w-10 h-10" />
-            <h1 className="text-xl font-bold text-gray-900">챗봇 관리자</h1>
+            <h1 className="text-xl font-bold text-gray-900">GIST 챗봇</h1>
             <button
               onClick={handleLogout}
               className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors duration-150 border border-gray-200/60"
