@@ -2,7 +2,7 @@
   const scriptEl = document.currentScript;
   if (!scriptEl) return;
 
-  const WIDGET_ORIGIN = "http://localhost:5173"; // TODO: 배포 시 변경
+  const WIDGET_ORIGIN = `${import.meta.env.VITE_WIDGET_ORIGIN}/widget`;
   const IFRAME_URL = WIDGET_ORIGIN + "/";
 
   const Z = 2147483647;

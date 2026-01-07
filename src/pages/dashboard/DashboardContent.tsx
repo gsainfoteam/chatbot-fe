@@ -14,7 +14,7 @@ function generateWidgetKey(): string {
   return `${prefix}${random}`;
 }
 
-export default function Admin() {
+export default function DashboardContent() {
   const [widgetKeys, setWidgetKeys] = useState<WidgetKey[]>([]);
   const [newKeyName, setNewKeyName] = useState("");
   const [selectedKey, setSelectedKey] = useState<WidgetKey | null>(null);
@@ -92,7 +92,7 @@ export default function Admin() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -299,6 +299,39 @@ export default function Admin() {
                         )}
                       </div>
                     )}
+                    <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="text-xs font-medium text-blue-900 mb-2">
+                        💡 도메인 등록 가이드
+                      </p>
+                      <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
+                        <li>
+                          <strong>루트 도메인 등록:</strong>{" "}
+                          <code className="bg-blue-100 px-1 rounded">example.com</code>을
+                          등록하면 루트 도메인과{" "}
+                          <code className="bg-blue-100 px-1 rounded">www.example.com</code>이
+                          자동으로 허용됩니다.
+                        </li>
+                        <li>
+                          <strong>모든 서브도메인 허용:</strong>{" "}
+                          <code className="bg-blue-100 px-1 rounded">*.example.com</code>을
+                          등록하면 모든 서브도메인(
+                          <code className="bg-blue-100 px-1 rounded">app.example.com</code>,
+                          <code className="bg-blue-100 px-1 rounded">api.example.com</code> 등)이
+                          허용됩니다.
+                        </li>
+                        <li>
+                          <strong>특정 서브도메인만 허용:</strong>{" "}
+                          <code className="bg-blue-100 px-1 rounded">app.example.com</code>처럼
+                          서브도메인을 직접 등록할 수 있습니다.
+                        </li>
+                        <li>
+                          <strong>프로토콜 제외:</strong>{" "}
+                          <code className="bg-blue-100 px-1 rounded">https://</code>나{" "}
+                          <code className="bg-blue-100 px-1 rounded">http://</code>는
+                          입력하지 마세요.
+                        </li>
+                      </ul>
+                    </div>
                     <p className="mt-2 text-xs text-gray-500">
                       이 Widget Key가 사용될 수 있는 도메인 목록입니다.
                     </p>
