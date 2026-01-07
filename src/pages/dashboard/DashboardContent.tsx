@@ -25,6 +25,54 @@ function generateWidgetKey(): string {
   return `${prefix}${random}`;
 }
 
+function validateDomain(domain: string): { isValid: boolean; error?: string } {
+  const trimmed = domain.trim();
+
+  if (!trimmed) {
+    return { isValid: false, error: "도메인을 입력해주세요." };
+  }
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return {
+      isValid: false,
+      error: "프로토콜(http://, https://)은 포함하지 마세요.",
+    };
+  }
+  if (trimmed.includes(":")) {
+    return {
+      isValid: false,
+      error: "포트 번호는 포함하지 마세요.",
+    };
+  }
+  if (trimmed.includes("/")) {
+    return {
+      isValid: false,
+      error: "경로는 포함하지 마세요.",
+    };
+  }
+  if (trimmed === "localhost") {
+    return { isValid: true };
+  }
+
+  // 와일드카드 도메인 패턴: *.example.com
+  const wildcardPattern =
+    /^\*\.([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
+  if (wildcardPattern.test(trimmed)) {
+    return { isValid: true };
+  }
+
+  // 일반 도메인 패턴: example.com, sub.example.com 등
+  const domainPattern =
+    /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
+  if (domainPattern.test(trimmed)) {
+    return { isValid: true };
+  }
+
+  return {
+    isValid: false,
+    error: "유효한 도메인 형식이 아닙니다. (예: example.com, *.example.com)",
+  };
+}
+
 export default function DashboardContent() {
   const [widgetKeys, setWidgetKeys] = useState<WidgetKey[]>([]);
   const [newKeyName, setNewKeyName] = useState("");
@@ -66,6 +114,15 @@ export default function DashboardContent() {
     if (!selectedKey || !newDomain.trim()) return;
 
     const domain = newDomain.trim();
+
+    // 도메인 형식 검증
+    const validation = validateDomain(domain);
+    if (!validation.isValid) {
+      alert(validation.error || "유효하지 않은 도메인입니다.");
+      return;
+    }
+
+    // 중복 체크
     if (selectedKey.domains.includes(domain)) {
       alert("이미 등록된 도메인입니다.");
       return;
