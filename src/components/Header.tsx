@@ -21,6 +21,14 @@ export default function Header() {
             </span>
           </Link>
           <div className="flex gap-3">
+            <a
+              href="https://github.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors duration-150 inline-flex items-center gap-1.5"
+            >
+              문서 보기
+            </a>
             {isAuthenticated ? (
               <>
                 <Link
@@ -58,4 +66,3 @@ export default function Header() {
     </nav>
   );
 }
-
