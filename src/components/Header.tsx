@@ -20,15 +20,15 @@ export default function Header() {
           >
             <img src="/logo.svg" alt="logo" className="w-8 h-8" />
             <span className="text-lg font-semibold text-gray-900">
-              Chatbot Widget
+              GIST 챗봇
             </span>
           </Link>
           <div className="flex gap-2">
             <a
-              href="https://github.com"
+              href="https://github.com/gsainfoteam/chatbot-fe"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100/80 rounded-lg transition-all duration-200 inline-flex items-center gap-1.5 backdrop-blur-sm"
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200 inline-flex items-center gap-1.5"
             >
               <svg
                 className="w-4 h-4"
@@ -45,36 +45,59 @@ export default function Header() {
               </svg>
               문서 보기
             </a>
-            {isAuthenticated ? (
-              <>
-                <Link
-                  to="/dashboard"
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100/80 rounded-lg transition-all duration-200"
-                >
-                  대시보드
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100/80 rounded-lg transition-all duration-200 border border-gray-200/60 hover:border-gray-300/60"
-                >
-                  로그아웃
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100/80 rounded-lg transition-all duration-200"
-                >
-                  로그인
-                </Link>
-                <Link
-                  to="/dashboard"
-                  className="px-4 py-2 text-sm font-medium bg-[#df3326] text-white rounded-lg hover:bg-[#c72a1f] transition-all duration-200"
-                >
-                  대시보드
-                </Link>
-              </>
+            <Link
+              to="/dashboard"
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200 inline-flex items-center gap-1.5"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
+              대시보드
+            </Link>
+            <Link
+              to="/keys"
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200 inline-flex items-center gap-1.5"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                />
+              </svg>
+              키 발급
+            </Link>
+            {isAuthenticated && (
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 text-sm font-medium bg-[#df3326] text-white rounded-lg hover:bg-[#c72a1f] transition-all duration-200"
+              >
+                로그아웃
+              </button>
+            )}
+            {!isAuthenticated && (
+              <Link
+                to="/login"
+                className="px-4 py-2 text-sm font-medium bg-[#df3326] text-white rounded-lg hover:bg-[#c72a1f] transition-all duration-200"
+              >
+                로그인
+              </Link>
             )}
           </div>
         </div>

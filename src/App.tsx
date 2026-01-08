@@ -4,6 +4,7 @@ import { Routes, Route, useLocation } from "react-router-dom";
 import ChatWidget from "./widget/ChatWidget.tsx";
 import LoginPage from "./pages/login/LoginPage.tsx";
 import DashboardPage from "./pages/dashboard/DashboardPage.tsx";
+import KeysPage from "./pages/keys/KeysPage.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import LandingPage from "./pages/landing/LandingPage.tsx";
 import Header from "./components/Header.tsx";
@@ -31,6 +32,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/keys"
+          element={
+            <ProtectedRoute>
+              <KeysPage />
             </ProtectedRoute>
           }
         />
