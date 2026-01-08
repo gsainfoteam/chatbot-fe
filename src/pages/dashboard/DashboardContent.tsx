@@ -1,926 +1,686 @@
-import { useRef, useState, useEffect } from "react";
+import { useState, useMemo } from "react";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
-type WidgetKey = {
-  id: string;
-  name: string;
+// 더미 데이터 타입 정의
+type UsageData = {
+  date: string; // YYYY-MM-DD
+  tokens: number;
+  requests: number;
+  domain?: string;
+};
+
+type WidgetKeyStats = {
+  widgetKeyId: string;
+  widgetKeyName: string;
   widgetKey: string;
-  createdAt: string;
-  domains: string[];
+  totalTokens: number;
+  totalRequests: number;
+  usageData: UsageData[];
+  domainStats: {
+    domain: string;
+    tokens: number;
+    requests: number;
+  }[];
 };
 
-type ColorSettings = {
-  primary: string;
-  button: string;
-  background: string;
-  text: string;
-  textSecondary: string;
-  border: string;
-  userMessageBg: string;
-  assistantMessageBg: string;
-};
+// 더미 데이터 생성 함수
+function generateDummyData(): WidgetKeyStats[] {
+  const widgetKeys = [
+    { id: "1", name: "메인 웹사이트", key: "wk_main2024" },
+    { id: "2", name: "서브 도메인", key: "wk_sub2024" },
+    { id: "3", name: "테스트 환경", key: "wk_test2024" },
+  ];
 
-function generateWidgetKey(): string {
-  const prefix = "wk_";
-  const random = Math.random().toString(36).substring(2, 15);
-  return `${prefix}${random}`;
-}
+  const domains = [
+    "example.com",
+    "www.example.com",
+    "app.example.com",
+    "api.example.com",
+  ];
 
-function validateDomain(domain: string): { isValid: boolean; error?: string } {
-  const trimmed = domain.trim();
+  return widgetKeys.map((wk) => {
+    const days = 30; // 최근 30일
+    const usageData: UsageData[] = [];
+    const domainStatsMap = new Map<
+      string,
+      { tokens: number; requests: number }
+    >();
 
-  if (!trimmed) {
-    return { isValid: false, error: "도메인을 입력해주세요." };
-  }
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    // 각 도메인별 통계 초기화
+    domains.forEach((domain) => {
+      domainStatsMap.set(domain, { tokens: 0, requests: 0 });
+    });
+
+    // 날짜별 데이터 생성
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split("T")[0];
+
+      // 랜덤한 사용량 생성 (약간의 트렌드 포함)
+      const baseTokens = Math.floor(Math.random() * 50000) + 10000;
+      const baseRequests = Math.floor(Math.random() * 50) + 10;
+      const domain = domains[Math.floor(Math.random() * domains.length)];
+
+      usageData.push({
+        date: dateStr,
+        tokens: baseTokens,
+        requests: baseRequests,
+        domain: domain,
+      });
+
+      // 도메인별 통계 누적
+      const domainStat = domainStatsMap.get(domain)!;
+      domainStat.tokens += baseTokens;
+      domainStat.requests += baseRequests;
+      domainStatsMap.set(domain, domainStat);
+    }
+
+    const domainStats = Array.from(domainStatsMap.entries()).map(
+      ([domain, stats]) => ({
+        domain,
+        ...stats,
+      })
+    );
+
+    const totalTokens = usageData.reduce((sum, d) => sum + d.tokens, 0);
+    const totalRequests = usageData.reduce((sum, d) => sum + d.requests, 0);
+
     return {
-      isValid: false,
-      error: "프로토콜(http://, https://)은 포함하지 마세요.",
+      widgetKeyId: wk.id,
+      widgetKeyName: wk.name,
+      widgetKey: wk.key,
+      totalTokens,
+      totalRequests,
+      usageData,
+      domainStats,
     };
-  }
-  if (trimmed.includes(":")) {
-    return {
-      isValid: false,
-      error: "포트 번호는 포함하지 마세요.",
-    };
-  }
-  if (trimmed.includes("/")) {
-    return {
-      isValid: false,
-      error: "경로는 포함하지 마세요.",
-    };
-  }
-  if (trimmed === "localhost") {
-    return { isValid: true };
-  }
-
-  // 와일드카드 도메인 패턴: *.example.com
-  const wildcardPattern =
-    /^\*\.([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
-  if (wildcardPattern.test(trimmed)) {
-    return { isValid: true };
-  }
-
-  // 일반 도메인 패턴: example.com, sub.example.com 등
-  const domainPattern =
-    /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
-  if (domainPattern.test(trimmed)) {
-    return { isValid: true };
-  }
-
-  return {
-    isValid: false,
-    error: "유효한 도메인 형식이 아닙니다. (예: example.com, *.example.com)",
-  };
+  });
 }
 
 export default function DashboardContent() {
-  const [widgetKeys, setWidgetKeys] = useState<WidgetKey[]>([]);
-  const [newKeyName, setNewKeyName] = useState("");
-  const [selectedKey, setSelectedKey] = useState<WidgetKey | null>(null);
-  const [newDomain, setNewDomain] = useState("");
-  const isComposingKeyNameRef = useRef(false);
-  const isComposingDomainRef = useRef(false);
+  const [selectedWidgetKey, setSelectedWidgetKey] = useState<string | "all">(
+    "all"
+  );
+  const [selectedDomain, setSelectedDomain] = useState<string | "all">("all");
+  const [dateRange, setDateRange] = useState<"7d" | "30d" | "90d">("30d");
+  const [groupBy, setGroupBy] = useState<"1d" | "7d" | "30d">("1d");
 
-  const [colorSettings, setColorSettings] = useState<ColorSettings>({
-    primary: "#df3326",
-    button: "#df3326",
-    background: "#ffffff",
-    text: "#1e293b",
-    textSecondary: "#64748b",
-    border: "#e2e8f0",
-    userMessageBg: "#df3326",
-    assistantMessageBg: "#ffffff",
-  });
+  // 더미 데이터
+  const allStats = useMemo(() => generateDummyData(), []);
 
-  const previewIframeRef = useRef<HTMLIFrameElement>(null);
+  // 선택된 위젯 키의 데이터 필터링
+  const filteredStats = useMemo(() => {
+    if (selectedWidgetKey === "all") {
+      // 모든 위젯 키 통합
+      const combinedUsageData: Map<string, UsageData> = new Map();
+      const combinedDomainStats: Map<
+        string,
+        { tokens: number; requests: number }
+      > = new Map();
 
-  const handleGenerateKey = () => {
-    const name = newKeyName.trim() || `위젯 키 ${widgetKeys.length + 1}`;
+      allStats.forEach((stat) => {
+        stat.usageData.forEach((data) => {
+          const existing = combinedUsageData.get(data.date);
+          if (existing) {
+            existing.tokens += data.tokens;
+            existing.requests += data.requests;
+          } else {
+            combinedUsageData.set(data.date, { ...data });
+          }
+        });
 
-    const newKey: WidgetKey = {
-      id: Math.random().toString(36).substring(2, 15),
-      name: name,
-      widgetKey: generateWidgetKey(),
-      createdAt: new Date().toISOString(),
-      domains: [],
-    };
+        stat.domainStats.forEach((ds) => {
+          const existing = combinedDomainStats.get(ds.domain);
+          if (existing) {
+            existing.tokens += ds.tokens;
+            existing.requests += ds.requests;
+          } else {
+            combinedDomainStats.set(ds.domain, {
+              tokens: ds.tokens,
+              requests: ds.requests,
+            });
+          }
+        });
+      });
 
-    setWidgetKeys([...widgetKeys, newKey]);
-    setNewKeyName("");
-    setSelectedKey(newKey);
-  };
-
-  const handleAddDomain = () => {
-    if (!selectedKey || !newDomain.trim()) return;
-
-    const domain = newDomain.trim();
-
-    // 도메인 형식 검증
-    const validation = validateDomain(domain);
-    if (!validation.isValid) {
-      alert(validation.error || "유효하지 않은 도메인입니다.");
-      return;
+      return {
+        widgetKeyName: "모든 위젯 키",
+        totalTokens: Array.from(combinedUsageData.values()).reduce(
+          (sum, d) => sum + d.tokens,
+          0
+        ),
+        totalRequests: Array.from(combinedUsageData.values()).reduce(
+          (sum, d) => sum + d.requests,
+          0
+        ),
+        usageData: Array.from(combinedUsageData.values()).sort((a, b) =>
+          a.date.localeCompare(b.date)
+        ),
+        domainStats: Array.from(combinedDomainStats.entries()).map(
+          ([domain, stats]) => ({
+            domain,
+            ...stats,
+          })
+        ),
+      };
     }
 
-    // 중복 체크
-    if (selectedKey.domains.includes(domain)) {
-      alert("이미 등록된 도메인입니다.");
-      return;
-    }
-
-    setWidgetKeys(
-      widgetKeys.map((key) =>
-        key.id === selectedKey.id
-          ? { ...key, domains: [...key.domains, domain] }
-          : key
-      )
-    );
-    setNewDomain("");
-    setSelectedKey({
-      ...selectedKey,
-      domains: [...selectedKey.domains, domain],
-    });
-  };
-
-  const handleRemoveDomain = (domain: string) => {
-    if (!selectedKey) return;
-
-    setWidgetKeys(
-      widgetKeys.map((key) =>
-        key.id === selectedKey.id
-          ? { ...key, domains: key.domains.filter((d) => d !== domain) }
-          : key
-      )
-    );
-    setSelectedKey({
-      ...selectedKey,
-      domains: selectedKey.domains.filter((d) => d !== domain),
-    });
-  };
-
-  const handleDeleteKey = (keyId: string) => {
-    if (!confirm("위젯 키를 삭제하시겠습니까?")) return;
-
-    setWidgetKeys(widgetKeys.filter((key) => key.id !== keyId));
-    if (selectedKey?.id === keyId) {
-      setSelectedKey(null);
-    }
-  };
-
-  const handleCopyWidgetKey = (widgetKey: string) => {
-    navigator.clipboard.writeText(widgetKey);
-    alert("Widget Key가 클립보드에 복사되었습니다.");
-  };
-
-  const handleColorChange = (key: keyof ColorSettings, value: string) => {
-    const newColors = { ...colorSettings, [key]: value };
-    setColorSettings(newColors);
-
-    // 미리보기 iframe에 색상 업데이트 전달
-    if (previewIframeRef.current?.contentWindow) {
-      previewIframeRef.current.contentWindow.postMessage(
-        {
-          type: "WM_UPDATE_COLORS",
-          colors: {
-            primary: newColors.primary.replace("#", ""),
-            button: newColors.button.replace("#", ""),
-            background: newColors.background.replace("#", ""),
-            text: newColors.text.replace("#", ""),
-            textSecondary: newColors.textSecondary.replace("#", ""),
-            border: newColors.border.replace("#", ""),
-            userMessageBg: newColors.userMessageBg.replace("#", ""),
-            assistantMessageBg: newColors.assistantMessageBg.replace("#", ""),
-          },
-        },
-        "*"
+    const found = allStats.find((s) => s.widgetKeyId === selectedWidgetKey);
+    if (!found) {
+      // 기본값 반환
+      return (
+        allStats[0] || {
+          widgetKeyName: "위젯 키 없음",
+          totalTokens: 0,
+          totalRequests: 0,
+          usageData: [],
+          domainStats: [],
+        }
       );
     }
-  };
+    return found;
+  }, [selectedWidgetKey, allStats]);
 
-  useEffect(() => {
-    // 미리보기 iframe이 로드되면 초기 색상 설정
-    const iframe = previewIframeRef.current;
-    if (iframe) {
-      const handleLoad = () => {
-        iframe.contentWindow?.postMessage(
-          {
-            type: "WM_INIT",
-            widgetKey: selectedKey?.widgetKey || "preview",
-            pageUrl: window.location.href,
-            colors: {
-              primary: colorSettings.primary.replace("#", ""),
-              button: colorSettings.button.replace("#", ""),
-              background: colorSettings.background.replace("#", ""),
-              text: colorSettings.text.replace("#", ""),
-              textSecondary: colorSettings.textSecondary.replace("#", ""),
-              border: colorSettings.border.replace("#", ""),
-              userMessageBg: colorSettings.userMessageBg.replace("#", ""),
-              assistantMessageBg: colorSettings.assistantMessageBg.replace(
-                "#",
-                ""
-              ),
-            },
-          },
-          "*"
-        );
-      };
-      iframe.addEventListener("load", handleLoad);
-      return () => iframe.removeEventListener("load", handleLoad);
-    }
-  }, [selectedKey, colorSettings]);
+  // 날짜 범위 필터링
+  const dateFilteredData = useMemo(() => {
+    if (!filteredStats || !filteredStats.usageData) return [];
+    const days = dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : 90;
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+
+    return filteredStats.usageData.filter(
+      (d) => new Date(d.date) >= cutoffDate
+    );
+  }, [filteredStats, dateRange]);
+
+  // 도메인 필터링
+  const domainFilteredData = useMemo(() => {
+    if (selectedDomain === "all") return dateFilteredData;
+    return dateFilteredData.filter((d) => d.domain === selectedDomain);
+  }, [dateFilteredData, selectedDomain]);
+
+  // 그룹바이 처리
+  const groupedData = useMemo(() => {
+    if (groupBy === "1d") return domainFilteredData;
+
+    const grouped = new Map<string, UsageData>();
+    const groupDays = groupBy === "7d" ? 7 : 30;
+
+    domainFilteredData.forEach((data) => {
+      const date = new Date(data.date);
+      const groupKey = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        Math.floor(date.getDate() / groupDays) * groupDays
+      )
+        .toISOString()
+        .split("T")[0];
+
+      const existing = grouped.get(groupKey);
+      if (existing) {
+        existing.tokens += data.tokens;
+        existing.requests += data.requests;
+      } else {
+        grouped.set(groupKey, { ...data, date: groupKey });
+      }
+    });
+
+    return Array.from(grouped.values()).sort((a, b) =>
+      a.date.localeCompare(b.date)
+    );
+  }, [domainFilteredData, groupBy]);
+
+  // 총 사용량 계산
+  const totalTokens = domainFilteredData.reduce((sum, d) => sum + d.tokens, 0);
+  const totalRequests = domainFilteredData.reduce(
+    (sum, d) => sum + d.requests,
+    0
+  );
+
+  // 이전 기간과 비교 (간단히 절반으로 가정)
+  const previousTokens = Math.floor(totalTokens * 0.7);
+  const previousRequests = Math.floor(totalRequests * 0.7);
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">위젯 키 발급</h1>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">대시보드</h1>
           <p className="mt-2 text-sm text-gray-600">
-            위젯 키를 발급받고 도메인을 등록하여 챗봇 위젯을 설치하세요.
+            위젯 키별 및 도메인별 사용량 통계를 확인하세요.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Panel - Widget Key List */}
-          <div className="bg-white rounded-lg border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">
-                내 위젯 키
-              </h2>
+        {/* Filters */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+          <div className="flex flex-wrap gap-4 items-center">
+            {/* Widget Key Selector */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                위젯 키
+              </label>
+              <select
+                value={selectedWidgetKey}
+                onChange={(e) => setSelectedWidgetKey(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#df3326] focus:border-transparent"
+              >
+                <option value="all">모든 위젯 키</option>
+                {allStats.map((stat) => (
+                  <option key={stat.widgetKeyId} value={stat.widgetKeyId}>
+                    {stat.widgetKeyName} ({stat.widgetKey})
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* Generate Key Form */}
-            <div className="p-6 border-b border-gray-200">
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="프로젝트 이름 (선택사항)"
-                  value={newKeyName}
-                  onChange={(e) => setNewKeyName(e.target.value)}
-                  onCompositionStart={() => {
-                    isComposingKeyNameRef.current = true;
-                  }}
-                  onCompositionEnd={() => {
-                    setTimeout(() => {
-                      isComposingKeyNameRef.current = false;
-                    }, 0);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      if (
-                        isComposingKeyNameRef.current ||
-                        (e.nativeEvent as KeyboardEvent).isComposing
-                      ) {
-                        return;
-                      }
-                      handleGenerateKey();
-                    }
-                  }}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#df3326] focus:border-transparent transition-all duration-150"
-                />
-                <button
-                  onClick={handleGenerateKey}
-                  className="w-full px-6 py-2.5 bg-[#df3326] text-white font-medium rounded-md hover:bg-[#c72a1f] active:scale-[0.98] transition-all duration-150"
-                >
-                  위젯 키 발급
-                </button>
-              </div>
+            {/* Domain Selector */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                도메인
+              </label>
+              <select
+                value={selectedDomain}
+                onChange={(e) => setSelectedDomain(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#df3326] focus:border-transparent"
+              >
+                <option value="all">모든 도메인</option>
+                {filteredStats.domainStats.map((ds) => (
+                  <option key={ds.domain} value={ds.domain}>
+                    {ds.domain}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* Widget Key List */}
-            <div className="divide-y divide-gray-200">
-              {widgetKeys.length === 0 ? (
-                <div className="p-6 text-center text-gray-500">
-                  발급된 위젯 키가 없습니다.
-                  <br />
-                  위에서 위젯 키를 발급받으세요.
-                </div>
-              ) : (
-                widgetKeys.map((key) => (
-                  <div
-                    key={key.id}
-                    className={`p-4 cursor-pointer transition-colors duration-150 ${
-                      selectedKey?.id === key.id
-                        ? "bg-red-50 border-l-4 border-[#df3326]"
-                        : "hover:bg-gray-50"
-                    }`}
-                    onClick={() => setSelectedKey(key)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">
-                          {key.name}
-                        </h3>
-                        <p className="text-sm text-gray-500 mt-1 font-mono">
-                          {key.widgetKey}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {new Date(key.createdAt).toLocaleDateString("ko-KR")}
-                        </p>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteKey(key.id);
-                        }}
-                        className="ml-4 text-red-500 hover:text-red-700 text-sm"
-                      >
-                        삭제
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
+            {/* Date Range */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                기간
+              </label>
+              <select
+                value={dateRange}
+                onChange={(e) =>
+                  setDateRange(e.target.value as "7d" | "30d" | "90d")
+                }
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#df3326] focus:border-transparent"
+              >
+                <option value="7d">최근 7일</option>
+                <option value="30d">최근 30일</option>
+                <option value="90d">최근 90일</option>
+              </select>
             </div>
-          </div>
 
-          {/* Right Panel - Key Details */}
-          <div className="bg-white rounded-lg border border-gray-200">
-            {selectedKey ? (
-              <>
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    {selectedKey.name}
-                  </h2>
-                </div>
-
-                <div className="p-6 space-y-6">
-                  {/* Widget Key Section */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      위젯 키
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={selectedKey.widgetKey}
-                        readOnly
-                        className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-md font-mono text-sm"
-                      />
-                      <button
-                        onClick={() =>
-                          handleCopyWidgetKey(selectedKey.widgetKey)
-                        }
-                        className="px-4 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-md hover:bg-gray-200 active:scale-[0.98] transition-all duration-150"
-                      >
-                        복사
-                      </button>
-                    </div>
-                    <p className="mt-2 text-xs text-gray-500">
-                      이 키를 웹사이트에 위젯을 설치할 때 사용하세요.
-                    </p>
-                  </div>
-
-                  {/* Domains Section */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      허용 도메인
-                    </label>
-                    <div className="flex gap-2 mb-3">
-                      <input
-                        type="text"
-                        placeholder="example.com"
-                        value={newDomain}
-                        onChange={(e) => setNewDomain(e.target.value)}
-                        onCompositionStart={() => {
-                          isComposingDomainRef.current = true;
-                        }}
-                        onCompositionEnd={() => {
-                          setTimeout(() => {
-                            isComposingDomainRef.current = false;
-                          }, 0);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            if (
-                              isComposingDomainRef.current ||
-                              (e.nativeEvent as KeyboardEvent).isComposing
-                            ) {
-                              return;
-                            }
-                            handleAddDomain();
-                          }
-                        }}
-                        className="flex-1 px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#de3624] focus:border-transparent transition-all duration-150"
-                      />
-                      <button
-                        onClick={handleAddDomain}
-                        className="px-4 py-2.5 bg-[#df3326] text-white font-medium rounded-md hover:bg-[#c72a1f] active:scale-[0.98] transition-all duration-150"
-                      >
-                        추가
-                      </button>
-                    </div>
-
-                    {selectedKey.domains.length === 0 ? (
-                      <div className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg text-center">
-                        등록된 도메인이 없습니다.
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {selectedKey.domains.map(
-                          (domain: string, index: number) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                            >
-                              <span className="text-sm font-mono text-gray-900">
-                                {domain}
-                              </span>
-                              <button
-                                onClick={() => handleRemoveDomain(domain)}
-                                className="text-red-500 hover:text-red-700 text-sm font-medium"
-                              >
-                                삭제
-                              </button>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    )}
-                    <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-xs font-medium text-blue-900 mb-2">
-                        💡 도메인 등록 가이드
-                      </p>
-                      <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
-                        <li>
-                          <strong>루트 도메인 등록:</strong>{" "}
-                          <code className="bg-blue-100 px-1 rounded">
-                            example.com
-                          </code>
-                          을 등록하면 루트 도메인과{" "}
-                          <code className="bg-blue-100 px-1 rounded">
-                            www.example.com
-                          </code>
-                          이 자동으로 허용됩니다.
-                        </li>
-                        <li>
-                          <strong>모든 서브도메인 허용:</strong>{" "}
-                          <code className="bg-blue-100 px-1 rounded">
-                            *.example.com
-                          </code>
-                          을 등록하면 모든 서브도메인(
-                          <code className="bg-blue-100 px-1 rounded">
-                            app.example.com
-                          </code>
-                          ,
-                          <code className="bg-blue-100 px-1 rounded">
-                            api.example.com
-                          </code>{" "}
-                          등)이 허용됩니다.
-                        </li>
-                        <li>
-                          <strong>특정 서브도메인만 허용:</strong>{" "}
-                          <code className="bg-blue-100 px-1 rounded">
-                            app.example.com
-                          </code>
-                          처럼 서브도메인을 직접 등록할 수 있습니다.
-                        </li>
-                        <li>
-                          <strong>프로토콜 제외:</strong>{" "}
-                          <code className="bg-blue-100 px-1 rounded">
-                            https://
-                          </code>
-                          나{" "}
-                          <code className="bg-blue-100 px-1 rounded">
-                            http://
-                          </code>
-                          는 입력하지 마세요.
-                        </li>
-                      </ul>
-                    </div>
-                    <p className="mt-2 text-xs text-gray-500">
-                      이 Widget Key가 사용될 수 있는 도메인 목록입니다.
-                    </p>
-                  </div>
-
-                  {/* Usage Example */}
-                  <div className="pt-4 border-t border-gray-200">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      설치 코드
-                    </label>
-                    <div className="p-4 bg-gray-900 rounded-lg">
-                      <pre className="text-xs text-gray-100 overflow-x-auto">
-                        {`<script
-  src="https://widget.yourdomain.com/loader.js"
-  data-widget-key="${selectedKey.widgetKey}"
-></script>`}
-                      </pre>
-                    </div>
-                    <p className="mt-2 text-xs text-gray-500">
-                      이 코드를 웹사이트의 &lt;body&gt; 태그 하단에 추가하세요.
-                    </p>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="p-12 text-center text-gray-500">
-                <svg
-                  className="mx-auto h-12 w-12 text-gray-400 mb-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <p>왼쪽에서 위젯 키를 선택하세요</p>
-              </div>
-            )}
+            {/* Group By */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                그룹화
+              </label>
+              <select
+                value={groupBy}
+                onChange={(e) =>
+                  setGroupBy(e.target.value as "1d" | "7d" | "30d")
+                }
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#df3326] focus:border-transparent"
+              >
+                <option value="1d">일별</option>
+                <option value="7d">주별</option>
+                <option value="30d">월별</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* Customization Section - 공통 섹션 */}
-        <div className="mt-8 w-full">
-          <div className="bg-white rounded-lg border border-gray-200">
-            <div className="p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                위젯 커스터마이징
-              </h2>
-
-              {/* 설정 가능한 옵션 표 */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-3">
-                  설정 가능한 옵션
-                </h3>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* 레이아웃 옵션 */}
-                  <div>
-                    <h4 className="text-xs font-semibold text-gray-600 mb-2">
-                      레이아웃 옵션
-                    </h4>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs border border-gray-200 rounded-lg">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b">
-                              옵션
-                            </th>
-                            <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b">
-                              설명
-                            </th>
-                            <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b">
-                              기본값
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          <tr>
-                            <td className="px-3 py-2 font-mono text-gray-900">
-                              data-widget-key
-                            </td>
-                            <td className="px-3 py-2 text-gray-600">
-                              위젯 식별 키
-                            </td>
-                            <td className="px-3 py-2 text-gray-500">(필수)</td>
-                          </tr>
-                          <tr>
-                            <td className="px-3 py-2 font-mono text-gray-900">
-                              data-position
-                            </td>
-                            <td className="px-3 py-2 text-gray-600">
-                              버튼 위치 (right / left)
-                            </td>
-                            <td className="px-3 py-2 text-gray-500">right</td>
-                          </tr>
-                          <tr>
-                            <td className="px-3 py-2 font-mono text-gray-900">
-                              data-offset
-                            </td>
-                            <td className="px-3 py-2 text-gray-600">
-                              화면 가장자리 여백(px)
-                            </td>
-                            <td className="px-3 py-2 text-gray-500">18</td>
-                          </tr>
-                          <tr>
-                            <td className="px-3 py-2 font-mono text-gray-900">
-                              data-width
-                            </td>
-                            <td className="px-3 py-2 text-gray-600">
-                              위젯 패널 너비(px)
-                            </td>
-                            <td className="px-3 py-2 text-gray-500">360</td>
-                          </tr>
-                          <tr>
-                            <td className="px-3 py-2 font-mono text-gray-900">
-                              data-height
-                            </td>
-                            <td className="px-3 py-2 text-gray-600">
-                              위젯 패널 높이(px)
-                            </td>
-                            <td className="px-3 py-2 text-gray-500">520</td>
-                          </tr>
-                          <tr>
-                            <td className="px-3 py-2 font-mono text-gray-900">
-                              data-theme
-                            </td>
-                            <td className="px-3 py-2 text-gray-600">
-                              테마 식별자
-                            </td>
-                            <td className="px-3 py-2 text-gray-500">light</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* 색상 옵션 */}
-                  <div>
-                    <h4 className="text-xs font-semibold text-gray-600 mb-2">
-                      색상 커스터마이징 옵션
-                    </h4>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs border border-gray-200 rounded-lg">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b">
-                              옵션
-                            </th>
-                            <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b">
-                              설명
-                            </th>
-                            <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b">
-                              기본값
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          <tr>
-                            <td className="px-3 py-2 font-mono text-gray-900">
-                              data-primary-color
-                            </td>
-                            <td className="px-3 py-2 text-gray-600">
-                              주요 색상 (아이콘, 전송 버튼 등)
-                            </td>
-                            <td className="px-3 py-2 text-gray-500">df3326</td>
-                          </tr>
-                          <tr>
-                            <td className="px-3 py-2 font-mono text-gray-900">
-                              data-button-color
-                            </td>
-                            <td className="px-3 py-2 text-gray-600">
-                              런처 버튼 배경색
-                            </td>
-                            <td className="px-3 py-2 text-gray-500">primary</td>
-                          </tr>
-                          <tr>
-                            <td className="px-3 py-2 font-mono text-gray-900">
-                              data-background-color
-                            </td>
-                            <td className="px-3 py-2 text-gray-600">
-                              위젯 배경색
-                            </td>
-                            <td className="px-3 py-2 text-gray-500">ffffff</td>
-                          </tr>
-                          <tr>
-                            <td className="px-3 py-2 font-mono text-gray-900">
-                              data-text-color
-                            </td>
-                            <td className="px-3 py-2 text-gray-600">
-                              기본 텍스트 색상
-                            </td>
-                            <td className="px-3 py-2 text-gray-500">1e293b</td>
-                          </tr>
-                          <tr>
-                            <td className="px-3 py-2 font-mono text-gray-900">
-                              data-text-secondary-color
-                            </td>
-                            <td className="px-3 py-2 text-gray-600">
-                              보조 텍스트 색상
-                            </td>
-                            <td className="px-3 py-2 text-gray-500">64748b</td>
-                          </tr>
-                          <tr>
-                            <td className="px-3 py-2 font-mono text-gray-900">
-                              data-border-color
-                            </td>
-                            <td className="px-3 py-2 text-gray-600">
-                              테두리 색상
-                            </td>
-                            <td className="px-3 py-2 text-gray-500">e2e8f0</td>
-                          </tr>
-                          <tr>
-                            <td className="px-3 py-2 font-mono text-gray-900">
-                              data-user-message-bg
-                            </td>
-                            <td className="px-3 py-2 text-gray-600">
-                              사용자 메시지 배경색
-                            </td>
-                            <td className="px-3 py-2 text-gray-500">primary</td>
-                          </tr>
-                          <tr>
-                            <td className="px-3 py-2 font-mono text-gray-900">
-                              data-assistant-message-bg
-                            </td>
-                            <td className="px-3 py-2 text-gray-600">
-                              어시스턴트 메시지 배경색
-                            </td>
-                            <td className="px-3 py-2 text-gray-500">ffffff</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                    <p className="mt-2 text-xs text-gray-500">
-                      💡 색상 값은{" "}
-                      <code className="bg-gray-100 px-1 rounded">#</code> 없이
-                      6자리 hex 코드로 입력하세요. (예:{" "}
-                      <code className="bg-gray-100 px-1 rounded">df3326</code>,{" "}
-                      <code className="bg-gray-100 px-1 rounded">3b82f6</code>)
-                    </p>
-                  </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Total Spend / Usage */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                  총 토큰 사용량
+                </h2>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-gray-900">
+                    {totalTokens.toLocaleString()}
+                  </span>
+                  <span className="text-sm text-gray-500">토큰</span>
                 </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  이전 기간: {previousTokens.toLocaleString()} 토큰
+                </p>
               </div>
 
-              {/* Color Settings & Preview - 가로 배치 */}
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Color Settings */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-4">
-                      색상 설정
-                    </label>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">
-                          Primary
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            value={colorSettings.primary}
-                            onChange={(e) =>
-                              handleColorChange("primary", e.target.value)
-                            }
-                            className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
-                          />
-                          <input
-                            type="text"
-                            value={colorSettings.primary}
-                            onChange={(e) =>
-                              handleColorChange("primary", e.target.value)
-                            }
-                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
-                            placeholder="#df3326"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">
-                          Button
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            value={colorSettings.button}
-                            onChange={(e) =>
-                              handleColorChange("button", e.target.value)
-                            }
-                            className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
-                          />
-                          <input
-                            type="text"
-                            value={colorSettings.button}
-                            onChange={(e) =>
-                              handleColorChange("button", e.target.value)
-                            }
-                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
-                            placeholder="#df3326"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">
-                          Background
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            value={colorSettings.background}
-                            onChange={(e) =>
-                              handleColorChange("background", e.target.value)
-                            }
-                            className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
-                          />
-                          <input
-                            type="text"
-                            value={colorSettings.background}
-                            onChange={(e) =>
-                              handleColorChange("background", e.target.value)
-                            }
-                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
-                            placeholder="#ffffff"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">
-                          Text
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            value={colorSettings.text}
-                            onChange={(e) =>
-                              handleColorChange("text", e.target.value)
-                            }
-                            className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
-                          />
-                          <input
-                            type="text"
-                            value={colorSettings.text}
-                            onChange={(e) =>
-                              handleColorChange("text", e.target.value)
-                            }
-                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
-                            placeholder="#1e293b"
-                          />
-                        </div>
-                      </div>
-                    </div>
+              {/* Chart */}
+              <div className="mt-6">
+                {groupedData.length === 0 ? (
+                  <div className="h-64 flex items-center justify-center text-gray-500">
+                    데이터가 없습니다.
                   </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={256}>
+                    <LineChart
+                      data={groupedData.map((d, index) => {
+                        // 이전 기간 데이터도 함께 계산 (비교용)
+                        const prevIndex =
+                          index - Math.ceil(groupedData.length / 2);
+                        const prevTokens =
+                          prevIndex >= 0 ? groupedData[prevIndex].tokens : 0;
 
-                  {/* Preview */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-4">
-                      미리보기
-                    </label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Floating Button Preview */}
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-2">
-                          플로팅 버튼
-                        </label>
-                        <div
-                          className="border border-gray-200 rounded-lg bg-white relative"
-                          style={{ height: "400px", overflow: "hidden" }}
-                        >
-                          {/* Skeleton UI - 웹페이지 예시 */}
-                          <div className="absolute inset-0 p-4">
-                            <div className="h-4 bg-gray-200 rounded mb-3 w-3/4 animate-pulse"></div>
-                            <div className="h-4 bg-gray-200 rounded mb-3 w-full animate-pulse"></div>
-                            <div className="h-4 bg-gray-200 rounded mb-3 w-5/6 animate-pulse"></div>
-                            <div className="h-4 bg-gray-200 rounded mb-3 w-4/5 animate-pulse"></div>
-                            <div className="h-48 bg-gray-100 rounded mt-4 animate-pulse"></div>
-                            <div className="h-4 bg-gray-200 rounded mt-4 w-2/3 animate-pulse"></div>
-                            <div className="h-4 bg-gray-200 rounded mt-2 w-4/5 animate-pulse"></div>
-                            <div className="h-4 bg-gray-200 rounded mt-2 w-3/4 animate-pulse"></div>
-                            <div className="h-32 bg-gray-100 rounded mt-4 animate-pulse"></div>
-                            <div className="h-4 bg-gray-200 rounded mt-4 w-2/3 animate-pulse"></div>
-                            <div className="h-4 bg-gray-200 rounded mt-2 w-4/5 animate-pulse"></div>
-                          </div>
-                          <div className="absolute bottom-4 right-4">
-                            <button
-                              className="w-14 h-14 rounded-full flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
-                              style={{
-                                backgroundColor: colorSettings.button,
-                                boxShadow: "0 12px 30px rgba(0,0,0,.18)",
-                              }}
-                            >
-                              <svg
-                                viewBox="0 0 173 150"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                                style={{ width: "28px", height: "auto" }}
-                              >
-                                <path
-                                  d="M83.7427 87.1014L109.873 87.108V114.663H78.4867C56.3773 114.663 38.456 96.74 38.456 74.632C38.456 52.524 56.3773 34.6014 78.4867 34.6014H137.464L172.871 4.57764e-05H74.632C33.4147 4.57764e-05 0 33.4134 0 74.632C0 115.849 33.4147 149.264 74.632 149.264H112.308H147.541H147.544V58.7254H147.541H112.779L83.7427 87.1014Z"
-                                  fill="white"
-                                />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
+                        return {
+                          date: new Date(d.date).toLocaleDateString("ko-KR", {
+                            month: "short",
+                            day: "numeric",
+                          }),
+                          tokens: d.tokens,
+                          previousTokens: prevTokens > 0 ? prevTokens : null,
+                          fullDate: d.date,
+                        };
+                      })}
+                      margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 12, fill: "#6b7280" }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 12, fill: "#6b7280" }}
+                        tickFormatter={(value: number) => {
+                          if (value >= 1000000)
+                            return `${(value / 1000000).toFixed(1)}M`;
+                          if (value >= 1000)
+                            return `${(value / 1000).toFixed(1)}K`;
+                          return value.toString();
+                        }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1f2937",
+                          border: "none",
+                          borderRadius: "6px",
+                          color: "#fff",
+                        }}
+                        formatter={(value: number, name: string) => {
+                          if (name === "tokens") {
+                            return [
+                              `${value.toLocaleString()} 토큰`,
+                              "현재 기간",
+                            ];
+                          }
+                          if (name === "previousTokens") {
+                            return [
+                              `${value.toLocaleString()} 토큰`,
+                              "이전 기간",
+                            ];
+                          }
+                          return [value, name];
+                        }}
+                        labelFormatter={(
+                          label: string,
+                          payload: Array<{ payload?: { fullDate?: string } }>
+                        ) => {
+                          if (payload && payload[0]?.payload?.fullDate) {
+                            return payload[0].payload.fullDate;
+                          }
+                          return label;
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="tokens"
+                        stroke="#df3326"
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{
+                          r: 6,
+                          fill: "#df3326",
+                          stroke: "#fff",
+                          strokeWidth: 2,
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="previousTokens"
+                        stroke="#ec4899"
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={false}
+                        activeDot={{
+                          r: 6,
+                          fill: "#ec4899",
+                          stroke: "#fff",
+                          strokeWidth: 2,
+                        }}
+                        connectNulls={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
 
-                      {/* Chat UI Preview */}
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-2">
-                          채팅 UI
-                        </label>
-                        <div
-                          className="border border-gray-200 rounded-lg overflow-hidden"
-                          style={{ height: "400px" }}
-                        >
-                          <iframe
-                            ref={previewIframeRef}
-                            src={`${window.location.origin}/widget/?preview=true`}
-                            className="w-full h-full border-0"
-                            title="채팅 UI 미리보기"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <p className="mt-2 text-xs text-gray-500">
-                      색상 변경 시 실시간으로 미리보기가 업데이트됩니다.
-                    </p>
+            {/* Requests Chart */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                  총 요청 수
+                </h2>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-gray-900">
+                    {totalRequests.toLocaleString()}
+                  </span>
+                  <span className="text-sm text-gray-500">요청</span>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  이전 기간: {previousRequests.toLocaleString()} 요청
+                </p>
+              </div>
+
+              {/* Chart */}
+              <div className="mt-6">
+                {groupedData.length === 0 ? (
+                  <div className="h-64 flex items-center justify-center text-gray-500">
+                    데이터가 없습니다.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={256}>
+                    <BarChart
+                      data={groupedData.map((d) => ({
+                        date: new Date(d.date).toLocaleDateString("ko-KR", {
+                          month: "short",
+                          day: "numeric",
+                        }),
+                        requests: d.requests,
+                        fullDate: d.date,
+                      }))}
+                      margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 12, fill: "#6b7280" }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 12, fill: "#6b7280" }}
+                        tickFormatter={(value: number) => value.toString()}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1f2937",
+                          border: "none",
+                          borderRadius: "6px",
+                          color: "#fff",
+                        }}
+                        formatter={(value: number) => [
+                          `${value.toLocaleString()} 요청`,
+                          "요청",
+                        ]}
+                        labelFormatter={(
+                          label: string,
+                          payload: Array<{ payload?: { fullDate?: string } }>
+                        ) => {
+                          if (payload && payload[0]?.payload?.fullDate) {
+                            return payload[0].payload.fullDate;
+                          }
+                          return label;
+                        }}
+                      />
+                      <Bar
+                        dataKey="requests"
+                        fill="#3b82f6"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Summary Stats */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">요약</h3>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs text-gray-600">총 토큰</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {totalTokens.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-[#df3326] h-2 rounded-full"
+                      style={{ width: "100%" }}
+                    ></div>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs text-gray-600">총 요청</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {totalRequests.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-500 h-2 rounded-full"
+                      style={{ width: "100%" }}
+                    ></div>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs text-gray-600">
+                      평균 토큰/요청
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {totalRequests > 0
+                        ? Math.floor(
+                            totalTokens / totalRequests
+                          ).toLocaleString()
+                        : 0}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Domain Stats */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                도메인별 통계
+              </h3>
+              <div className="space-y-3">
+                {filteredStats.domainStats
+                  .sort((a, b) => b.tokens - a.tokens)
+                  .map((ds) => (
+                    <div
+                      key={ds.domain}
+                      className="border-b border-gray-100 pb-3 last:border-0"
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs font-medium text-gray-900">
+                          {ds.domain}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {ds.tokens.toLocaleString()} 토큰
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500">
+                          {ds.requests} 요청
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {ds.requests > 0
+                            ? Math.floor(
+                                ds.tokens / ds.requests
+                              ).toLocaleString()
+                            : 0}{" "}
+                          토큰/요청
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Widget Key Stats (if all selected) */}
+            {selectedWidgetKey === "all" && (
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-4">
+                  위젯 키별 통계
+                </h3>
+                <div className="space-y-3">
+                  {allStats
+                    .sort((a, b) => b.totalTokens - a.totalTokens)
+                    .map((stat) => (
+                      <div
+                        key={stat.widgetKeyId}
+                        className="border-b border-gray-100 pb-3 last:border-0 cursor-pointer hover:bg-gray-50 p-2 rounded -m-2"
+                        onClick={() => setSelectedWidgetKey(stat.widgetKeyId)}
+                      >
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs font-medium text-gray-900">
+                            {stat.widgetKeyName}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {stat.totalTokens.toLocaleString()} 토큰
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-gray-500 font-mono text-[10px]">
+                            {stat.widgetKey}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {stat.totalRequests} 요청
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
