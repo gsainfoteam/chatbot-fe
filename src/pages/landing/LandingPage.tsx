@@ -400,7 +400,7 @@ export default function LandingPage() {
               빠른 시작 가이드
             </h2>
             <p className="text-base sm:text-lg text-gray-600 px-2">
-              3단계로 시작하는 간단한 가이드입니다
+              4단계로 시작하는 간단한 가이드입니다
             </p>
           </div>
 
@@ -415,6 +415,13 @@ export default function LandingPage() {
               },
               {
                 step: "2",
+                title: "도메인 등록하기",
+                description:
+                  "발급받은 위젯 키에 사용할 도메인을 등록하세요. 보안을 위해 허용된 도메인에서만 위젯이 동작합니다.",
+                code: null,
+              },
+              {
+                step: "3",
                 title: "스크립트 추가하기",
                 description:
                   "발급받은 위젯 키를 사용해 스크립트를 웹사이트에 추가하세요.",
@@ -424,7 +431,7 @@ export default function LandingPage() {
 ></script>`,
               },
               {
-                step: "3",
+                step: "4",
                 title: "완료!",
                 description:
                   "이제 웹사이트 우하단에 챗봇 버튼이 표시됩니다. 필요에 따라 색상이나 위치를 커스터마이징하세요.",
