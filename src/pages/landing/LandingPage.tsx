@@ -131,7 +131,7 @@ export default function LandingPage() {
           >
             <div className="inline-block mb-4 sm:mb-6">
               <span className="px-3 py-1.5 sm:px-4 sm:py-2 bg-red-50 text-[#df3326] rounded-full text-xs sm:text-sm font-medium border border-red-100">
-                GIST 개발자를 위한 챗봇 위젯 SDK
+                GIST 학생들을 위한 챗봇 위젯 서비스
               </span>
             </div>
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight px-2">
@@ -475,10 +475,11 @@ export default function LandingPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 md:py-12">
             <div className="text-center text-gray-500 px-2">
               <p className="mb-2 text-sm sm:text-base">
-                © 2024 Chatbot Widget. 개발자를 위한 챗봇 위젯 SDK
+                © 2026 INFOTEAM. GIST 학생들을 위한 챗봇 위젯
               </p>
               <p className="text-xs sm:text-sm text-gray-400">
-                궁금한 점이 있으시면 언제든지 문의해주세요
+                문의 :{" "}
+                <a href="mailto:chatbot@gistory.me">chatbot@gistory.me</a>
               </p>
             </div>
           </div>
