@@ -19,7 +19,7 @@ export default function App() {
       {!isWidgetPage && <Header />}
 
       <Routes>
-        {/* 위젯은 헤더 없이 별도 경로로 분리 */}
+        {/* 채팅 위젯 */}
         <Route path="/widget/*" element={<ChatWidget />} />
 
         {/* 랜딩 페이지 */}
