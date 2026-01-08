@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import "./landing.module.css";
 
 export default function LandingPage() {
   const [isVisible] = useState(true);
@@ -46,16 +47,15 @@ export default function LandingPage() {
           }}
         />
 
-        {/* Moving Grid Pattern */}
+        {/* Static Grid Pattern */}
         <div
           className="absolute inset-0"
           style={{
             backgroundImage: `
-              linear-gradient(90deg, transparent 78px, rgba(223, 51, 38, 0.08) 80px, rgba(223, 51, 38, 0.08) 82px, transparent 84px),
-              linear-gradient(0deg, transparent 78px, rgba(223, 51, 38, 0.08) 80px, rgba(223, 51, 38, 0.08) 82px, transparent 84px)
+              linear-gradient(90deg, transparent 78px, rgba(223, 51, 38, 0.06) 80px, rgba(223, 51, 38, 0.06) 82px, transparent 84px),
+              linear-gradient(0deg, transparent 78px, rgba(223, 51, 38, 0.06) 80px, rgba(223, 51, 38, 0.06) 82px, transparent 84px)
             `,
             backgroundSize: "80px 80px",
-            animation: "gridMove 30s linear infinite",
           }}
         />
 
@@ -85,21 +85,36 @@ export default function LandingPage() {
           }}
         />
 
-        {/* Animated Lines Pattern */}
+        {/* Moving Diagonal Lines Pattern - 빠르게 움직이는 대각선 */}
         <div
-          className="absolute inset-0"
+          className="absolute"
           style={{
+            inset: "-40px",
             backgroundImage: `
               repeating-linear-gradient(
                 45deg,
                 transparent,
                 transparent 10px,
-                rgba(223, 51, 38, 0.05) 10px,
-                rgba(223, 51, 38, 0.05) 11px
+                rgba(223, 51, 38, 0.06) 10px,
+                rgba(223, 51, 38, 0.06) 11px
               )
             `,
             backgroundSize: "40px 40px",
-            animation: "lineMove 40s linear infinite",
+            animation: "lineMove 2.7s linear infinite",
+          }}
+        />
+
+        {/* Pulsing Color Overlay - 더 연한 펄스 효과 */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `radial-gradient(
+              ellipse 110% 70% at 50% 40%,
+              rgba(223, 51, 38, 0.08) 0%,
+              rgba(223, 51, 38, 0.05) 35%,
+              transparent 65%
+            )`,
+            animation: "pulseColor 5s ease-in-out infinite",
           }}
         />
       </div>
@@ -157,7 +172,7 @@ export default function LandingPage() {
                   onClick={copyToClipboard}
                   className={`px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
                     isCopied
-                      ? "bg-green-600 text-white border border-green-600"
+                      ? "bg-[#df3326] text-white border border-[#df3326]"
                       : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
                   }`}
                 >
@@ -462,74 +477,6 @@ export default function LandingPage() {
           </div>
         </footer>
       </div>
-
-      <style>{`
-        @keyframes gradientShift {
-          0% {
-            opacity: 0.6;
-          }
-          50% {
-            opacity: 1;
-          }
-          100% {
-            opacity: 0.6;
-          }
-        }
-        
-        @keyframes gridMove {
-          0% {
-            transform: translate(0, 0);
-          }
-          100% {
-            transform: translate(80px, 80px);
-          }
-        }
-        
-        @keyframes orbFloat1 {
-          0%, 100% {
-            transform: translate(0, 0) scale(1);
-          }
-          25% {
-            transform: translate(50px, -50px) scale(1.1);
-          }
-          50% {
-            transform: translate(100px, 0) scale(0.9);
-          }
-          75% {
-            transform: translate(50px, 50px) scale(1.05);
-          }
-        }
-        
-        @keyframes orbFloat2 {
-          0%, 100% {
-            transform: translate(0, 0) scale(1);
-          }
-          33% {
-            transform: translate(-60px, 60px) scale(1.15);
-          }
-          66% {
-            transform: translate(-120px, -30px) scale(0.85);
-          }
-        }
-        
-        @keyframes orbFloat3 {
-          0%, 100% {
-            transform: translate(-50%, -50%) scale(1) rotate(0deg);
-          }
-          50% {
-            transform: translate(-50%, -50%) scale(1.2) rotate(180deg);
-          }
-        }
-        
-        @keyframes lineMove {
-          0% {
-            transform: translate(0, 0);
-          }
-          100% {
-            transform: translate(20px, 20px);
-          }
-        }
-      `}</style>
     </div>
   );
 }
