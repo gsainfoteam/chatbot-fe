@@ -19,6 +19,14 @@ type ColorSettings = {
   assistantMessageBg: string;
 };
 
+type LayoutSettings = {
+  position: "right" | "left";
+  offset: number;
+  width: number;
+  height: number;
+  theme: "light" | "dark";
+};
+
 function generateWidgetKey(): string {
   const prefix = "wk_";
   const random = Math.random().toString(36).substring(2, 15);
@@ -90,6 +98,14 @@ export default function KeysContent() {
     border: "#e2e8f0",
     userMessageBg: "#df3326",
     assistantMessageBg: "#ffffff",
+  });
+
+  const [layoutSettings, setLayoutSettings] = useState<LayoutSettings>({
+    position: "right",
+    offset: 18,
+    width: 360,
+    height: 520,
+    theme: "light",
   });
 
   const previewIframeRef = useRef<HTMLIFrameElement>(null);
@@ -197,8 +213,27 @@ export default function KeysContent() {
     }
   };
 
+  const handleLayoutChange = (
+    key: keyof LayoutSettings,
+    value: string | number
+  ) => {
+    const newLayout = { ...layoutSettings, [key]: value };
+    setLayoutSettings(newLayout);
+
+    // 미리보기 iframe에 레이아웃 업데이트 전달
+    if (previewIframeRef.current?.contentWindow) {
+      previewIframeRef.current.contentWindow.postMessage(
+        {
+          type: "WM_UPDATE_LAYOUT",
+          layout: newLayout,
+        },
+        "*"
+      );
+    }
+  };
+
   useEffect(() => {
-    // 미리보기 iframe이 로드되면 초기 색상 설정
+    // 미리보기 iframe이 로드되면 초기 색상 및 레이아웃 설정
     const iframe = previewIframeRef.current;
     if (iframe) {
       const handleLoad = () => {
@@ -220,6 +255,7 @@ export default function KeysContent() {
                 ""
               ),
             },
+            layout: layoutSettings,
           },
           "*"
         );
@@ -227,7 +263,7 @@ export default function KeysContent() {
       iframe.addEventListener("load", handleLoad);
       return () => iframe.removeEventListener("load", handleLoad);
     }
-  }, [selectedKey, colorSettings]);
+  }, [selectedKey, colorSettings, layoutSettings]);
 
   return (
     <div>
@@ -501,8 +537,24 @@ export default function KeysContent() {
                     <div className="p-4 bg-gray-900 rounded-lg">
                       <pre className="text-xs text-gray-100 overflow-x-auto">
                         {`<script
-  src="https://widget.yourdomain.com/loader.js"
+  src="https://chatbot.gistory.me/loader.js"
   data-widget-key="${selectedKey.widgetKey}"
+  data-position="${layoutSettings.position}"
+  data-offset="${layoutSettings.offset}"
+  data-width="${layoutSettings.width}"
+  data-height="${layoutSettings.height}"
+  data-theme="${layoutSettings.theme}"
+  data-primary-color="${colorSettings.primary.replace("#", "")}"
+  data-button-color="${colorSettings.button.replace("#", "")}"
+  data-background-color="${colorSettings.background.replace("#", "")}"
+  data-text-color="${colorSettings.text.replace("#", "")}"
+  data-text-secondary-color="${colorSettings.textSecondary.replace("#", "")}"
+  data-border-color="${colorSettings.border.replace("#", "")}"
+  data-user-message-bg="${colorSettings.userMessageBg.replace("#", "")}"
+  data-assistant-message-bg="${colorSettings.assistantMessageBg.replace(
+    "#",
+    ""
+  )}"
 ></script>`}
                       </pre>
                     </div>
@@ -735,109 +787,324 @@ export default function KeysContent() {
                 </div>
               </div>
 
-              {/* Color Settings & Preview - 가로 배치 */}
+              {/* Settings & Preview - 가로 배치 */}
               <div className="mt-8 pt-6 border-t border-gray-200">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Color Settings */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-4">
-                      색상 설정
-                    </label>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">
-                          Primary
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            value={colorSettings.primary}
+                  {/* Settings */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Layout Settings */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-4">
+                        레이아웃 설정
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">
+                            Position
+                          </label>
+                          <select
+                            value={layoutSettings.position}
                             onChange={(e) =>
-                              handleColorChange("primary", e.target.value)
+                              handleLayoutChange(
+                                "position",
+                                e.target.value as "right" | "left"
+                              )
                             }
-                            className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
+                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md"
+                          >
+                            <option value="right">Right</option>
+                            <option value="left">Left</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">
+                            Theme
+                          </label>
+                          <select
+                            value={layoutSettings.theme}
+                            onChange={(e) =>
+                              handleLayoutChange(
+                                "theme",
+                                e.target.value as "light" | "dark"
+                              )
+                            }
+                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md"
+                          >
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">
+                            Width (px)
+                          </label>
+                          <input
+                            type="number"
+                            value={layoutSettings.width}
+                            onChange={(e) =>
+                              handleLayoutChange(
+                                "width",
+                                parseInt(e.target.value) || 0
+                              )
+                            }
+                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md"
+                            min="200"
+                            max="800"
                           />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">
+                            Height (px)
+                          </label>
                           <input
-                            type="text"
-                            value={colorSettings.primary}
+                            type="number"
+                            value={layoutSettings.height}
                             onChange={(e) =>
-                              handleColorChange("primary", e.target.value)
+                              handleLayoutChange(
+                                "height",
+                                parseInt(e.target.value) || 0
+                              )
                             }
-                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
-                            placeholder="#df3326"
+                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md"
+                            min="300"
+                            max="800"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">
+                            Offset (px)
+                          </label>
+                          <input
+                            type="number"
+                            value={layoutSettings.offset}
+                            onChange={(e) =>
+                              handleLayoutChange(
+                                "offset",
+                                parseInt(e.target.value) || 0
+                              )
+                            }
+                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md"
+                            min="0"
                           />
                         </div>
                       </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">
-                          Button
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            value={colorSettings.button}
-                            onChange={(e) =>
-                              handleColorChange("button", e.target.value)
-                            }
-                            className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
-                          />
-                          <input
-                            type="text"
-                            value={colorSettings.button}
-                            onChange={(e) =>
-                              handleColorChange("button", e.target.value)
-                            }
-                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
-                            placeholder="#df3326"
-                          />
+                    </div>
+
+                    {/* Color Settings */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-4">
+                        색상 설정
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">
+                            Primary
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={colorSettings.primary}
+                              onChange={(e) =>
+                                handleColorChange("primary", e.target.value)
+                              }
+                              className="w-10 h-8 rounded border border-gray-300 cursor-pointer"
+                            />
+                            <input
+                              type="text"
+                              value={colorSettings.primary}
+                              onChange={(e) =>
+                                handleColorChange("primary", e.target.value)
+                              }
+                              className="w-20 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
+                              placeholder="#df3326"
+                            />
+                          </div>
                         </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">
-                          Background
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            value={colorSettings.background}
-                            onChange={(e) =>
-                              handleColorChange("background", e.target.value)
-                            }
-                            className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
-                          />
-                          <input
-                            type="text"
-                            value={colorSettings.background}
-                            onChange={(e) =>
-                              handleColorChange("background", e.target.value)
-                            }
-                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
-                            placeholder="#ffffff"
-                          />
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">
+                            Button
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={colorSettings.button}
+                              onChange={(e) =>
+                                handleColorChange("button", e.target.value)
+                              }
+                              className="w-10 h-8 rounded border border-gray-300 cursor-pointer"
+                            />
+                            <input
+                              type="text"
+                              value={colorSettings.button}
+                              onChange={(e) =>
+                                handleColorChange("button", e.target.value)
+                              }
+                              className="w-20 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
+                              placeholder="#df3326"
+                            />
+                          </div>
                         </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">
-                          Text
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="color"
-                            value={colorSettings.text}
-                            onChange={(e) =>
-                              handleColorChange("text", e.target.value)
-                            }
-                            className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
-                          />
-                          <input
-                            type="text"
-                            value={colorSettings.text}
-                            onChange={(e) =>
-                              handleColorChange("text", e.target.value)
-                            }
-                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
-                            placeholder="#1e293b"
-                          />
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">
+                            Background
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={colorSettings.background}
+                              onChange={(e) =>
+                                handleColorChange("background", e.target.value)
+                              }
+                              className="w-10 h-8 rounded border border-gray-300 cursor-pointer"
+                            />
+                            <input
+                              type="text"
+                              value={colorSettings.background}
+                              onChange={(e) =>
+                                handleColorChange("background", e.target.value)
+                              }
+                              className="w-20 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
+                              placeholder="#ffffff"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">
+                            Text
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={colorSettings.text}
+                              onChange={(e) =>
+                                handleColorChange("text", e.target.value)
+                              }
+                              className="w-10 h-8 rounded border border-gray-300 cursor-pointer"
+                            />
+                            <input
+                              type="text"
+                              value={colorSettings.text}
+                              onChange={(e) =>
+                                handleColorChange("text", e.target.value)
+                              }
+                              className="w-20 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
+                              placeholder="#1e293b"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">
+                            Text Secondary
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={colorSettings.textSecondary}
+                              onChange={(e) =>
+                                handleColorChange(
+                                  "textSecondary",
+                                  e.target.value
+                                )
+                              }
+                              className="w-10 h-8 rounded border border-gray-300 cursor-pointer"
+                            />
+                            <input
+                              type="text"
+                              value={colorSettings.textSecondary}
+                              onChange={(e) =>
+                                handleColorChange(
+                                  "textSecondary",
+                                  e.target.value
+                                )
+                              }
+                              className="w-20 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
+                              placeholder="#64748b"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">
+                            Border
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={colorSettings.border}
+                              onChange={(e) =>
+                                handleColorChange("border", e.target.value)
+                              }
+                              className="w-10 h-8 rounded border border-gray-300 cursor-pointer"
+                            />
+                            <input
+                              type="text"
+                              value={colorSettings.border}
+                              onChange={(e) =>
+                                handleColorChange("border", e.target.value)
+                              }
+                              className="w-20 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
+                              placeholder="#e2e8f0"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">
+                            User Msg BG
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={colorSettings.userMessageBg}
+                              onChange={(e) =>
+                                handleColorChange(
+                                  "userMessageBg",
+                                  e.target.value
+                                )
+                              }
+                              className="w-10 h-8 rounded border border-gray-300 cursor-pointer"
+                            />
+                            <input
+                              type="text"
+                              value={colorSettings.userMessageBg}
+                              onChange={(e) =>
+                                handleColorChange(
+                                  "userMessageBg",
+                                  e.target.value
+                                )
+                              }
+                              className="w-20 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
+                              placeholder="#df3326"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">
+                            Assistant Msg BG
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={colorSettings.assistantMessageBg}
+                              onChange={(e) =>
+                                handleColorChange(
+                                  "assistantMessageBg",
+                                  e.target.value
+                                )
+                              }
+                              className="w-10 h-8 rounded border border-gray-300 cursor-pointer"
+                            />
+                            <input
+                              type="text"
+                              value={colorSettings.assistantMessageBg}
+                              onChange={(e) =>
+                                handleColorChange(
+                                  "assistantMessageBg",
+                                  e.target.value
+                                )
+                              }
+                              className="w-20 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
+                              placeholder="#ffffff"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -872,7 +1139,19 @@ export default function KeysContent() {
                             <div className="h-4 bg-gray-200 rounded mt-4 w-2/3 animate-pulse"></div>
                             <div className="h-4 bg-gray-200 rounded mt-2 w-4/5 animate-pulse"></div>
                           </div>
-                          <div className="absolute bottom-4 right-4">
+                          <div
+                            className={`absolute bottom-4 ${
+                              layoutSettings.position === "right"
+                                ? "right-4"
+                                : "left-4"
+                            }`}
+                            style={{
+                              bottom: `${layoutSettings.offset}px`,
+                              [layoutSettings.position === "right"
+                                ? "right"
+                                : "left"]: `${layoutSettings.offset}px`,
+                            }}
+                          >
                             <button
                               className="w-14 h-14 rounded-full flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
                               style={{
