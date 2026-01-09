@@ -1,12 +1,111 @@
 // 채팅 위젯 메인 컴포넌트
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ChatMessage, ColorTheme, WidgetContext } from "./types";
+import type { ChatMessage, ColorTheme, WidgetContext, Source } from "./types";
 import { uid, applyColorTheme } from "./utils";
+import { LinkIcon, ExternalLinkIcon, PhotoIcon } from "../components/Icons";
+
+// 출처 배지 컴포넌트
+function SourceBadge({ source }: { source: Source }) {
+  if (source.type === "url") {
+    return (
+      <a
+        href={source.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition hover:opacity-80"
+        style={{
+          backgroundColor: "var(--color-background, #f8fafc)",
+          borderColor: "var(--color-border, #e2e8f0)",
+          color: "var(--color-text, #1e293b)",
+        }}
+      >
+        <LinkIcon className="w-3 h-3 shrink-0" />
+        <span className="max-w-[200px] truncate">
+          {source.title || new URL(source.url).hostname}
+        </span>
+        <ExternalLinkIcon className="w-3 h-3 shrink-0" />
+      </a>
+    );
+  }
+
+  if (source.type === "image") {
+    if (source.title) {
+      return (
+        <div
+          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border"
+          style={{
+            backgroundColor: "var(--color-background, #f8fafc)",
+            borderColor: "var(--color-border, #e2e8f0)",
+            color: "var(--color-text, #1e293b)",
+          }}
+        >
+          <PhotoIcon className="w-3 h-3 shrink-0" />
+          <span className="max-w-[200px] truncate">{source.title}</span>
+        </div>
+      );
+    }
+    return <></>;
+  }
+  return null;
+}
+
+// 이미지 컴포넌트 (로딩 skeleton 포함)
+function SourceImage({ source }: { source: Source }) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+
+  if (hasError) {
+    return null;
+  }
+
+  return (
+    <div className="mt-2 relative">
+      {/* Skeleton UI */}
+      {isLoading && (
+        <div
+          className="rounded-lg border animate-pulse"
+          style={{
+            aspectRatio: "16 / 9",
+            backgroundColor: "var(--color-background, #f1f5f9)",
+            borderColor: "var(--color-border, #e2e8f0)",
+          }}
+        />
+      )}
+
+      {/* 실제 이미지 */}
+      <img
+        src={source.url}
+        alt={source.title || "출처 이미지"}
+        className={`rounded-lg border ${
+          isLoading ? "absolute opacity-0" : "opacity-100"
+        }`}
+        style={{
+          maxWidth: "100%",
+          width: "100%",
+          height: "auto",
+          borderColor: "var(--color-border, #e2e8f0)",
+          transition: "opacity 0.2s ease-in-out",
+        }}
+        onLoad={() => {
+          setIsLoading(false);
+        }}
+        onError={() => {
+          setIsLoading(false);
+          setHasError(true);
+        }}
+      />
+    </div>
+  );
+}
 
 export default function ChatWidget() {
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: uid(), role: "assistant", text: "안녕하세요! 무엇을 도와드릴까요?" },
+    {
+      id: uid(),
+      role: "assistant",
+      text: "무엇을 도와드릴까요?",
+    },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -96,14 +195,30 @@ export default function ChatWidget() {
       "*"
     );
 
-    // ✅ 지금은 API 없이 "가짜 응답"만
+    // TODO: 실제 API 연동으로 대체 필요
     setTimeout(() => {
+      // TODO: 실제 API 응답으로 대체 필요 - 아래는 테스트용 더미 데이터입니다
       const assistantMsg: ChatMessage = {
         id: uid(),
         role: "assistant",
-        text: `(${ctx.widgetKey ?? "no-key"}) 페이지(${
-          ctx.pageUrl ? "있음" : "없음"
-        }) 확인! "${text}"에 답변할게요.`,
+        text: `(${ctx.widgetKey})\n\n이것은 테스트용 응답입니다. 실제 구현에서는 API에서 받은 응답을 사용하게 됩니다.`,
+        sources: [
+          {
+            type: "url",
+            url: "https://example.com/documentation",
+            title: "공식 문서",
+          },
+          {
+            type: "url",
+            url: "https://blog.example.com/article",
+            title: "관련 블로그 포스트",
+          },
+          {
+            type: "image",
+            url: "https://picsum.photos/400/300?random=1",
+            title: "출처 이미지",
+          },
+        ],
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
@@ -210,6 +325,27 @@ export default function ChatWidget() {
                 }
               >
                 {m.text}
+
+                {/* 출처 정보 표시 (assistant 메시지만) */}
+                {m.role === "assistant" &&
+                  m.sources &&
+                  m.sources.length > 0 && (
+                    <div className="mt-2 pt-3 border-t border-slate-200 flex flex-col gap-1">
+                      {/* 출처 배지 */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {m.sources.map((source, idx) => (
+                          <SourceBadge key={idx} source={source} />
+                        ))}
+                      </div>
+
+                      {/* 이미지 출처 표시 */}
+                      {m.sources
+                        .filter((s) => s.type === "image")
+                        .map((source, idx) => (
+                          <SourceImage key={`img-${idx}`} source={source} />
+                        ))}
+                    </div>
+                  )}
               </div>
             </div>
           ))}
