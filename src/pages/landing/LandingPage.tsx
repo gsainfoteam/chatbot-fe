@@ -118,7 +118,7 @@ export default function LandingPage() {
                 </code>
               </pre>
               <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-500 px-1 flex items-center gap-1.5 flex-wrap">
-                <span className="font-medium">팁:</span> 이 코드를 웹사이트의{" "}
+                <span className="font-medium">💡 팁:</span> 이 코드를 웹사이트의{" "}
                 <code className="px-1 py-0.5 bg-gray-200 rounded text-xs font-mono">
                   &lt;body&gt;
                 </code>{" "}
