@@ -1,5 +1,20 @@
 import { useState, useRef } from "react";
 import "./landing.module.css";
+import {
+  ClipboardIcon,
+  AcademicIcon,
+  BookIcon,
+  BuildingIcon,
+  BoltIcon,
+  CheckCircleIcon,
+  ChatIcon,
+  ShieldIcon,
+  PaletteIcon,
+  CodeIcon,
+  LockIcon,
+  DocumentIcon,
+} from "@/components/Icons";
+import AnimatedBackground from "@/components/AnimatedBackground";
 
 export default function LandingPage() {
   const [isVisible] = useState(true);
@@ -32,92 +47,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
-      {/* Animated Background Pattern */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Animated Gradient Background */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `
-              radial-gradient(circle at 20% 30%, rgba(223, 51, 38, 0.08) 0%, transparent 50%),
-              radial-gradient(circle at 80% 70%, rgba(255, 152, 0, 0.08) 0%, transparent 50%),
-              radial-gradient(circle at 50% 50%, rgba(223, 51, 38, 0.05) 0%, transparent 50%)
-            `,
-            animation: "gradientShift 20s ease infinite",
-          }}
-        />
-
-        {/* Static Grid Pattern */}
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `
-              linear-gradient(90deg, transparent 78px, rgba(223, 51, 38, 0.06) 80px, rgba(223, 51, 38, 0.06) 82px, transparent 84px),
-              linear-gradient(0deg, transparent 78px, rgba(223, 51, 38, 0.06) 80px, rgba(223, 51, 38, 0.06) 82px, transparent 84px)
-            `,
-            backgroundSize: "80px 80px",
-          }}
-        />
-
-        {/* Floating Gradient Orbs */}
-        <div
-          className="absolute top-1/4 -left-1/4 w-[300px] h-[300px] sm:w-[400px] sm:h-[400px] md:w-[500px] md:h-[500px] rounded-full blur-3xl"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(223, 51, 38, 0.12) 0%, transparent 70%)",
-            animation: "orbFloat1 25s ease-in-out infinite",
-          }}
-        />
-        <div
-          className="absolute bottom-1/4 -right-1/4 w-[350px] h-[350px] sm:w-[450px] sm:h-[450px] md:w-[600px] md:h-[600px] rounded-full blur-3xl"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(255, 152, 0, 0.1) 0%, transparent 70%)",
-            animation: "orbFloat2 30s ease-in-out infinite",
-          }}
-        />
-        <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] sm:w-[300px] sm:h-[300px] md:w-[400px] md:h-[400px] rounded-full blur-3xl"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(223, 51, 38, 0.08) 0%, transparent 70%)",
-            animation: "orbFloat3 20s ease-in-out infinite",
-          }}
-        />
-
-        {/* Moving Diagonal Lines Pattern - 빠르게 움직이는 대각선 */}
-        <div
-          className="absolute"
-          style={{
-            inset: "-40px",
-            backgroundImage: `
-              repeating-linear-gradient(
-                45deg,
-                transparent,
-                transparent 10px,
-                rgba(223, 51, 38, 0.06) 10px,
-                rgba(223, 51, 38, 0.06) 11px
-              )
-            `,
-            backgroundSize: "40px 40px",
-            animation: "lineMove 2.7s linear infinite",
-          }}
-        />
-
-        {/* Pulsing Color Overlay - 더 연한 펄스 효과 */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `radial-gradient(
-              ellipse 110% 70% at 50% 40%,
-              rgba(223, 51, 38, 0.08) 0%,
-              rgba(223, 51, 38, 0.05) 35%,
-              transparent 65%
-            )`,
-            animation: "pulseColor 5s ease-in-out infinite",
-          }}
-        />
-      </div>
+      <AnimatedBackground />
 
       <div className="relative z-10">
         {/* Hero Section */}
@@ -131,7 +61,7 @@ export default function LandingPage() {
           >
             <div className="inline-block mb-4 sm:mb-6">
               <span className="px-3 py-1.5 sm:px-4 sm:py-2 bg-red-50 text-[#df3326] rounded-full text-xs sm:text-sm font-medium border border-red-100">
-                GIST 학생들을 위한 챗봇 위젯 서비스
+                GIST 학생들을 위한 챗봇 서비스
               </span>
             </div>
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight px-2">
@@ -182,13 +112,13 @@ export default function LandingPage() {
               <pre className="text-left overflow-x-auto bg-gray-900 rounded-lg p-3 sm:p-4 text-xs sm:text-sm md:text-base">
                 <code className="text-green-400 font-mono">
                   {`<script
-  src="https://widget.yourdomain.com/loader.js"
+  src="https://chatbot.gistory.me/loader.js"
   data-widget-key="YOUR_WIDGET_KEY"
 ></script>`}
                 </code>
               </pre>
-              <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-500 px-1">
-                💡 <span className="font-medium">팁:</span> 이 코드를 웹사이트의{" "}
+              <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-500 px-1 flex items-center gap-1.5 flex-wrap">
+                <span className="font-medium">팁:</span> 이 코드를 웹사이트의{" "}
                 <code className="px-1 py-0.5 bg-gray-200 rounded text-xs font-mono">
                   &lt;body&gt;
                 </code>{" "}
@@ -246,17 +176,29 @@ export default function LandingPage() {
                       을 제공합니다.
                     </p>
                     <div className="flex flex-wrap gap-2 sm:gap-3 justify-center sm:justify-start">
-                      <span className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white/80 rounded-lg text-xs sm:text-sm font-medium text-gray-700 border border-red-200">
-                        📋 학사 공지
+                      <span className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white/80 rounded-lg text-xs sm:text-sm font-medium text-gray-700 border border-red-200 flex items-center gap-1.5">
+                        <span className="text-[#df3326]">
+                          <ClipboardIcon />
+                        </span>
+                        학사 공지
                       </span>
-                      <span className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white/80 rounded-lg text-xs sm:text-sm font-medium text-gray-700 border border-red-200">
-                        🎓 신입생 소개 자료
+                      <span className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white/80 rounded-lg text-xs sm:text-sm font-medium text-gray-700 border border-red-200 flex items-center gap-1.5">
+                        <span className="text-[#df3326]">
+                          <AcademicIcon />
+                        </span>
+                        신입생 소개 자료
                       </span>
-                      <span className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white/80 rounded-lg text-xs sm:text-sm font-medium text-gray-700 border border-red-200">
-                        📖 학사 편람
+                      <span className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white/80 rounded-lg text-xs sm:text-sm font-medium text-gray-700 border border-red-200 flex items-center gap-1.5">
+                        <span className="text-[#df3326]">
+                          <BookIcon />
+                        </span>
+                        학사 편람
                       </span>
-                      <span className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white/80 rounded-lg text-xs sm:text-sm font-medium text-gray-700 border border-red-200">
-                        🏫 학교 자체 정보
+                      <span className="px-3 py-1.5 sm:px-4 sm:py-2 bg-white/80 rounded-lg text-xs sm:text-sm font-medium text-gray-700 border border-red-200 flex items-center gap-1.5">
+                        <span className="text-[#df3326]">
+                          <BuildingIcon />
+                        </span>
+                        학교 자체 정보
                       </span>
                     </div>
                   </div>
@@ -266,19 +208,19 @@ export default function LandingPage() {
               <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
                 {[
                   {
-                    icon: "⚡",
+                    icon: <BoltIcon />,
                     title: "빠른 응답",
                     description:
                       "학교 공식 정보를 기반으로 하기 때문에 즉시 정확한 답변을 받을 수 있습니다.",
                   },
                   {
-                    icon: "🎯",
+                    icon: <CheckCircleIcon />,
                     title: "정확한 정보",
                     description:
                       "학사 공지와 편람 등 공식 자료를 학습하여 신뢰할 수 있는 정보만 제공합니다.",
                   },
                   {
-                    icon: "💬",
+                    icon: <ChatIcon />,
                     title: "쉬운 접근",
                     description:
                       "복잡한 웹사이트 탐색 없이 간단한 질문으로 원하는 정보를 바로 찾을 수 있습니다.",
@@ -293,7 +235,7 @@ export default function LandingPage() {
                     }`}
                     style={{ transitionDelay: `${index * 100}ms` }}
                   >
-                    <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-red-50 rounded-xl flex items-center justify-center text-[#df3326] mb-3 sm:mb-4">
                       {item.icon}
                     </div>
                     <h4 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
@@ -324,42 +266,42 @@ export default function LandingPage() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
               {[
                 {
-                  icon: "⚡",
+                  icon: <BoltIcon />,
                   title: "초간단 설치",
                   description:
                     "스크립트 한 줄만 추가하면 바로 사용할 수 있습니다. 복잡한 빌드 과정이나 설정 파일이 필요 없어요.",
                   detail: "npm 설치나 번들링 과정 없이 바로 시작하세요.",
                 },
                 {
-                  icon: "🛡️",
+                  icon: <ShieldIcon />,
                   title: "완전 분리된 구조",
                   description:
                     "iframe 기반으로 호스트 페이지와 완전히 분리되어 있어 CSS/JS 충돌 걱정이 없습니다.",
                   detail: "기존 스타일이나 스크립트에 영향을 주지 않아요.",
                 },
                 {
-                  icon: "🎨",
+                  icon: <PaletteIcon />,
                   title: "유연한 커스터마이징",
                   description:
                     "색상, 위치, 크기 등 모든 것을 data 속성으로 쉽게 커스터마이징할 수 있습니다.",
                   detail: "브랜드에 맞게 색상을 자유롭게 변경하세요.",
                 },
                 {
-                  icon: "📡",
+                  icon: <CodeIcon />,
                   title: "강력한 JavaScript API",
                   description:
                     "위젯 상태와 메시지를 실시간으로 추적하고 제어할 수 있는 완전한 API를 제공합니다.",
                   detail: "onOpen, onMessage 등 다양한 이벤트를 감지하세요.",
                 },
                 {
-                  icon: "🔒",
+                  icon: <LockIcon />,
                   title: "안전한 통신",
                   description:
                     "postMessage와 origin 검증으로 안전한 통신을 보장합니다.",
                   detail: "보안을 최우선으로 설계되었습니다.",
                 },
                 {
-                  icon: "📚",
+                  icon: <DocumentIcon />,
                   title: "상세한 문서",
                   description:
                     "설치부터 커스터마이징까지 모든 것을 친절하게 안내하는 문서를 제공합니다.",
@@ -375,7 +317,7 @@ export default function LandingPage() {
                   }`}
                   style={{ transitionDelay: `${index * 50}ms` }}
                 >
-                  <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-red-50 rounded-xl flex items-center justify-center text-[#df3326] mb-3 sm:mb-4">
                     {feature.icon}
                   </div>
                   <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
@@ -426,7 +368,7 @@ export default function LandingPage() {
                 description:
                   "발급받은 위젯 키를 사용해 스크립트를 웹사이트에 추가하세요.",
                 code: `<script
-  src="https://widget.yourdomain.com/loader.js"
+  src="https://chatbot.gistory.me/loader.js"
   data-widget-key="YOUR_WIDGET_KEY"
 ></script>`,
               },
@@ -475,7 +417,7 @@ export default function LandingPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 md:py-12">
             <div className="text-center text-gray-500 px-2">
               <p className="mb-2 text-sm sm:text-base">
-                © 2026 INFOTEAM. GIST 학생들을 위한 챗봇 위젯
+                © 2026 INFOTEAM. GIST 학생들을 위한 챗봇 서비스
               </p>
               <p className="text-xs sm:text-sm text-gray-400">
                 문의 :{" "}
