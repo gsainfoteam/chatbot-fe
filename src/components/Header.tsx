@@ -1,10 +1,9 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import { getToken, logoutFromOAuth2, revokeToken } from "../api/auth";
 import { BookIcon, KeyIcon, ChartBarIcon, MenuIcon, XIcon } from "./Icons";
 
 export default function Header() {
-  const navigate = useNavigate();
   const isAuthenticated = !!getToken();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
