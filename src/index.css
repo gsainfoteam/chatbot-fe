@@ -84,3 +84,21 @@
     transform: scale(1.08);
   }
 }
+
+/* Loading Spinner Animations */
+@keyframes spinner-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner {
+  animation: spinner-spin 1s linear infinite;
+}
+
+/* Glassmorphism backdrop for loading spinner */
+.loading-overlay {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(8px) saturate(130%);
+  -webkit-backdrop-filter: blur(8px) saturate(130%);
+}

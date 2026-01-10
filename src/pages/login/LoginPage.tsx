@@ -5,6 +5,7 @@ import {
   handleOAuth2Callback,
   useTokenExchange,
 } from "../../api/auth";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -149,12 +150,5 @@ export default function LoginPage() {
     return null;
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-      <div className="text-center">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#df3326] mb-4"></div>
-        <p className="text-gray-600">로그인 중...</p>
-      </div>
-    </div>
-  );
+  return <LoadingSpinner message="로그인 중..." fullScreen />;
 }
