@@ -11,21 +11,18 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-// 개발 환경 확인
-const isDev = import.meta.env.DEV || import.meta.env.MODE === "development";
-
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const token = getToken();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshToken = useRefreshToken();
 
-  // 개발 환경이 아니고 토큰이 있을 때만 검증 활성화
-  const shouldVerify = !isDev && !!token && !isRefreshing;
+  // 토큰이 있을 때만 검증 활성화
+  const shouldVerify = !!token && !isRefreshing;
   const { data, isLoading, isError } = useVerifyToken(shouldVerify);
 
   // Access Token 만료 체크 및 자동 갱신
   useEffect(() => {
-    if (isDev || !token || isRefreshing) {
+    if (!token || isRefreshing) {
       return;
     }
 
@@ -44,11 +41,6 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
-
-  // 개발 환경에서는 검증 건너뛰기
-  if (isDev) {
-    return <>{children}</>;
-  }
 
   // 토큰이 없으면 로그인 페이지로
   if (!token) {
@@ -79,8 +71,8 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // 인증 실패 또는 에러
-  if (isError || !data?.valid) {
+  // 인증 실패 또는 에러 (응답에 uuid가 있으면 유효)
+  if (isError || !data?.uuid) {
     return <Navigate to="/login" replace />;
   }
 

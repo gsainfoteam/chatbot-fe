@@ -2,7 +2,8 @@
 
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 import type { AxiosInstance } from "axios";
-import type { ApiResponse, OAuth2TokenResponse } from "./types";
+import type { ApiResponse } from "./types";
+import { refreshAccessToken, getRefreshToken } from "./auth";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
@@ -36,7 +37,10 @@ let failedQueue: Array<{
   reject: (error?: unknown) => void;
 }> = [];
 
-const processQueue = (error: AxiosError | null, token: string | null = null) => {
+const processQueue = (
+  error: AxiosError | null,
+  token: string | null = null
+) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
@@ -57,7 +61,11 @@ apiClient.interceptors.response.use(
     };
 
     // refresh 엔드포인트는 인터셉터에서 제외 (무한 루프 방지)
-    if (originalRequest.url?.includes("/auth/oauth2/refresh")) {
+    if (
+      originalRequest.url?.includes("/oauth2/token") ||
+      originalRequest.url?.includes("/oauth2/revoke") ||
+      originalRequest.url?.includes("/auth/oauth2/refresh")
+    ) {
       return Promise.reject(error);
     }
 
@@ -82,46 +90,36 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem("refreshToken");
-      if (refreshToken) {
+      // 백엔드 refresh token으로 토큰 갱신 시도
+      const savedRefreshToken = getRefreshToken();
+      if (savedRefreshToken) {
         try {
-          // 순환 참조 방지를 위해 직접 axios 호출
-          const refreshResponse = await axios.post<OAuth2TokenResponse>(
-            `${API_BASE_URL}/auth/oauth2/refresh`,
-            {
-              refresh_token: refreshToken,
-            }
-          );
-          
-          const tokenResponse = refreshResponse.data;
-          
-          // 토큰 저장
-          localStorage.setItem("authToken", tokenResponse.access_token);
-          if (tokenResponse.refresh_token) {
-            localStorage.setItem("refreshToken", tokenResponse.refresh_token);
-          }
-          if (tokenResponse.expires_in) {
-            const expiresAt = Date.now() + tokenResponse.expires_in * 1000;
-            localStorage.setItem("tokenExpiresAt", expiresAt.toString());
-          }
-          
-          processQueue(null, tokenResponse.access_token);
+          // IDP refresh -> 백엔드 로그인 전체 플로우 실행
+          // refreshAccessToken 내부에서 토큰 저장 처리됨
+          const backendResponse = await refreshAccessToken();
+
+          processQueue(null, backendResponse.access_token);
 
           // 원래 요청 재시도
           if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${tokenResponse.access_token}`;
+            originalRequest.headers.Authorization = `Bearer ${backendResponse.access_token}`;
           }
           isRefreshing = false;
           return apiClient(originalRequest);
         } catch (refreshError) {
           // Refresh 실패 시 로그인 페이지로 리다이렉트
           processQueue(refreshError as AxiosError, null);
+
+          // 모든 토큰 삭제
           localStorage.removeItem("authToken");
           localStorage.removeItem("refreshToken");
           localStorage.removeItem("tokenExpiresAt");
           isRefreshing = false;
-          
-          if (window.location.pathname !== "/login" && !window.location.pathname.startsWith("/auth/callback")) {
+
+          if (
+            window.location.pathname !== "/login" &&
+            !window.location.pathname.startsWith("/auth/callback")
+          ) {
             window.location.href = "/login";
           }
           return Promise.reject(refreshError);
@@ -132,8 +130,11 @@ apiClient.interceptors.response.use(
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("tokenExpiresAt");
         isRefreshing = false;
-        
-        if (window.location.pathname !== "/login" && !window.location.pathname.startsWith("/auth/callback")) {
+
+        if (
+          window.location.pathname !== "/login" &&
+          !window.location.pathname.startsWith("/auth/callback")
+        ) {
           window.location.href = "/login";
         }
         return Promise.reject(error);

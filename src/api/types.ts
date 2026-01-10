@@ -7,6 +7,7 @@ export interface ApiResponse<T = unknown> {
   error?: string;
 }
 
+// 기존 이메일/패스워드 로그인 (사용하지 않음)
 export interface LoginRequest {
   email: string;
   password: string;
@@ -21,13 +22,32 @@ export interface LoginResponse {
   };
 }
 
-export interface VerifyTokenResponse {
-  valid: boolean;
+// 백엔드 IDP 로그인 요청/응답
+// POST /api/v1/auth/admin/login with { code: "...", redirect_uri: "...", code_verifier: "..." }
+// 백엔드가 IDP 토큰 교환을 처리하므로 client_secret은 백엔드에서 관리
+export interface AdminLoginRequest {
+  code: string;
+  redirect_uri: string;
+  code_verifier: string;
+}
+
+export interface AdminLoginResponse {
+  access_token: string;
+  refresh_token?: string;
+  expires_in?: number;
+  token_type?: string;
   user?: {
     id: string;
     email: string;
     name?: string;
+    student_id?: string;
   };
+}
+
+export interface VerifyTokenResponse {
+  uuid: string;
+  email: string;
+  name: string;
 }
 
 export interface ChatMessage {
@@ -66,7 +86,13 @@ export interface OAuth2CallbackParams {
 }
 
 export interface TokenExchangeRequest {
-  code: string;
-  code_verifier?: string;
+  grant_type: "authorization_code" | "refresh_token";
+  code?: string;
   redirect_uri?: string;
+  refresh_token?: string;
+}
+
+export interface TokenRevocationRequest {
+  token: string;
+  token_type_hint?: "access_token" | "refresh_token";
 }

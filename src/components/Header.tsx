@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { getToken, removeTokens, logoutFromOAuth2 } from "../api/auth";
+import { getToken, logoutFromOAuth2, revokeToken } from "../api/auth";
 import { BookIcon, KeyIcon, ChartBarIcon, MenuIcon, XIcon } from "./Icons";
 
 export default function Header() {
@@ -11,7 +11,10 @@ export default function Header() {
   const handleLogout = async () => {
     setIsMobileMenuOpen(false);
 
-    // OAuth Provider 로그아웃 (선택사항 - 환경 변수가 설정되어 있으면 실행)
+    // 1. 백엔드 로그아웃 (토큰 무효화 + 로컬 토큰 삭제)
+    await revokeToken();
+
+    // 2. OAuth Provider 로그아웃 (선택사항 - 환경 변수가 설정되어 있으면 실행)
     const logoutUrl = import.meta.env.VITE_OAUTH2_LOGOUT_URL;
     if (logoutUrl) {
       try {
@@ -20,13 +23,11 @@ export default function Header() {
         return;
       } catch (error) {
         console.error("OAuth2 로그아웃 실패:", error);
-        // 실패해도 로컬 토큰은 제거하고 진행
       }
     }
 
-    // 로컬 토큰 제거 및 로그인 페이지로 이동
-    removeTokens();
-    navigate("/login");
+    // 3. 홈으로 이동
+    window.location.replace("/");
   };
 
   const closeMobileMenu = () => {
