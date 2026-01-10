@@ -219,6 +219,30 @@ Host Page
           └─ API 요청 → AI / Backend Server
 ```
 
+### 인증 플로우
+
+이 프로젝트는 인포팀 IDP(OAuth2/OIDC)를 통한 인증과 백엔드 자체 토큰 발급 구조를 사용합니다:
+
+```
+1. 사용자 → 로그인 클릭
+2. 프론트엔드 → IDP /authorize로 리다이렉트
+3. IDP → 사용자 로그인/동의
+4. IDP → 프론트엔드 /login으로 authorization code와 함께 리다이렉트
+5. 프론트엔드 → IDP /oauth2/token으로 code 교환 → IDP access_token 획득
+6. 프론트엔드 → 백엔드 /api/v1/auth/admin/login으로 { idp_token } 전송
+7. 백엔드 → 자체 access_token 발급
+8. 프론트엔드 → 백엔드 access_token으로 API 호출
+```
+
+토큰 갱신 플로우:
+
+```
+1. 백엔드 access_token 만료 (401 에러)
+2. IDP refresh_token으로 새 IDP access_token 획득
+3. 새 IDP access_token으로 백엔드 재로그인
+4. 새 백엔드 access_token으로 원래 요청 재시도
+```
+
 ---
 
 ## 🚀 개발 & 배포 (Maintainers)
@@ -232,12 +256,11 @@ npm run dev
 
 ### 환경 변수 설정
 
-프로젝트 루트에 `.env` 파일을 생성하고 다음 환경 변수를 설정하세요:
-
 ```bash
-# .env.example 파일을 복사하여 .env 파일 생성
 cp .env.example .env
 ```
+
+`.env.example` 파일을 복사한 후 필요한 값을 설정하세요.
 
 빌드
 
