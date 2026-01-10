@@ -164,19 +164,15 @@ function generateNonce(): string {
 
 // OAuth2 Authorization URL 생성
 export async function generateAuthorizationUrl(): Promise<string> {
-  // 로그인 페이지 URL (예: https://idp.gistory.me/auth/login)
-  const loginUrl =
+  // authorize 엔드포인트 URL (예: https://idp.gistory.me/authorize)
+  const authorizationUrl =
     import.meta.env.VITE_OAUTH2_AUTHORIZATION_URL ||
     "https://auth.example.com/authorize";
-
-  // 실제 authorize 엔드포인트는 상대 경로로 생성해야 함
-  // 예: /authorize?client_id=...&...
-  const authorizePath = "/authorize";
 
   const clientId = import.meta.env.VITE_OAUTH2_CLIENT_ID || "";
   const redirectUri =
     import.meta.env.VITE_OAUTH2_REDIRECT_URI ||
-    `${window.location.origin}/auth/callback`;
+    `${window.location.origin}/login`;
   const scope = import.meta.env.VITE_OAUTH2_SCOPE || "openid profile email";
 
   const { codeVerifier, codeChallenge } = await generatePKCE();
@@ -189,26 +185,20 @@ export async function generateAuthorizationUrl(): Promise<string> {
   localStorage.setItem("oauth2_nonce", nonce);
 
   // authorize 엔드포인트에 전달할 파라미터 생성
-  const authorizeParams = new URLSearchParams({
+  // 참고 URL 구조: https://idp.gistory.me/authorize?response_type=code&client_id=...&scope=...&state=...&redirect_uri=...&prompt=consent
+  const params = new URLSearchParams({
     response_type: "code",
     client_id: clientId,
-    redirect_uri: redirectUri,
     scope: scope,
     state: state,
+    redirect_uri: redirectUri,
+    prompt: "consent",
     code_challenge: codeChallenge,
     code_challenge_method: "S256",
     nonce: nonce,
-    prompt: "consent",
   });
 
-  // 로그인 페이지로 redirect 파라미터에 authorize 경로 인코딩
-  // 참고 URL 구조: https://idp.gistory.me/auth/login?redirect=%2Fauthorize%3F...
-  // redirect 파라미터는 상대 경로여야 함 (예: /authorize?...)
-  const loginParams = new URLSearchParams({
-    redirect: `${authorizePath}?${authorizeParams.toString()}`,
-  });
-
-  return `${loginUrl}?${loginParams.toString()}`;
+  return `${authorizationUrl}?${params.toString()}`;
 }
 
 // OAuth2 Callback에서 파라미터 추출 및 state 검증

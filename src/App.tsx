@@ -3,7 +3,6 @@
 import { Routes, Route, useLocation } from "react-router-dom";
 import ChatWidget from "./widget/ChatWidget.tsx";
 import LoginPage from "./pages/login/LoginPage.tsx";
-import OAuth2CallbackPage from "./pages/login/OAuth2CallbackPage.tsx";
 import DashboardPage from "./pages/dashboard/DashboardPage.tsx";
 import KeysPage from "./pages/keys/KeysPage.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
@@ -28,7 +27,6 @@ export default function App() {
 
         {/* 관리자 영역 */}
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/auth/callback" element={<OAuth2CallbackPage />} />
         <Route
           path="/dashboard"
           element={
