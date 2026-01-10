@@ -141,7 +141,6 @@ export default function ChatWidget() {
         // 색상 업데이트 메시지 처리
         const colors = data.colors as ColorTheme | undefined;
         if (colors) {
-          console.log("색상 업데이트 받음:", colors);
           applyColorTheme(colors);
           setCtx((prev) => ({
             ...prev,
