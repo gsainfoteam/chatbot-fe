@@ -99,7 +99,17 @@ function SourceImage({ source }: { source: Source }) {
   );
 }
 
-export default function ChatWidget() {
+interface ChatWidgetProps {
+  onClose?: () => void;
+  className?: string;
+  widgetKey?: string;
+}
+
+export default function ChatWidget({
+  onClose,
+  className,
+  widgetKey,
+}: ChatWidgetProps = {}) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: uid(),
@@ -111,51 +121,75 @@ export default function ChatWidget() {
   const [loading, setLoading] = useState(false);
   const isComposingRef = useRef(false);
 
+  // iframe 환경인지 확인 (React 앱 내부에서는 false)
+  const isInIframe = typeof window !== "undefined" && window.parent !== window;
+
   const [ctx, setCtx] = useState<WidgetContext>({});
   const listRef = useRef<HTMLDivElement | null>(null);
+
+  // React 앱 내부에서 직접 사용 시 widgetKey prop으로 초기화
+  useEffect(() => {
+    if (!isInIframe && widgetKey) {
+      setCtx((prev) => {
+        // 이미 같은 widgetKey이면 업데이트하지 않음
+        if (prev.widgetKey === widgetKey) {
+          return prev;
+        }
+        return {
+          widgetKey: widgetKey,
+          pageUrl:
+            typeof window !== "undefined" ? window.location.href : undefined,
+        };
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInIframe, widgetKey]); // ctx는 의존성에서 제외하여 무한 루프 방지
 
   // 미리보기 모드 확인 (URL 파라미터)
   const isPreviewMode =
     new URLSearchParams(window.location.search).get("preview") === "true";
 
   useEffect(() => {
-    // iframe이 로드되면 부모에게 준비됨 알림
-    window.parent?.postMessage({ type: "WM_WIDGET_READY" }, "*");
+    // iframe 환경에서만 postMessage 사용
+    if (isInIframe) {
+      // iframe이 로드되면 부모에게 준비됨 알림
+      window.parent?.postMessage({ type: "WM_WIDGET_READY" }, "*");
 
-    const onMsg = (e: MessageEvent) => {
-      const data = e.data;
-      if (!data || typeof data !== "object") return;
+      const onMsg = (e: MessageEvent) => {
+        const data = e.data;
+        if (!data || typeof data !== "object") return;
 
-      if (data.type === "WM_INIT") {
-        const colors = data.colors as ColorTheme | undefined;
-        if (colors) {
-          applyColorTheme(colors);
-        }
-        setCtx({
-          widgetKey: data.widgetKey,
-          pageUrl: data.pageUrl,
-          colors: colors,
-        });
-      }
-      if (data.type === "WM_UPDATE_COLORS") {
-        // 색상 업데이트 메시지 처리
-        const colors = data.colors as ColorTheme | undefined;
-        if (colors) {
-          applyColorTheme(colors);
-          setCtx((prev) => ({
-            ...prev,
+        if (data.type === "WM_INIT") {
+          const colors = data.colors as ColorTheme | undefined;
+          if (colors) {
+            applyColorTheme(colors);
+          }
+          setCtx({
+            widgetKey: data.widgetKey,
+            pageUrl: data.pageUrl,
             colors: colors,
-          }));
+          });
         }
-      }
-      if (data.type === "WM_CLOSE") {
-        // (필요하면 닫힘 애니메이션 처리 가능)
-      }
-    };
+        if (data.type === "WM_UPDATE_COLORS") {
+          // 색상 업데이트 메시지 처리
+          const colors = data.colors as ColorTheme | undefined;
+          if (colors) {
+            applyColorTheme(colors);
+            setCtx((prev) => ({
+              ...prev,
+              colors: colors,
+            }));
+          }
+        }
+        if (data.type === "WM_CLOSE") {
+          // (필요하면 닫힘 애니메이션 처리 가능)
+        }
+      };
 
-    window.addEventListener("message", onMsg);
-    return () => window.removeEventListener("message", onMsg);
-  }, []);
+      window.addEventListener("message", onMsg);
+      return () => window.removeEventListener("message", onMsg);
+    }
+  }, [isInIframe]);
 
   useEffect(() => {
     listRef.current?.scrollTo({
@@ -181,18 +215,20 @@ export default function ChatWidget() {
     setInput("");
     setLoading(true);
 
-    // 메시지 전송 이벤트 전달
-    window.parent?.postMessage(
-      {
-        type: "WM_MESSAGE_SENT",
-        message: {
-          id: userMsg.id,
-          text: userMsg.text,
-          role: userMsg.role,
+    // 메시지 전송 이벤트 전달 (iframe 환경에서만)
+    if (isInIframe) {
+      window.parent?.postMessage(
+        {
+          type: "WM_MESSAGE_SENT",
+          message: {
+            id: userMsg.id,
+            text: userMsg.text,
+            role: userMsg.role,
+          },
         },
-      },
-      "*"
-    );
+        "*"
+      );
+    }
 
     // TODO: 실제 API 연동으로 대체 필요
     setTimeout(() => {
@@ -223,24 +259,29 @@ export default function ChatWidget() {
       setMessages((prev) => [...prev, assistantMsg]);
       setLoading(false);
 
-      // 메시지 수신 이벤트 전달
-      window.parent?.postMessage(
-        {
-          type: "WM_MESSAGE_RECEIVED",
-          message: {
-            id: assistantMsg.id,
-            text: assistantMsg.text,
-            role: assistantMsg.role,
+      // 메시지 수신 이벤트 전달 (iframe 환경에서만)
+      if (isInIframe) {
+        window.parent?.postMessage(
+          {
+            type: "WM_MESSAGE_RECEIVED",
+            message: {
+              id: assistantMsg.id,
+              text: assistantMsg.text,
+              role: assistantMsg.role,
+            },
           },
-        },
-        "*"
-      );
+          "*"
+        );
+      }
     }, 600);
   };
 
   return (
-    <div className="h-screen w-screen bg-transparent p-0">
-      <div className="h-full w-full bg-white border border-slate-200 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.22)] overflow-hidden flex flex-col">
+    <div className={className || "h-screen w-screen bg-transparent p-0"}>
+      <div
+        className="h-full w-full bg-white border border-slate-200 shadow-[0_16px_40px_rgba(0,0,0,0.22)] overflow-hidden flex flex-col"
+        style={{ borderRadius: "18px" }}
+      >
         {/* Header */}
         <div
           className="flex items-center justify-between px-3 py-2 border-b bg-white"
@@ -281,9 +322,13 @@ export default function ChatWidget() {
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = "transparent";
             }}
-            onClick={() =>
-              window.parent?.postMessage({ type: "WM_REQUEST_CLOSE" }, "*")
-            }
+            onClick={() => {
+              if (isInIframe) {
+                window.parent?.postMessage({ type: "WM_REQUEST_CLOSE" }, "*");
+              } else if (onClose) {
+                onClose();
+              }
+            }}
             aria-label="닫기"
             title="닫기"
           >

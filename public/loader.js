@@ -2,8 +2,22 @@
   const scriptEl = document.currentScript;
   if (!scriptEl) return;
 
-  const WIDGET_ORIGIN = "http://localhost:5173";
+  const WIDGET_ORIGIN = "http://localhost:5173"; // TODO: 환경 변수로 설정
   const IFRAME_URL = WIDGET_ORIGIN + "/widget/";
+
+  // iframe 내부이거나 위젯 origin의 /widget/ 경로에서는 실행하지 않음 (무한 루프 방지)
+  // 다른 서비스에서는 WIDGET_ORIGIN과 다르므로 정상 실행됨
+  const isInIframe = window.self !== window.top;
+  const isWidgetOrigin =
+    window.location.origin === WIDGET_ORIGIN ||
+    window.location.origin === "http://localhost:5173" ||
+    window.location.origin === "https://chatbot.gistory.me";
+  if (
+    isInIframe ||
+    (isWidgetOrigin && window.location.pathname.startsWith("/widget"))
+  ) {
+    return;
+  }
 
   const Z = 2147483647;
 
