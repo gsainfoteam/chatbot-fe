@@ -19,6 +19,11 @@ export const apiClient: AxiosInstance = axios.create({
 // 요청 인터셉터: 토큰 자동 추가
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // refresh 엔드포인트는 Authorization 헤더 제외
+    if (config.url?.includes("/v1/auth/admin/refresh")) {
+      return config;
+    }
+    
     const token = localStorage.getItem("authToken");
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;

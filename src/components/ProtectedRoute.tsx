@@ -1,11 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import {
-  useVerifyToken,
-  getToken,
-  isTokenExpired,
-  useRefreshToken,
-} from "../api/auth";
+import { useVerifyToken, getToken } from "../api/auth";
 import LoadingSpinner from "./LoadingSpinner";
 
 interface ProtectedRouteProps {
@@ -14,49 +9,27 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const token = getToken();
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const refreshToken = useRefreshToken();
+  const [retryCount, setRetryCount] = useState(0);
 
   // 토큰이 있을 때만 검증 활성화
-  const shouldVerify = !!token && !isRefreshing;
-  const { data, isLoading, isError } = useVerifyToken(shouldVerify);
+  const shouldVerify = !!token;
+  const { data, isLoading, isError, refetch } = useVerifyToken(shouldVerify);
 
-  // Access Token 만료 체크 및 자동 갱신
+  // 에러 발생 시 재시도 (인터셉터가 토큰 갱신 중일 수 있음)
   useEffect(() => {
-    if (!token || isRefreshing) {
-      return;
+    if (isError && token && retryCount < 2) {
+      // 인터셉터가 토큰 갱신을 시도하는 동안 잠시 대기 후 재시도
+      const timer = setTimeout(() => {
+        setRetryCount((prev) => prev + 1);
+        refetch();
+      }, 500);
+      return () => clearTimeout(timer);
     }
-
-    if (isTokenExpired()) {
-      setIsRefreshing(true);
-      refreshToken.mutate(undefined, {
-        onSuccess: () => {
-          setIsRefreshing(false);
-        },
-        onError: () => {
-          setIsRefreshing(false);
-          // 갱신 실패 시 로그인 페이지로 리다이렉트
-          window.location.href = "/login";
-        },
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [isError, token, retryCount, refetch]);
 
   // 토큰이 없으면 로그인 페이지로
   if (!token) {
     return <Navigate to="/login" replace />;
-  }
-
-  // 토큰 갱신 중
-  if (isRefreshing || refreshToken.isPending) {
-    return (
-      <LoadingSpinner
-        message="토큰 갱신 중..."
-        fullScreen
-        className="bg-gray-50/55"
-      />
-    );
   }
 
   // 로딩 중
@@ -71,8 +44,20 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   // 인증 실패 또는 에러 (응답에 uuid가 있으면 유효)
-  if (isError || !data?.uuid) {
+  // 재시도 횟수를 초과한 경우에만 로그인 페이지로 리다이렉트
+  if ((isError || !data?.uuid) && retryCount >= 2) {
     return <Navigate to="/login" replace />;
+  }
+
+  // 에러가 있지만 재시도 중인 경우 로딩 표시
+  if (isError && retryCount < 2) {
+    return (
+      <LoadingSpinner
+        message="인증 확인 중..."
+        fullScreen
+        className="bg-gray-50/55"
+      />
+    );
   }
 
   return <>{children}</>;
