@@ -64,7 +64,8 @@ apiClient.interceptors.response.use(
     if (
       originalRequest.url?.includes("/oauth2/token") ||
       originalRequest.url?.includes("/oauth2/revoke") ||
-      originalRequest.url?.includes("/auth/oauth2/refresh")
+      originalRequest.url?.includes("/auth/oauth2/refresh") ||
+      originalRequest.url?.includes("/v1/auth/admin/refresh")
     ) {
       return Promise.reject(error);
     }
