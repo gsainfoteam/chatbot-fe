@@ -3,7 +3,7 @@ import CodeBlock from "../../../components/CodeBlock";
 export default function Examples() {
   return (
     <div className="prose prose-slate max-w-none">
-      <h1 className="text-4xl font-bold text-gray-900 mb-4">예제 모음</h1>
+      <h1 className="text-4xl font-bold text-gray-900 mb-4">Examples</h1>
       <p className="text-lg text-gray-600 mb-8">
         다양한 상황에서 사용할 수 있는 예제들을 확인하세요.
       </p>
