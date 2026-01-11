@@ -7,6 +7,7 @@ import DashboardPage from "./pages/dashboard/DashboardPage.tsx";
 import KeysPage from "./pages/keys/KeysPage.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import LandingPage from "./pages/landing/LandingPage.tsx";
+import DocsPage from "./pages/docs/DocsPage.tsx";
 import Header from "./components/Header.tsx";
 
 export default function App() {
@@ -24,6 +25,9 @@ export default function App() {
 
         {/* 랜딩 페이지 */}
         <Route path="/" element={<LandingPage />} />
+
+        {/* 문서 페이지 */}
+        <Route path="/docs/*" element={<DocsPage />} />
 
         {/* 관리자 영역 */}
         <Route path="/login" element={<LoginPage />} />

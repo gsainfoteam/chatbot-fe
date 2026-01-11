@@ -15,6 +15,7 @@ import {
   DocumentIcon,
 } from "@/components/Icons";
 import AnimatedBackground from "@/components/AnimatedBackground";
+import CodeBlock from "@/components/CodeBlock";
 
 export default function LandingPage() {
   const [isVisible] = useState(true);
@@ -109,14 +110,13 @@ export default function LandingPage() {
                   {isCopied ? "복사됨!" : "복사하기"}
                 </button>
               </div>
-              <pre className="text-left overflow-x-auto bg-gray-900 rounded-lg p-3 sm:p-4 text-xs sm:text-sm md:text-base">
-                <code className="text-green-400 font-mono">
-                  {`<script
+              <CodeBlock
+                code={`<script
   src="https://chatbot.gistory.me/loader.js"
   data-widget-key="YOUR_WIDGET_KEY"
 ></script>`}
-                </code>
-              </pre>
+                language="html"
+              />
               <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-500 px-1 flex items-center gap-1.5 flex-wrap">
                 <span className="font-medium">💡 팁:</span> 이 코드를 웹사이트의{" "}
                 <code className="px-1 py-0.5 bg-gray-200 rounded text-xs font-mono">
@@ -400,11 +400,7 @@ export default function LandingPage() {
                     {item.description}
                   </p>
                   {item.code && (
-                    <pre className="bg-gray-900 rounded-lg p-3 sm:p-4 overflow-x-auto text-xs sm:text-sm">
-                      <code className="text-green-400 font-mono">
-                        {item.code}
-                      </code>
-                    </pre>
+                    <CodeBlock code={item.code} language="html" />
                   )}
                 </div>
               </div>

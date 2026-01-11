@@ -34,7 +34,7 @@ export default function Header() {
   };
 
   return (
-    <nav className="sticky top-0 z-[9999] border-b border-gray-200/60 bg-white/80 backdrop-blur-md">
+    <nav className="header-sticky z-50 border-b border-gray-200/60 bg-white/80 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link
@@ -50,9 +50,7 @@ export default function Header() {
           {/* Desktop Menu */}
           <div className="hidden md:flex gap-2">
             <a
-              href="https://github.com/gsainfoteam/chatbot-fe"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/docs"
               className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200 inline-flex items-center gap-1.5"
             >
               <BookIcon className="w-4 h-4" />
