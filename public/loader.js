@@ -2,7 +2,7 @@
   const scriptEl = document.currentScript;
   if (!scriptEl) return;
 
-  const WIDGET_ORIGIN = "http://localhost:5173"; // TODO: 환경 변수로 설정
+  const WIDGET_ORIGIN = "https://chatbot.gistory.me";
   const IFRAME_URL = WIDGET_ORIGIN + "/widget/";
 
   // iframe 내부이거나 위젯 origin의 /widget/ 경로에서는 실행하지 않음 (무한 루프 방지)
