@@ -24,7 +24,7 @@ export default function LandingPage() {
 
   const copyToClipboard = async () => {
     const code = `<script
-  src="https://widget.yourdomain.com/loader.js"
+  src="https://chatbot.gistory.me/loader.js"
   data-widget-key="YOUR_WIDGET_KEY"
 ></script>`;
 
@@ -399,9 +399,7 @@ export default function LandingPage() {
                   <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4 text-center sm:text-left">
                     {item.description}
                   </p>
-                  {item.code && (
-                    <CodeBlock code={item.code} language="html" />
-                  )}
+                  {item.code && <CodeBlock code={item.code} language="html" />}
                 </div>
               </div>
             ))}

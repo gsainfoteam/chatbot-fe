@@ -19,7 +19,7 @@ export default function Examples() {
           </p>
           <CodeBlock
             code={`<script
-  src="https://widget.yourdomain.com/loader.js"
+  src="https://chatbot.gistory.me/loader.js"
   data-widget-key="YOUR_WIDGET_KEY"
 ></script>`}
             language="html"
@@ -36,7 +36,7 @@ export default function Examples() {
           </p>
           <CodeBlock
             code={`<script
-  src="https://widget.yourdomain.com/loader.js"
+  src="https://chatbot.gistory.me/loader.js"
   data-widget-key="wk_live_abc123"
   data-position="right"
   data-primary-color="3b82f6"
@@ -60,7 +60,7 @@ export default function Examples() {
           </p>
           <CodeBlock
             code={`<script
-  src="https://widget.yourdomain.com/loader.js"
+  src="https://chatbot.gistory.me/loader.js"
   data-widget-key="YOUR_WIDGET_KEY"
 ></script>
 <script>
@@ -109,7 +109,7 @@ export default function Examples() {
           </p>
           <CodeBlock
             code={`<script
-  src="https://widget.yourdomain.com/loader.js"
+  src="https://chatbot.gistory.me/loader.js"
   data-widget-key="YOUR_WIDGET_KEY"
 ></script>
 <script>
@@ -213,7 +213,7 @@ export default function Examples() {
 
   if (allowedPaths.includes(currentPath)) {
     const script = document.createElement('script');
-    script.src = 'https://widget.yourdomain.com/loader.js';
+    script.src = 'https://chatbot.gistory.me/loader.js';
     script.setAttribute('data-widget-key', 'YOUR_WIDGET_KEY');
     document.body.appendChild(script);
   }
@@ -222,7 +222,7 @@ export default function Examples() {
   const userRole = getUserRole(); // 사용자 정의 함수
   if (userRole === 'premium' || userRole === 'admin') {
     const script = document.createElement('script');
-    script.src = 'https://widget.yourdomain.com/loader.js';
+    script.src = 'https://chatbot.gistory.me/loader.js';
     script.setAttribute('data-widget-key', 'YOUR_WIDGET_KEY');
     document.body.appendChild(script);
   }

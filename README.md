@@ -35,7 +35,7 @@ Chatbot Widget은 웹사이트에 **간단하게 통합할 수 있는 임베디�
 
 ```html
 <script
-  src="https://widget.yourdomain.com/loader.js"
+  src="https://chatbot.gistory.me/loader.js"
   data-widget-key="YOUR_WIDGET_KEY"
 ></script>
 ```
@@ -56,7 +56,7 @@ Chatbot Widget은 웹사이트에 **간단하게 통합할 수 있는 임베디�
 
     <!-- 챗봇 위젯 설치 -->
     <script
-      src="https://widget.yourdomain.com/loader.js"
+      src="https://chatbot.gistory.me/loader.js"
       data-widget-key="wk_live_abc123"
     ></script>
   </body>
@@ -67,7 +67,7 @@ Chatbot Widget은 웹사이트에 **간단하게 통합할 수 있는 임베디�
 
 ```html
 <script
-  src="https://widget.yourdomain.com/loader.js"
+  src="https://chatbot.gistory.me/loader.js"
   data-widget-key="wk_live_abc123"
   data-position="right"
   data-primary-color="df3326"

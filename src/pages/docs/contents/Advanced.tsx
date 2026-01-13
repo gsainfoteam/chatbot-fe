@@ -15,8 +15,9 @@ export default function Advanced() {
             동적 색상 변경
           </h2>
           <p className="text-gray-700 mb-4">
-            위젯이 로드된 후에도 JavaScript API를 사용하여 색상을 동적으로 변경할 수 있습니다. 
-            이는 사용자 설정, 테마 변경, 또는 시간대에 따른 색상 변경 등에 유용합니다.
+            위젯이 로드된 후에도 JavaScript API를 사용하여 색상을 동적으로
+            변경할 수 있습니다. 이는 사용자 설정, 테마 변경, 또는 시간대에 따른
+            색상 변경 등에 유용합니다.
           </p>
           <CodeBlock
             code={`// 위젯이 준비되면 색상 변경
@@ -36,7 +37,9 @@ ChatbotWidget.on("onReady", () => {
           />
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
             <p className="text-sm text-blue-900">
-              💡 <strong>팁:</strong> 색상 값은 <code className="bg-blue-100 px-1 rounded">#</code> 없이 6자리 hex 코드로 입력하세요.
+              💡 <strong>팁:</strong> 색상 값은{" "}
+              <code className="bg-blue-100 px-1 rounded">#</code> 없이 6자리 hex
+              코드로 입력하세요.
             </p>
           </div>
         </section>
@@ -47,7 +50,14 @@ ChatbotWidget.on("onReady", () => {
             커스텀 이벤트 처리
           </h2>
           <p className="text-gray-700 mb-4">
-            <code className="bg-gray-100 px-2 py-1 rounded text-sm">ChatbotWidget.on()</code> 외에도 브라우저의 네이티브 <code className="bg-gray-100 px-2 py-1 rounded text-sm">CustomEvent</code>를 사용할 수 있습니다.
+            <code className="bg-gray-100 px-2 py-1 rounded text-sm">
+              ChatbotWidget.on()
+            </code>{" "}
+            외에도 브라우저의 네이티브{" "}
+            <code className="bg-gray-100 px-2 py-1 rounded text-sm">
+              CustomEvent
+            </code>
+            를 사용할 수 있습니다.
           </p>
           <CodeBlock
             code={`// CustomEvent 방식 사용
@@ -126,7 +136,8 @@ ChatbotWidget.on("onClose", () => {
                 1. 지연 로딩 (Lazy Loading)
               </h3>
               <p className="text-gray-700 mb-3">
-                사용자가 페이지 하단으로 스크롤하거나 특정 조건이 만족될 때만 위젯을 로드할 수 있습니다.
+                사용자가 페이지 하단으로 스크롤하거나 특정 조건이 만족될 때만
+                위젯을 로드할 수 있습니다.
               </p>
               <CodeBlock
                 code={`// Intersection Observer를 사용한 지연 로딩
@@ -135,7 +146,7 @@ const observer = new IntersectionObserver((entries) => {
     if (entry.isIntersecting) {
       // 뷰포트에 들어왔을 때 위젯 로드
       const script = document.createElement('script');
-      script.src = 'https://widget.yourdomain.com/loader.js';
+      script.src = 'https://chatbot.gistory.me/loader.js';
       script.setAttribute('data-widget-key', 'YOUR_WIDGET_KEY');
       document.body.appendChild(script);
       observer.disconnect();
@@ -187,11 +198,14 @@ unsubscribe();`}
             여러 위젯 키 사용
           </h2>
           <p className="text-gray-700 mb-4">
-            한 페이지에 여러 위젯 키를 사용하는 것은 권장하지 않습니다. 하나의 위젯 키에 여러 도메인을 등록하여 사용하세요.
+            한 페이지에 여러 위젯 키를 사용하는 것은 권장하지 않습니다. 하나의
+            위젯 키에 여러 도메인을 등록하여 사용하세요.
           </p>
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <p className="text-sm text-yellow-900">
-              ⚠️ <strong>주의:</strong> 하나의 페이지에 여러 위젯 인스턴스를 로드하면 충돌이 발생할 수 있습니다. 대신 하나의 위젯 키를 사용하고 도메인을 여러 개 등록하세요.
+              ⚠️ <strong>주의:</strong> 하나의 페이지에 여러 위젯 인스턴스를
+              로드하면 충돌이 발생할 수 있습니다. 대신 하나의 위젯 키를 사용하고
+              도메인을 여러 개 등록하세요.
             </p>
           </div>
         </section>
@@ -202,7 +216,8 @@ unsubscribe();`}
             접근성 고려사항
           </h2>
           <p className="text-gray-700 mb-4">
-            위젯은 기본적으로 접근성을 고려하여 설계되었지만, 추가적인 고려사항이 있습니다.
+            위젯은 기본적으로 접근성을 고려하여 설계되었지만, 추가적인
+            고려사항이 있습니다.
           </p>
           <ul className="list-disc list-inside space-y-2 text-gray-700 ml-4">
             <li>키보드 네비게이션: 위젯은 키보드로도 접근 가능합니다</li>
@@ -218,11 +233,14 @@ unsubscribe();`}
             SEO 고려사항
           </h2>
           <p className="text-gray-700 mb-4">
-            위젯은 iframe 내에서 실행되므로 검색 엔진에 의해 인덱싱되지 않습니다. 이는 SEO에 영향을 주지 않습니다.
+            위젯은 iframe 내에서 실행되므로 검색 엔진에 의해 인덱싱되지
+            않습니다. 이는 SEO에 영향을 주지 않습니다.
           </p>
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <p className="text-sm text-green-900">
-              ✅ <strong>좋은 소식:</strong> 위젯은 SEO에 영향을 주지 않습니다. iframe 내에서 실행되므로 페이지의 메타데이터나 콘텐츠 인덱싱에 영향을 미치지 않습니다.
+              ✅ <strong>좋은 소식:</strong> 위젯은 SEO에 영향을 주지 않습니다.
+              iframe 내에서 실행되므로 페이지의 메타데이터나 콘텐츠 인덱싱에
+              영향을 미치지 않습니다.
             </p>
           </div>
         </section>

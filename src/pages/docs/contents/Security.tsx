@@ -16,8 +16,13 @@ export default function Security() {
           </h2>
           <ul className="space-y-3 text-gray-700 list-disc list-inside mb-4">
             <li>위젯 UI는 iframe에서 실행됩니다</li>
-            <li>호스트 ↔ iframe 통신은 postMessage + origin 검증을 사용합니다</li>
-            <li>실제 AI 요청/비즈니스 로직은 서버에서만 처리하는 것을 전제로 합니다</li>
+            <li>
+              호스트 ↔ iframe 통신은 postMessage + origin 검증을 사용합니다
+            </li>
+            <li>
+              실제 AI 요청/비즈니스 로직은 서버에서만 처리하는 것을 전제로
+              합니다
+            </li>
           </ul>
           <CodeBlock
             code={`Host Page
@@ -34,14 +39,18 @@ export default function Security() {
             Widget Key 보안
           </h2>
           <p className="text-gray-700 mb-4">
-            <code className="bg-gray-100 px-2 py-1 rounded text-sm">widgetKey</code>는 위젯을 설치한 서비스를 식별하기 위한 키입니다.
+            <code className="bg-gray-100 px-2 py-1 rounded text-sm">
+              widgetKey
+            </code>
+            는 위젯을 설치한 서비스를 식별하기 위한 키입니다.
           </p>
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
             <p className="text-sm text-yellow-900 font-semibold mb-2">
               ⚠️ 주의사항
             </p>
             <p className="text-sm text-yellow-900">
-              widgetKey는 공개 HTML에 포함되므로, 서버에서는 반드시 <strong>도메인 기반 검증</strong>을 수행해야 합니다.
+              widgetKey는 공개 HTML에 포함되므로, 서버에서는 반드시{" "}
+              <strong>도메인 기반 검증</strong>을 수행해야 합니다.
             </p>
           </div>
           <p className="text-gray-700 mb-4">
@@ -65,10 +74,12 @@ export default function Security() {
               🔒 보안 필수사항
             </p>
             <p className="text-sm text-red-900 mb-2">
-              <code className="bg-red-100 px-2 py-1 rounded">loader.js</code>는 반드시 <strong>HTTPS 환경</strong>에서 사용하세요.
+              <code className="bg-red-100 px-2 py-1 rounded">loader.js</code>는
+              반드시 <strong>HTTPS 환경</strong>에서 사용하세요.
             </p>
             <p className="text-sm text-red-900">
-              HTTP 환경에서는 보안 위험이 있으며, 일부 브라우저에서는 동작하지 않을 수 있습니다.
+              HTTP 환경에서는 보안 위험이 있으며, 일부 브라우저에서는 동작하지
+              않을 수 있습니다.
             </p>
           </div>
         </section>
@@ -83,8 +94,8 @@ export default function Security() {
           </p>
           <CodeBlock
             code={`Content-Security-Policy:
-  script-src 'self' https://widget.yourdomain.com;
-  frame-src 'self' https://widget.yourdomain.com;`}
+  script-src 'self' https://chatbot.gistory.me;
+  frame-src 'self' https://chatbot.gistory.me;`}
             language="plaintext"
           />
         </section>

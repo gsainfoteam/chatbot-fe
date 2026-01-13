@@ -178,7 +178,10 @@ export default function Customization() {
           </div>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-900">
-              💡 색상 값은 <code className="bg-blue-100 px-1 rounded">#</code> 없이 6자리 hex 코드로 입력하세요. (예: <code className="bg-blue-100 px-1 rounded">df3326</code>, <code className="bg-blue-100 px-1 rounded">3b82f6</code>)
+              💡 색상 값은 <code className="bg-blue-100 px-1 rounded">#</code>{" "}
+              없이 6자리 hex 코드로 입력하세요. (예:{" "}
+              <code className="bg-blue-100 px-1 rounded">df3326</code>,{" "}
+              <code className="bg-blue-100 px-1 rounded">3b82f6</code>)
             </p>
           </div>
         </section>
@@ -190,7 +193,7 @@ export default function Customization() {
           </h2>
           <CodeBlock
             code={`<script
-  src="https://widget.yourdomain.com/loader.js"
+  src="https://chatbot.gistory.me/loader.js"
   data-widget-key="wk_live_abc123"
   data-position="right"
   data-primary-color="3b82f6"

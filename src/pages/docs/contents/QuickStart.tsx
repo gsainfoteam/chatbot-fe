@@ -18,11 +18,15 @@ export default function QuickStart() {
             스크립트 추가
           </h2>
           <p className="text-gray-700 mb-4">
-            웹사이트의 <code className="bg-gray-100 px-2 py-1 rounded text-sm">&lt;body&gt;</code> 태그 하단에 아래 스크립트를 추가하세요.
+            웹사이트의{" "}
+            <code className="bg-gray-100 px-2 py-1 rounded text-sm">
+              &lt;body&gt;
+            </code>{" "}
+            태그 하단에 아래 스크립트를 추가하세요.
           </p>
           <CodeBlock
             code={`<script
-  src="https://widget.yourdomain.com/loader.js"
+  src="https://chatbot.gistory.me/loader.js"
   data-widget-key="YOUR_WIDGET_KEY"
 ></script>`}
             language="html"
@@ -38,11 +42,17 @@ export default function QuickStart() {
             Widget Key 발급
           </h2>
           <p className="text-gray-700 mb-4">
-            위젯을 사용하려면 <code className="bg-gray-100 px-2 py-1 rounded text-sm">widget-key</code>가 필요합니다. 관리자 페이지에서 키를 발급받으세요.
+            위젯을 사용하려면{" "}
+            <code className="bg-gray-100 px-2 py-1 rounded text-sm">
+              widget-key
+            </code>
+            가 필요합니다. 관리자 페이지에서 키를 발급받으세요.
           </p>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-900">
-              💡 <strong>Widget Key란?</strong> 위젯을 설치한 서비스를 식별하기 위한 고유 키입니다. 이를 통해 도메인 제한, 사용량 관리 등이 가능합니다.
+              💡 <strong>Widget Key란?</strong> 위젯을 설치한 서비스를 식별하기
+              위한 고유 키입니다. 이를 통해 도메인 제한, 사용량 관리 등이
+              가능합니다.
             </p>
           </div>
         </section>
@@ -60,7 +70,8 @@ export default function QuickStart() {
           </p>
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <p className="text-sm text-green-900">
-              ✅ 위젯이 정상적으로 로드되었는지 확인하려면 브라우저 개발자 도구의 콘솔을 확인하세요.
+              ✅ 위젯이 정상적으로 로드되었는지 확인하려면 브라우저 개발자
+              도구의 콘솔을 확인하세요.
             </p>
           </div>
         </section>
@@ -82,7 +93,7 @@ export default function QuickStart() {
     
     <!-- 챗봇 위젯 설치 -->
     <script
-      src="https://widget.yourdomain.com/loader.js"
+      src="https://chatbot.gistory.me/loader.js"
       data-widget-key="wk_live_abc123"
     ></script>
   </body>
@@ -103,8 +114,8 @@ export default function QuickStart() {
                 className="text-[#df3326] hover:underline font-medium"
               >
                 Installation 가이드
-              </a>
-              {" "}에서 더 자세한 설치 방법을 확인하세요
+              </a>{" "}
+              에서 더 자세한 설치 방법을 확인하세요
             </li>
             <li>
               <a
@@ -112,8 +123,8 @@ export default function QuickStart() {
                 className="text-[#df3326] hover:underline font-medium"
               >
                 Customization
-              </a>
-              {" "}에서 색상과 레이아웃을 커스터마이징하세요
+              </a>{" "}
+              에서 색상과 레이아웃을 커스터마이징하세요
             </li>
             <li>
               <a
@@ -121,8 +132,8 @@ export default function QuickStart() {
                 className="text-[#df3326] hover:underline font-medium"
               >
                 JavaScript API
-              </a>
-              {" "}를 사용하여 위젯을 프로그래밍 방식으로 제어하세요
+              </a>{" "}
+              를 사용하여 위젯을 프로그래밍 방식으로 제어하세요
             </li>
           </ul>
         </section>
