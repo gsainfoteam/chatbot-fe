@@ -198,6 +198,13 @@ export async function apiPut<T>(
   return apiRequest<T>(apiClient.put<T>(endpoint, body));
 }
 
+export async function apiPatch<T>(
+  endpoint: string,
+  body?: unknown
+): Promise<ApiResponse<T>> {
+  return apiRequest<T>(apiClient.patch<T>(endpoint, body));
+}
+
 export async function apiDelete<T>(endpoint: string): Promise<ApiResponse<T>> {
   return apiRequest<T>(apiClient.delete<T>(endpoint));
 }

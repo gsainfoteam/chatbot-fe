@@ -1,4 +1,11 @@
 import { useRef, useState, useEffect } from "react";
+import {
+  getWidgetKeys,
+  createWidgetKey,
+  addDomainToWidgetKey,
+  removeDomainFromWidgetKey,
+  revokeWidgetKey,
+} from "../../api/widgetKeys";
 
 type WidgetKey = {
   id: string;
@@ -6,6 +13,7 @@ type WidgetKey = {
   widgetKey: string;
   createdAt: string;
   domains: string[];
+  status?: "ACTIVE" | "REVOKED";
 };
 
 type ColorSettings = {
@@ -26,12 +34,6 @@ type LayoutSettings = {
   height: number;
   theme: "light" | "dark";
 };
-
-function generateWidgetKey(): string {
-  const prefix = "wk_";
-  const random = Math.random().toString(36).substring(2, 15);
-  return `${prefix}${random}`;
-}
 
 function validateDomain(domain: string): { isValid: boolean; error?: string } {
   const trimmed = domain.trim();
@@ -86,6 +88,8 @@ export default function KeysContent() {
   const [newKeyName, setNewKeyName] = useState("");
   const [selectedKey, setSelectedKey] = useState<WidgetKey | null>(null);
   const [newDomain, setNewDomain] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const isComposingKeyNameRef = useRef(false);
   const isComposingDomainRef = useRef(false);
 
@@ -109,24 +113,37 @@ export default function KeysContent() {
   });
 
   const previewIframeRef = useRef<HTMLIFrameElement>(null);
+  const [isCreating, setIsCreating] = useState(false);
 
-  const handleGenerateKey = () => {
+  const handleGenerateKey = async () => {
     const name = newKeyName.trim() || `위젯 키 ${widgetKeys.length + 1}`;
 
-    const newKey: WidgetKey = {
-      id: Math.random().toString(36).substring(2, 15),
-      name: name,
-      widgetKey: generateWidgetKey(),
-      createdAt: new Date().toISOString(),
-      domains: [],
-    };
+    try {
+      setIsCreating(true);
+      const response = await createWidgetKey({ name });
 
-    setWidgetKeys([...widgetKeys, newKey]);
-    setNewKeyName("");
-    setSelectedKey(newKey);
+      // API 응답을 WidgetKey 타입으로 변환
+      const newKey: WidgetKey = {
+        id: response.id,
+        name: response.name,
+        widgetKey: response.secretKey,
+        createdAt: response.createdAt,
+        domains: response.allowedDomains,
+        status: response.status,
+      };
+
+      setWidgetKeys([...widgetKeys, newKey]);
+      setNewKeyName("");
+      setSelectedKey(newKey);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "위젯 키 생성에 실패했습니다.");
+      console.error("Failed to create widget key:", err);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
-  const handleAddDomain = () => {
+  const handleAddDomain = async () => {
     if (!selectedKey || !newDomain.trim()) return;
 
     const domain = newDomain.trim();
@@ -144,42 +161,91 @@ export default function KeysContent() {
       return;
     }
 
-    setWidgetKeys(
-      widgetKeys.map((key) =>
-        key.id === selectedKey.id
-          ? { ...key, domains: [...key.domains, domain] }
-          : key
-      )
-    );
-    setNewDomain("");
-    setSelectedKey({
-      ...selectedKey,
-      domains: [...selectedKey.domains, domain],
-    });
+    try {
+      const response = await addDomainToWidgetKey(selectedKey.id, { domain });
+
+      // API 응답을 WidgetKey 타입으로 변환
+      const updatedKey: WidgetKey = {
+        id: response.id,
+        name: response.name,
+        widgetKey: response.secretKey,
+        createdAt: response.createdAt,
+        domains: response.allowedDomains,
+        status: response.status,
+      };
+
+      // 위젯 키 목록 업데이트
+      setWidgetKeys(
+        widgetKeys.map((key) =>
+          key.id === selectedKey.id ? updatedKey : key
+        )
+      );
+      setNewDomain("");
+      setSelectedKey(updatedKey);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "도메인 추가에 실패했습니다.");
+      console.error("Failed to add domain:", err);
+    }
   };
 
-  const handleRemoveDomain = (domain: string) => {
+  const handleRemoveDomain = async (domain: string) => {
     if (!selectedKey) return;
 
-    setWidgetKeys(
-      widgetKeys.map((key) =>
-        key.id === selectedKey.id
-          ? { ...key, domains: key.domains.filter((d) => d !== domain) }
-          : key
-      )
-    );
-    setSelectedKey({
-      ...selectedKey,
-      domains: selectedKey.domains.filter((d) => d !== domain),
-    });
+    try {
+      await removeDomainFromWidgetKey(selectedKey.id, domain);
+
+      // 삭제 성공 후 목록 다시 불러오기
+      const response = await getWidgetKeys();
+      const convertedKeys: WidgetKey[] = response.map((key) => ({
+        id: key.id,
+        name: key.name,
+        widgetKey: key.secretKey,
+        createdAt: key.createdAt,
+        domains: key.allowedDomains,
+        status: key.status,
+      }));
+
+      setWidgetKeys(convertedKeys);
+
+      // 선택된 키 업데이트
+      const updatedKey = convertedKeys.find((key) => key.id === selectedKey.id);
+      if (updatedKey) {
+        setSelectedKey(updatedKey);
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "도메인 삭제에 실패했습니다.");
+      console.error("Failed to remove domain:", err);
+    }
   };
 
-  const handleDeleteKey = (keyId: string) => {
-    if (!confirm("위젯 키를 삭제하시겠습니까?")) return;
+  const handleDeleteKey = async (keyId: string) => {
+    if (!confirm("위젯 키를 폐기하시겠습니까?")) return;
 
-    setWidgetKeys(widgetKeys.filter((key) => key.id !== keyId));
-    if (selectedKey?.id === keyId) {
-      setSelectedKey(null);
+    try {
+      const response = await revokeWidgetKey(keyId);
+
+      // API 응답을 WidgetKey 타입으로 변환
+      const updatedKey: WidgetKey = {
+        id: response.id,
+        name: response.name,
+        widgetKey: response.secretKey,
+        createdAt: response.createdAt,
+        domains: response.allowedDomains,
+        status: response.status,
+      };
+
+      // 위젯 키 목록 업데이트
+      setWidgetKeys(
+        widgetKeys.map((key) => (key.id === keyId ? updatedKey : key))
+      );
+
+      // 선택된 키가 폐기된 키라면 선택 해제
+      if (selectedKey?.id === keyId) {
+        setSelectedKey(null);
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "위젯 키 폐기에 실패했습니다.");
+      console.error("Failed to revoke widget key:", err);
     }
   };
 
@@ -231,6 +297,41 @@ export default function KeysContent() {
       );
     }
   };
+
+  // 위젯 키 목록 조회
+  useEffect(() => {
+    const fetchWidgetKeys = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await getWidgetKeys();
+        
+        // API 응답을 WidgetKey 타입으로 변환
+        const convertedKeys: WidgetKey[] = response.map((key) => ({
+          id: key.id,
+          name: key.name,
+          widgetKey: key.secretKey,
+          createdAt: key.createdAt,
+          domains: key.allowedDomains,
+          status: key.status,
+        }));
+        
+        setWidgetKeys(convertedKeys);
+        
+        // 첫 번째 키를 자동으로 선택
+        if (convertedKeys.length > 0 && !selectedKey) {
+          setSelectedKey(convertedKeys[0]);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "위젯 키 목록을 불러오는데 실패했습니다.");
+        console.error("Failed to fetch widget keys:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchWidgetKeys();
+  }, []);
 
   useEffect(() => {
     // 미리보기 iframe이 로드되면 초기 색상 및 레이아웃 설정
@@ -316,16 +417,55 @@ export default function KeysContent() {
                 />
                 <button
                   onClick={handleGenerateKey}
-                  className="w-full px-6 py-2.5 bg-[#df3326] text-white font-medium rounded-md hover:bg-[#c72a1f] active:scale-[0.98] transition-all duration-150"
+                  disabled={isCreating}
+                  className="w-full px-6 py-2.5 bg-[#df3326] text-white font-medium rounded-md hover:bg-[#c72a1f] active:scale-[0.98] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  위젯 키 발급
+                  {isCreating ? "생성 중..." : "위젯 키 발급"}
                 </button>
               </div>
             </div>
 
             {/* Widget Key List */}
             <div className="divide-y divide-gray-200">
-              {widgetKeys.length === 0 ? (
+              {isLoading ? (
+                <div className="p-6 text-center text-gray-500">
+                  위젯 키 목록을 불러오는 중...
+                </div>
+              ) : error ? (
+                <div className="p-6 text-center">
+                  <p className="text-red-500 mb-2">{error}</p>
+                  <button
+                    onClick={() => {
+                      setError(null);
+                      setIsLoading(true);
+                      getWidgetKeys()
+                        .then((response) => {
+                          const convertedKeys: WidgetKey[] = response.map((key) => ({
+                            id: key.id,
+                            name: key.name,
+                            widgetKey: key.secretKey,
+                            createdAt: key.createdAt,
+                            domains: key.allowedDomains,
+                            status: key.status,
+                          }));
+                          setWidgetKeys(convertedKeys);
+                          if (convertedKeys.length > 0 && !selectedKey) {
+                            setSelectedKey(convertedKeys[0]);
+                          }
+                        })
+                        .catch((err) => {
+                          setError(err instanceof Error ? err.message : "위젯 키 목록을 불러오는데 실패했습니다.");
+                        })
+                        .finally(() => {
+                          setIsLoading(false);
+                        });
+                    }}
+                    className="text-sm text-[#df3326] hover:underline"
+                  >
+                    다시 시도
+                  </button>
+                </div>
+              ) : widgetKeys.length === 0 ? (
                 <div className="p-6 text-center text-gray-500">
                   발급된 위젯 키가 없습니다.
                   <br />

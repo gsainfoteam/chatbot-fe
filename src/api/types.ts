@@ -96,3 +96,21 @@ export interface TokenRevocationRequest {
   token: string;
   token_type_hint?: "access_token" | "refresh_token";
 }
+
+// 위젯 키 관련 타입
+export interface CreateWidgetKeyRequest {
+  name: string;
+}
+
+export interface AddDomainRequest {
+  domain: string;
+}
+
+export interface WidgetKeyResponse {
+  id: string;
+  name: string;
+  secretKey: string;
+  status: "ACTIVE" | "REVOKED";
+  allowedDomains: string[];
+  createdAt: string;
+}
