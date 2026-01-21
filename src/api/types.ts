@@ -68,6 +68,30 @@ export interface ChatResponse {
   sessionId?: string;
 }
 
+// 위젯 채팅 관련 타입
+export interface CreateSessionRequest {
+  widgetKey: string;
+  pageUrl: string;
+}
+
+export interface CreateSessionResponse {
+  sessionToken: string;
+  expiresIn: number;
+}
+
+export interface SendChatRequest {
+  question: string;
+}
+
+export interface SendChatResponse {
+  answer: string;
+  sources?: Array<{
+    type: "url" | "image";
+    url: string;
+    title?: string;
+  }>;
+}
+
 // OAuth2/OIDC 타입 정의
 export interface OAuth2TokenResponse {
   access_token: string;
