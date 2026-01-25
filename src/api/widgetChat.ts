@@ -62,7 +62,9 @@ export async function sendWidgetChatMessage(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`HTTP error! status: ${response.status}, error: ${errorText}`);
+    throw new Error(
+      `HTTP error! status: ${response.status}, error: ${errorText}`,
+    );
   }
 
   const reader = response.body?.getReader();
@@ -138,7 +140,92 @@ export async function sendWidgetChatMessage(
 
             // 리소스 정보 처리
             if (parsed.type === "resources") {
-              resources = parsed.resources || [];
+              const RESOURCE_CENTER_BASE =
+                "https://resource-center-573707418062.us-central1.run.app/resource";
+
+              resources = (parsed.resources || []).map(
+                (resource: { type: string; url: string; title?: string }) => {
+                  const url = resource.url || "";
+
+                  // URL에서 path만 추출
+                  let path = url;
+
+                  // 절대 URL인 경우 path만 추출
+                  try {
+                    const urlObj = new URL(url);
+                    path = urlObj.pathname;
+                  } catch {
+                    // URL 파싱 실패 시 원본 사용 (상대 경로일 가능성)
+                    path = url;
+                  }
+
+                  // path에서 앞의 / 제거 (있으면)
+                  let cleanPath = path.startsWith("/") ? path.slice(1) : path;
+
+                  // 확장자 체크
+                  const lowerPath = cleanPath.toLowerCase();
+                  const hasPdfExtension = lowerPath.endsWith(".pdf");
+                  const hasPngExtension = lowerPath.endsWith(".png");
+                  const hasJpgExtension =
+                    lowerPath.endsWith(".jpg") || lowerPath.endsWith(".jpeg");
+                  const hasExtension =
+                    hasPdfExtension || hasPngExtension || hasJpgExtension;
+
+                  // 확장자가 없으면 서버에서 온 type을 기반으로 추가
+                  if (!hasExtension) {
+                    if (resource.type === "image" || resource.type === "png") {
+                      cleanPath = `${cleanPath}.png`;
+                    } else if (resource.type === "pdf") {
+                      cleanPath = `${cleanPath}.pdf`;
+                    } else {
+                      // 기본값: PDF로 처리 (문서일 가능성이 높음)
+                      cleanPath = `${cleanPath}.pdf`;
+                    }
+                  }
+
+                  const finalUrl = `${RESOURCE_CENTER_BASE}/${cleanPath}`;
+
+                  // PNG, JPG 등 이미지 확장자면 image 타입으로 설정
+                  const finalLowerPath = cleanPath.toLowerCase();
+                  const isImage =
+                    finalLowerPath.endsWith(".png") ||
+                    finalLowerPath.endsWith(".jpg") ||
+                    finalLowerPath.endsWith(".jpeg") ||
+                    resource.type === "image";
+
+                  // 파일명에서 제목 추출 (확장자 제거, URL 디코딩, 8글자 제한)
+                  let title = resource.title;
+                  if (!title) {
+                    // URL에서 파일명 추출
+                    const pathParts = cleanPath.split("/");
+                    let fileName =
+                      pathParts[pathParts.length - 1] || "참고자료";
+
+                    // URL 디코딩
+                    try {
+                      fileName = decodeURIComponent(fileName);
+                    } catch {
+                      console.log("[widgetChat] URL 디코딩 실패:", fileName);
+                    }
+
+                    // 확장자 제거
+                    fileName = fileName.replace(/\.(pdf|png|jpg|jpeg)$/i, "");
+
+                    // 8글자로 제한하고 ... 추가
+                    if (fileName.length > 20) {
+                      title = fileName.slice(0, 20) + "...";
+                    } else {
+                      title = fileName;
+                    }
+                  }
+
+                  return {
+                    type: isImage ? ("image" as const) : ("url" as const),
+                    url: finalUrl,
+                    title: title,
+                  };
+                },
+              );
             }
           } catch (e) {
             // JSON 파싱 실패 시 무시 (불완전한 데이터일 수 있음)
