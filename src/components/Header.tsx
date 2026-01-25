@@ -105,8 +105,7 @@ export default function Header() {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200/60 py-4 space-y-2">
             <a
-              href="https://github.com/gsainfoteam/chatbot-fe"
-              target="_blank"
+              href="/docs"
               rel="noopener noreferrer"
               onClick={closeMobileMenu}
               className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
