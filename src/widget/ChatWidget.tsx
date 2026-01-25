@@ -2,8 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChatMessage, ColorTheme, WidgetContext, Source } from "./types";
-import { uid, applyColorTheme } from "./utils";
+import { uid, applyColorTheme, renderMarkdown } from "./utils";
 import { LinkIcon, ExternalLinkIcon, PhotoIcon } from "../components/Icons";
+import {
+  createWidgetSession,
+  sendWidgetChatMessage,
+  saveSessionToken,
+  getSessionToken,
+} from "../api/widgetChat";
 
 // 출처 배지 컴포넌트
 function SourceBadge({ source }: { source: Source }) {
@@ -146,7 +152,10 @@ export default function ChatWidget({
   }, [isInIframe, widgetKey]); // ctx는 의존성에서 제외하여 무한 루프 방지
 
   // 미리보기 모드 확인 (URL 파라미터)
-  const isPreviewMode =
+  // 로컬 호스트에서는 preview 모드를 무시하여 실제 API 호출 가능
+  const isLocalhost = window.location.hostname === "localhost" || 
+                      window.location.hostname === "127.0.0.1";
+  const isPreviewMode = !isLocalhost && 
     new URLSearchParams(window.location.search).get("preview") === "true";
 
   useEffect(() => {
@@ -210,6 +219,18 @@ export default function ChatWidget({
     // 미리보기 모드에서는 전송 비활성화
     if (isPreviewMode) return;
 
+    // widgetKey가 없으면 전송 불가
+    if (!ctx.widgetKey) {
+      console.error("Widget key is not available");
+      const errorMsg: ChatMessage = {
+        id: uid(),
+        role: "assistant",
+        text: "위젯 키가 설정되지 않았습니다. 위젯을 다시 로드해주세요.",
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+      return;
+    }
+
     const userMsg: ChatMessage = { id: uid(), role: "user", text };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
@@ -230,50 +251,133 @@ export default function ChatWidget({
       );
     }
 
-    // TODO: 실제 API 연동으로 대체 필요
-    setTimeout(() => {
-      // TODO: 실제 API 응답으로 대체 필요 - 아래는 테스트용 더미 데이터입니다
-      const assistantMsg: ChatMessage = {
-        id: uid(),
-        role: "assistant",
-        text: `(${ctx.widgetKey})\n\n이것은 테스트용 응답입니다. 실제 구현에서는 API에서 받은 응답을 사용하게 됩니다.`,
-        sources: [
-          {
-            type: "url",
-            url: "https://example.com/documentation",
-            title: "공식 문서",
-          },
-          {
-            type: "url",
-            url: "https://blog.example.com/article",
-            title: "관련 블로그 포스트",
-          },
-          {
-            type: "image",
-            url: "https://picsum.photos/400/300?random=1",
-            title: "출처 이미지",
-          },
-        ],
-      };
+    try {
+      // 세션 토큰 확인 및 발급
+      let sessionToken = getSessionToken();
+      if (!sessionToken) {
+        // 세션이 없으면 발급
+        // iframe 내부에서는 부모 페이지의 URL을 사용해야 함
+        // ctx.pageUrl은 loader.js에서 부모 페이지의 location.href로 설정됨
+        const pageUrl = ctx.pageUrl || (isInIframe ? document.referrer : window.location.href);
+        const sessionResponse = await createWidgetSession({
+          widgetKey: ctx.widgetKey,
+          pageUrl: pageUrl,
+        });
+        saveSessionToken(
+          sessionResponse.sessionToken,
+          sessionResponse.expiresIn
+        );
+        sessionToken = sessionResponse.sessionToken;
+      }
 
-      setMessages((prev) => [...prev, assistantMsg]);
+      // 스트리밍 응답을 위한 메시지 ID 생성
+      const assistantMsgId = uid();
+
+      // 초기 메시지 추가 (빈 텍스트로 시작)
+      const initialMessage: ChatMessage = {
+        id: assistantMsgId,
+        role: "assistant",
+        text: "",
+        sources: [],
+      };
+      setMessages((prev) => [...prev, initialMessage]);
+
+      // 채팅 메시지 전송 (스트리밍)
+      await sendWidgetChatMessage(
+        {
+          question: text,
+        },
+        // onChunk: 스트림 청크를 받을 때마다 호출
+        (streamedText) => {
+          try {
+            // 함수형 업데이트를 사용하여 최신 상태 기반으로 업데이트
+            setMessages((prev) => {
+              return prev.map((msg): ChatMessage => {
+                if (msg.id === assistantMsgId) {
+                  return {
+                    ...msg,
+                    text: streamedText,
+                  };
+                }
+                return msg;
+              });
+            });
+          } catch (error) {
+            // 렌더링 에러 발생 시 무시 (스트림 계속 진행)
+            console.error("Error updating message:", error);
+          }
+        },
+        // onComplete: 전체 응답 완료 시 호출
+        (finalResponse) => {
+          // 함수형 업데이트를 사용하여 최종 메시지 업데이트 (sources 포함)
+          setMessages((prev) => {
+            const updatedMessage: ChatMessage = {
+              id: assistantMsgId,
+              role: "assistant",
+              text: finalResponse.answer,
+              sources: finalResponse.sources,
+            };
+            return prev.map((msg) =>
+              msg.id === assistantMsgId ? updatedMessage : msg
+            );
+          });
+          setLoading(false);
+
+          // 메시지 수신 이벤트 전달 (iframe 환경에서만)
+          if (isInIframe) {
+            setMessages((prev) => {
+              const assistantMsg = prev.find((msg) => msg.id === assistantMsgId);
+              if (assistantMsg) {
+                window.parent?.postMessage(
+                  {
+                    type: "WM_MESSAGE_RECEIVED",
+                    message: {
+                      id: assistantMsg.id,
+                      text: assistantMsg.text,
+                      role: assistantMsg.role,
+                    },
+                  },
+                  "*"
+                );
+              }
+              return prev;
+            });
+          }
+        }
+      ).catch((error) => {
+        // 스트림 에러 발생 시 처리
+        setLoading(false);
+        // 에러가 발생했지만 이미 일부 텍스트가 있다면 그대로 유지
+        setMessages((prev) => {
+          const existingMsg = prev.find((msg) => msg.id === assistantMsgId);
+          if (existingMsg && existingMsg.text) {
+            // 이미 받은 텍스트가 있으면 그대로 유지
+            return prev;
+          }
+          // 텍스트가 없으면 에러 메시지로 교체
+          return prev.map((msg) =>
+            msg.id === assistantMsgId
+              ? {
+                  ...msg,
+                  text: "죄송합니다. 응답을 받는 중 오류가 발생했습니다.",
+                }
+              : msg
+          );
+        });
+        throw error; // 상위 catch로 전파
+      });
+    } catch (error) {
+      console.error("Failed to send chat message:", error);
       setLoading(false);
 
-      // 메시지 수신 이벤트 전달 (iframe 환경에서만)
-      if (isInIframe) {
-        window.parent?.postMessage(
-          {
-            type: "WM_MESSAGE_RECEIVED",
-            message: {
-              id: assistantMsg.id,
-              text: assistantMsg.text,
-              role: assistantMsg.role,
-            },
-          },
-          "*"
-        );
-      }
-    }, 600);
+      // 에러 메시지 표시
+      const errorMsg: ChatMessage = {
+        id: uid(),
+        role: "assistant",
+        text: "죄송합니다. 메시지를 전송하는 중 오류가 발생했습니다. 다시 시도해주세요.",
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    }
   };
 
   return (
@@ -368,7 +472,22 @@ export default function ChatWidget({
                       }
                 }
               >
-                {m.text}
+                {m.role === "assistant" ? (
+                  m.text ? (
+                    renderMarkdown(m.text)
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <span className="loading-text-shimmer">자료 읽는 중</span>
+                      <span className="flex items-center gap-1.5" style={{ color: "var(--color-text-secondary, #64748b)" }}>
+                        <span className="thinking-dot"></span>
+                        <span className="thinking-dot"></span>
+                        <span className="thinking-dot"></span>
+                      </span>
+                    </div>
+                  )
+                ) : (
+                  m.text
+                )}
 
                 {/* 출처 정보 표시 (assistant 메시지만) */}
                 {m.role === "assistant" &&
@@ -394,7 +513,8 @@ export default function ChatWidget({
             </div>
           ))}
 
-          {loading && (
+          {/* 로딩 표시는 메시지가 생성되기 전에만 표시 (텍스트가 있는 assistant 메시지가 없을 때만) */}
+          {loading && !messages.some(m => m.role === "assistant" && m.text && m.text.trim().length > 0) && (
             <div className="flex mb-2 justify-start">
               <div
                 className="max-w-[80%] text-[14px] px-3 py-2 rounded-2xl border"
@@ -404,7 +524,14 @@ export default function ChatWidget({
                   color: "var(--color-text-secondary, #64748b)",
                 }}
               >
-                …
+                <div className="flex items-center gap-1.5">
+                  <span className="loading-text-shimmer">자료 검색 중...</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="thinking-dot"></span>
+                    <span className="thinking-dot"></span>
+                    <span className="thinking-dot"></span>
+                  </span>
+                </div>
               </div>
             </div>
           )}
