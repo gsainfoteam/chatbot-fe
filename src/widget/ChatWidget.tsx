@@ -108,13 +108,11 @@ function SourceImage({ source }: { source: Source }) {
 interface ChatWidgetProps {
   onClose?: () => void;
   className?: string;
-  widgetKey?: string;
 }
 
 export default function ChatWidget({
   onClose,
   className,
-  widgetKey,
 }: ChatWidgetProps = {}) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -125,6 +123,7 @@ export default function ChatWidget({
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("자료를 찾아보는 중");
   const isComposingRef = useRef(false);
 
   // iframe 환경인지 확인 (React 앱 내부에서는 false)
@@ -133,29 +132,8 @@ export default function ChatWidget({
   const [ctx, setCtx] = useState<WidgetContext>({});
   const listRef = useRef<HTMLDivElement | null>(null);
 
-  // React 앱 내부에서 직접 사용 시 widgetKey prop으로 초기화
-  useEffect(() => {
-    if (!isInIframe && widgetKey) {
-      setCtx((prev) => {
-        // 이미 같은 widgetKey이면 업데이트하지 않음
-        if (prev.widgetKey === widgetKey) {
-          return prev;
-        }
-        return {
-          widgetKey: widgetKey,
-          pageUrl:
-            typeof window !== "undefined" ? window.location.href : undefined,
-        };
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInIframe, widgetKey]); // ctx는 의존성에서 제외하여 무한 루프 방지
-
   // 미리보기 모드 확인 (URL 파라미터)
-  // 로컬 호스트에서는 preview 모드를 무시하여 실제 API 호출 가능
-  const isLocalhost = window.location.hostname === "localhost" || 
-                      window.location.hostname === "127.0.0.1";
-  const isPreviewMode = !isLocalhost && 
+  const isPreviewMode =
     new URLSearchParams(window.location.search).get("preview") === "true";
 
   useEffect(() => {
@@ -207,9 +185,29 @@ export default function ChatWidget({
     });
   }, [messages, loading]);
 
+  // 로딩 시간에 따라 메시지 변경
+  useEffect(() => {
+    if (!loading) {
+      return;
+    }
+
+    const timeout1 = setTimeout(() => {
+      setLoadingMessage("파일을 읽어보는 중");
+    }, 3000);
+
+    const timeout2 = setTimeout(() => {
+      setLoadingMessage("조금 더 생각 중");
+    }, 6000);
+
+    return () => {
+      clearTimeout(timeout1);
+      clearTimeout(timeout2);
+    };
+  }, [loading]);
+
   const canSend = useMemo(
     () => input.trim().length > 0 && !loading,
-    [input, loading]
+    [input, loading],
   );
 
   const send = async () => {
@@ -247,7 +245,7 @@ export default function ChatWidget({
             role: userMsg.role,
           },
         },
-        "*"
+        "*",
       );
     }
 
@@ -258,14 +256,16 @@ export default function ChatWidget({
         // 세션이 없으면 발급
         // iframe 내부에서는 부모 페이지의 URL을 사용해야 함
         // ctx.pageUrl은 loader.js에서 부모 페이지의 location.href로 설정됨
-        const pageUrl = ctx.pageUrl || (isInIframe ? document.referrer : window.location.href);
+        const pageUrl =
+          ctx.pageUrl ||
+          (isInIframe ? document.referrer : window.location.href);
         const sessionResponse = await createWidgetSession({
           widgetKey: ctx.widgetKey,
           pageUrl: pageUrl,
         });
         saveSessionToken(
           sessionResponse.sessionToken,
-          sessionResponse.expiresIn
+          sessionResponse.expiresIn,
         );
         sessionToken = sessionResponse.sessionToken;
       }
@@ -318,7 +318,7 @@ export default function ChatWidget({
               sources: finalResponse.sources,
             };
             return prev.map((msg) =>
-              msg.id === assistantMsgId ? updatedMessage : msg
+              msg.id === assistantMsgId ? updatedMessage : msg,
             );
           });
           setLoading(false);
@@ -326,7 +326,9 @@ export default function ChatWidget({
           // 메시지 수신 이벤트 전달 (iframe 환경에서만)
           if (isInIframe) {
             setMessages((prev) => {
-              const assistantMsg = prev.find((msg) => msg.id === assistantMsgId);
+              const assistantMsg = prev.find(
+                (msg) => msg.id === assistantMsgId,
+              );
               if (assistantMsg) {
                 window.parent?.postMessage(
                   {
@@ -337,13 +339,13 @@ export default function ChatWidget({
                       role: assistantMsg.role,
                     },
                   },
-                  "*"
+                  "*",
                 );
               }
               return prev;
             });
           }
-        }
+        },
       ).catch((error) => {
         // 스트림 에러 발생 시 처리
         setLoading(false);
@@ -361,7 +363,7 @@ export default function ChatWidget({
                   ...msg,
                   text: "죄송합니다. 응답을 받는 중 오류가 발생했습니다.",
                 }
-              : msg
+              : msg,
           );
         });
         throw error; // 상위 catch로 전파
@@ -477,8 +479,15 @@ export default function ChatWidget({
                     renderMarkdown(m.text)
                   ) : (
                     <div className="flex items-center gap-1.5">
-                      <span className="loading-text-shimmer">자료 읽는 중</span>
-                      <span className="flex items-center gap-1.5" style={{ color: "var(--color-text-secondary, #64748b)" }}>
+                      <span className="loading-text-shimmer">
+                        {loadingMessage}
+                      </span>
+                      <span
+                        className="flex items-center gap-1.5"
+                        style={{
+                          color: "var(--color-text-secondary, #64748b)",
+                        }}
+                      >
                         <span className="thinking-dot"></span>
                         <span className="thinking-dot"></span>
                         <span className="thinking-dot"></span>
@@ -514,27 +523,34 @@ export default function ChatWidget({
           ))}
 
           {/* 로딩 표시는 메시지가 생성되기 전에만 표시 (텍스트가 있는 assistant 메시지가 없을 때만) */}
-          {loading && !messages.some(m => m.role === "assistant" && m.text && m.text.trim().length > 0) && (
-            <div className="flex mb-2 justify-start">
-              <div
-                className="max-w-[80%] text-[14px] px-3 py-2 rounded-2xl border"
-                style={{
-                  backgroundColor: "var(--color-assistant-message-bg, #ffffff)",
-                  borderColor: "var(--color-border, #e2e8f0)",
-                  color: "var(--color-text-secondary, #64748b)",
-                }}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="loading-text-shimmer">자료 검색 중...</span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="thinking-dot"></span>
-                    <span className="thinking-dot"></span>
-                    <span className="thinking-dot"></span>
-                  </span>
+          {loading &&
+            !messages.some(
+              (m) =>
+                m.role === "assistant" && m.text && m.text.trim().length > 0,
+            ) && (
+              <div className="flex mb-2 justify-start">
+                <div
+                  className="max-w-[80%] text-[14px] px-3 py-2 rounded-2xl border"
+                  style={{
+                    backgroundColor:
+                      "var(--color-assistant-message-bg, #ffffff)",
+                    borderColor: "var(--color-border, #e2e8f0)",
+                    color: "var(--color-text-secondary, #64748b)",
+                  }}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="loading-text-shimmer">
+                      {loadingMessage}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="thinking-dot"></span>
+                      <span className="thinking-dot"></span>
+                      <span className="thinking-dot"></span>
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
 
         {/* Input */}
