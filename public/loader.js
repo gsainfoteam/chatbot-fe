@@ -2,25 +2,6 @@
   const scriptEl = document.currentScript;
   if (!scriptEl) return;
 
-  const WIDGET_ORIGIN = "https://chatbot.gistory.me";
-  const IFRAME_URL = WIDGET_ORIGIN + "/widget/";
-
-  // iframe 내부이거나 위젯 origin의 /widget/ 경로에서는 실행하지 않음 (무한 루프 방지)
-  // 다른 서비스에서는 WIDGET_ORIGIN과 다르므로 정상 실행됨
-  const isInIframe = window.self !== window.top;
-  const isWidgetOrigin =
-    window.location.origin === WIDGET_ORIGIN ||
-    window.location.origin === "http://localhost:5173" ||
-    window.location.origin === "https://chatbot.gistory.me";
-  if (
-    isInIframe ||
-    (isWidgetOrigin && window.location.pathname.startsWith("/widget"))
-  ) {
-    return;
-  }
-
-  const Z = 2147483647;
-
   // ---- utils ----
   function clampInt(v, fallback, min, max) {
     const n = Number.parseInt(String(v ?? ""), 10);
@@ -39,6 +20,32 @@
     }
     return fallback;
   }
+
+  // 위젯 origin 결정: 스크립트가 로드되는 origin 기반으로 설정
+  // 보안: 스크립트의 origin을 사용하여 조작 불가능
+  const scriptOrigin = scriptEl.src ? new URL(scriptEl.src).origin : null;
+  const isLocalDev = scriptOrigin && (
+    scriptOrigin === "http://localhost:5173" || 
+    scriptOrigin === "http://127.0.0.1:5173"
+  );
+  
+  const WIDGET_ORIGIN = isLocalDev && scriptOrigin 
+    ? scriptOrigin 
+    : "https://chatbot.gistory.me";
+  const IFRAME_URL = WIDGET_ORIGIN + "/widget/";
+
+  // iframe 내부이거나 위젯 origin의 /widget/ 경로에서는 실행하지 않음 (무한 루프 방지)
+  // 다른 서비스에서는 WIDGET_ORIGIN과 다르므로 정상 실행됨
+  const isInIframe = window.self !== window.top;
+  const isWidgetOrigin = window.location.origin === WIDGET_ORIGIN;
+  if (
+    isInIframe ||
+    (isWidgetOrigin && window.location.pathname.startsWith("/widget"))
+  ) {
+    return;
+  }
+
+  const Z = 2147483647;
 
   // ---- 1) data-* 옵션 읽기 ----
   const ds = scriptEl.dataset;
