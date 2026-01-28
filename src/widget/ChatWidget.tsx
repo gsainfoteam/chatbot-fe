@@ -190,6 +190,8 @@ export default function ChatWidget({
     if (!loading) {
       return;
     }
+    // 새 질문 시작 시 항상 첫 메시지로 초기화
+    setLoadingMessage("자료를 찾아보는 중");
 
     const timeout1 = setTimeout(() => {
       setLoadingMessage("파일을 읽어보는 중");
@@ -232,6 +234,7 @@ export default function ChatWidget({
     const userMsg: ChatMessage = { id: uid(), role: "user", text };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
+    setLoadingMessage("자료를 찾아보는 중");
     setLoading(true);
 
     // 메시지 전송 이벤트 전달 (iframe 환경에서만)
@@ -379,6 +382,8 @@ export default function ChatWidget({
         text: "죄송합니다. 메시지를 전송하는 중 오류가 발생했습니다. 다시 시도해주세요.",
       };
       setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setLoadingMessage("자료를 찾아보는 중");
     }
   };
 
@@ -406,13 +411,13 @@ export default function ChatWidget({
                 className="text-sm font-extrabold"
                 style={{ color: "var(--color-text, #1e293b)" }}
               >
-                상담 챗봇
+                GIST 챗봇
               </div>
               <div
                 className="text-xs mt-0.5"
                 style={{ color: "var(--color-text-secondary, #64748b)" }}
               >
-                빠르게 도와드릴게요
+                궁금한 내용을 질문해보세요.
               </div>
             </div>
           </div>
