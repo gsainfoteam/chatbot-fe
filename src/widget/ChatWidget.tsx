@@ -9,6 +9,8 @@ import {
   sendWidgetChatMessage,
   saveSessionToken,
   getSessionToken,
+  getSessionExpiresAt,
+  isRateLimitError,
 } from "../api/widgetChat";
 
 // 출처 배지 컴포넌트
@@ -124,6 +126,10 @@ export default function ChatWidget({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("자료를 찾아보는 중");
+  const [rateLimitWarning, setRateLimitWarning] = useState<{
+    retryAt: number;
+  } | null>(null);
+  const [rateLimitRemainingText, setRateLimitRemainingText] = useState("");
   const isComposingRef = useRef(false);
 
   // iframe 환경인지 확인 (React 앱 내부에서는 false)
@@ -184,6 +190,36 @@ export default function ChatWidget({
       behavior: "smooth",
     });
   }, [messages, loading]);
+
+  // 429 경고 시 재시도 가능 시간 카운트다운
+  useEffect(() => {
+    if (!rateLimitWarning) return;
+
+    function formatRemaining(retryAt: number): string {
+      const now = Date.now();
+      if (now >= retryAt) return "이제 다시 시도할 수 있습니다.";
+      const sec = Math.ceil((retryAt - now) / 1000);
+      if (sec < 60) return `${sec}초 후에 다시 시도할 수 있습니다.`;
+      const min = Math.floor(sec / 60);
+      const s = sec % 60;
+      if (s === 0) return `${min}분 후에 다시 시도할 수 있습니다.`;
+      return `${min}분 ${s}초 후에 다시 시도할 수 있습니다.`;
+    }
+
+    setRateLimitRemainingText(formatRemaining(rateLimitWarning.retryAt));
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (now >= rateLimitWarning.retryAt) {
+        setRateLimitWarning(null);
+        setRateLimitRemainingText("");
+        return;
+      }
+      setRateLimitRemainingText(formatRemaining(rateLimitWarning.retryAt));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [rateLimitWarning]);
 
   // 로딩 시간에 따라 메시지 변경
   useEffect(() => {
@@ -252,7 +288,11 @@ export default function ChatWidget({
       );
     }
 
+    let assistantMsgId: string;
     try {
+      // 스트리밍 응답을 위한 메시지 ID 생성 (catch에서 제거할 수 있도록 먼저 생성)
+      assistantMsgId = uid();
+
       // 세션 토큰 확인 및 발급
       let sessionToken = getSessionToken();
       if (!sessionToken) {
@@ -272,9 +312,6 @@ export default function ChatWidget({
         );
         sessionToken = sessionResponse.sessionToken;
       }
-
-      // 스트리밍 응답을 위한 메시지 ID 생성
-      const assistantMsgId = uid();
 
       // 초기 메시지 추가 (빈 텍스트로 시작)
       const initialMessage: ChatMessage = {
@@ -352,6 +389,14 @@ export default function ChatWidget({
       ).catch((error) => {
         // 스트림 에러 발생 시 처리
         setLoading(false);
+        if (isRateLimitError(error)) {
+          const retryAt = getSessionExpiresAt();
+          if (retryAt) setRateLimitWarning({ retryAt });
+          setMessages((prev) =>
+            prev.filter((msg) => msg.id !== assistantMsgId),
+          );
+          return;
+        }
         // 에러가 발생했지만 이미 일부 텍스트가 있다면 그대로 유지
         setMessages((prev) => {
           const existingMsg = prev.find((msg) => msg.id === assistantMsgId);
@@ -375,13 +420,19 @@ export default function ChatWidget({
       console.error("Failed to send chat message:", error);
       setLoading(false);
 
-      // 에러 메시지 표시
-      const errorMsg: ChatMessage = {
-        id: uid(),
-        role: "assistant",
-        text: "죄송합니다. 메시지를 전송하는 중 오류가 발생했습니다. 다시 시도해주세요.",
-      };
-      setMessages((prev) => [...prev, errorMsg]);
+      if (isRateLimitError(error)) {
+        const retryAt = getSessionExpiresAt();
+        if (retryAt) setRateLimitWarning({ retryAt });
+        setMessages((prev) => prev.filter((msg) => msg.id !== assistantMsgId));
+      } else {
+        // 에러 메시지 표시 (말풍선)
+        const errorMsg: ChatMessage = {
+          id: uid(),
+          role: "assistant",
+          text: "죄송합니다. 메시지를 전송하는 중 오류가 발생했습니다. 다시 시도해주세요.",
+        };
+        setMessages((prev) => [...prev, errorMsg]);
+      }
     } finally {
       setLoadingMessage("자료를 찾아보는 중");
     }
@@ -557,6 +608,30 @@ export default function ChatWidget({
               </div>
             )}
         </div>
+
+        {/* 429 경고 */}
+        {rateLimitWarning && (
+          <div
+            className="px-3 pb-2"
+            style={{
+              backgroundColor: "var(--color-background, #ffffff)",
+            }}
+          >
+            <div
+              className="w-full text-xs sm:text-sm rounded-xl px-3 py-2"
+              style={{
+                backgroundColor: "#fee2e2",
+                color: "#7f1d1d",
+                border: "1px solid #fecaca",
+              }}
+            >
+              <div className="font-semibold">
+                한 번에 최대 5번까지만 질문할 수 있습니다.
+              </div>
+              <div className="mt-0.5 opacity-90">{rateLimitRemainingText}</div>
+            </div>
+          </div>
+        )}
 
         {/* Input */}
         <form

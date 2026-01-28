@@ -62,6 +62,13 @@ export async function sendWidgetChatMessage(
 
   if (!response.ok) {
     const errorText = await response.text();
+    if (response.status === 429) {
+      const err = new Error(
+        `HTTP error! status: ${response.status}, error: ${errorText}`,
+      ) as Error & { status: number };
+      err.status = 429;
+      throw err;
+    }
     throw new Error(
       `HTTP error! status: ${response.status}, error: ${errorText}`,
     );
@@ -320,4 +327,25 @@ export function getSessionToken(): string | null {
 export function clearSessionToken(): void {
   localStorage.removeItem("widgetSessionToken");
   localStorage.removeItem("widgetSessionTokenExpiresAt");
+}
+
+/**
+ * 세션 만료 시각(ms) 가져오기. 없거나 만료된 경우 null
+ */
+export function getSessionExpiresAt(): number | null {
+  const expiresAt = localStorage.getItem("widgetSessionTokenExpiresAt");
+  if (!expiresAt) return null;
+  const ts = parseInt(expiresAt, 10);
+  return Number.isFinite(ts) ? ts : null;
+}
+
+/**
+ * 429 Rate Limit 에러 여부
+ */
+export function isRateLimitError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    "status" in error &&
+    (error as Error & { status?: number }).status === 429
+  );
 }
