@@ -1,9 +1,8 @@
 // Admin PDF 업로드 / 삭제 API
 
-import { getToken } from "./auth";
+import axios from "axios";
+import { apiClient } from "./client";
 import type { UploadResponse } from "./types";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20MB
 
@@ -27,143 +26,98 @@ export interface GetUploadListParams {
   offset?: number;
 }
 
+function getErrorMessage(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err) && err.response?.data != null) {
+    const data = err.response.data as { message?: string };
+    if (typeof data.message === "string") return data.message;
+    if (typeof data === "string") return data;
+  }
+  return fallback;
+}
+
 /** 내가 업로드한 문서 목록 조회 (Super Admin) */
 export async function getUploadList(
   params?: GetUploadListParams,
 ): Promise<UploadResponse[]> {
-  const token = getToken();
-  if (!token) {
-    throw new Error("로그인이 필요합니다.");
-  }
-
-  const searchParams = new URLSearchParams();
+  const requestParams: { limit?: number; offset?: number } = {};
   if (params?.limit != null) {
-    searchParams.set("limit", String(Math.min(100, Math.max(1, params.limit))));
+    requestParams.limit = Math.min(100, Math.max(1, params.limit));
   }
   if (params?.offset != null && params.offset >= 0) {
-    searchParams.set("offset", String(params.offset));
-  }
-  const query = searchParams.toString();
-  const url = query
-    ? `${API_BASE_URL}/v1/admin/upload?${query}`
-    : `${API_BASE_URL}/v1/admin/upload`;
-
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (res.status === 200) {
-    return res.json() as Promise<UploadResponse[]>;
+    requestParams.offset = params.offset;
   }
 
-  const text = await res.text();
-  let message: string;
   try {
-    const json = JSON.parse(text) as { message?: string };
-    message = json.message ?? text;
-  } catch {
-    message = text;
+    const res = await apiClient.get<UploadResponse[]>("/v1/admin/upload", {
+      params: requestParams,
+    });
+    return res.data;
+  } catch (err) {
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+    const message = getErrorMessage(err, "목록을 불러오는데 실패했습니다.");
+    if (status === 401) {
+      throw new Error("인증에 실패했습니다. 다시 로그인해주세요.");
+    }
+    if (status === 403) {
+      throw new Error("Super Admin만 사용할 수 있습니다.");
+    }
+    throw new Error(message);
   }
-
-  if (res.status === 401) {
-    throw new Error("인증에 실패했습니다. 다시 로그인해주세요.");
-  }
-  if (res.status === 403) {
-    throw new Error("Super Admin만 사용할 수 있습니다.");
-  }
-
-  throw new Error(message || "목록을 불러오는데 실패했습니다.");
 }
 
-/** PDF 업로드 (multipart/form-data). Content-Type은 설정하지 않음. */
+/** PDF 업로드 (multipart/form-data). */
 export async function uploadPdf(
   file: File,
   title: string,
 ): Promise<UploadResponse> {
-  const token = getToken();
-  if (!token) {
-    throw new Error("로그인이 필요합니다.");
-  }
-
   const formData = new FormData();
   formData.append("file", file);
   formData.append("title", title.trim());
 
-  const res = await fetch(`${API_BASE_URL}/v1/admin/upload`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
-
-  if (res.status === 201) {
-    return res.json() as Promise<UploadResponse>;
-  }
-
-  const text = await res.text();
-  let message: string;
   try {
-    const json = JSON.parse(text) as { message?: string };
-    message = (json.message ?? text) || "업로드에 실패했습니다.";
-  } catch {
-    message = text || "업로드에 실패했습니다.";
-  }
-
-  if (res.status === 400) {
-    throw new Error(
-      message || "잘못된 요청입니다. (PDF 파일과 제목을 확인해주세요.)",
+    const res = await apiClient.post<UploadResponse>(
+      "/v1/admin/upload",
+      formData,
+      {
+        // FormData 전송 시 Content-Type 미설정 → axios가 boundary 포함 multipart/form-data로 설정
+        headers: { "Content-Type": undefined } as Record<string, string | undefined>,
+      },
     );
+    return res.data as UploadResponse;
+  } catch (err) {
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+    const message = getErrorMessage(err, "업로드에 실패했습니다.");
+    if (status === 400) {
+      throw new Error(
+        message || "잘못된 요청입니다. (PDF 파일과 제목을 확인해주세요.)",
+      );
+    }
+    if (status === 401) {
+      throw new Error("인증에 실패했습니다. 다시 로그인해주세요.");
+    }
+    if (status === 403) {
+      throw new Error("Super Admin만 사용할 수 있습니다.");
+    }
+    throw new Error(message);
   }
-  if (res.status === 401) {
-    throw new Error("인증에 실패했습니다. 다시 로그인해주세요.");
-  }
-  if (res.status === 403) {
-    throw new Error("Super Admin만 사용할 수 있습니다.");
-  }
-
-  throw new Error(message);
 }
 
 /** 업로드된 파일 삭제 */
 export async function deleteUpload(id: string): Promise<void> {
-  const token = getToken();
-  if (!token) {
-    throw new Error("로그인이 필요합니다.");
-  }
-
-  const res = await fetch(`${API_BASE_URL}/v1/admin/upload/${id}`, {
-    method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (res.status === 204) {
-    return;
-  }
-
-  const text = await res.text();
-  let message: string;
   try {
-    const json = JSON.parse(text) as { message?: string };
-    message = json.message ?? text;
-  } catch {
-    message = text;
+    await apiClient.delete(`/v1/admin/upload/${id}`);
+  } catch (err) {
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+    const message = getErrorMessage(err, "삭제에 실패했습니다.");
+    if (status === 401) {
+      throw new Error("인증에 실패했습니다. 다시 로그인해주세요.");
+    }
+    if (status === 403) {
+      throw new Error("Super Admin만 사용할 수 있습니다.");
+    }
+    if (status === 404) {
+      throw new Error("이미 삭제되었거나 존재하지 않는 파일입니다.");
+    }
+    throw new Error(message);
   }
-
-  if (res.status === 401) {
-    throw new Error("인증에 실패했습니다. 다시 로그인해주세요.");
-  }
-  if (res.status === 403) {
-    throw new Error("Super Admin만 사용할 수 있습니다.");
-  }
-  if (res.status === 404) {
-    throw new Error("이미 삭제되었거나 존재하지 않는 파일입니다.");
-  }
-
-  throw new Error(message || "삭제에 실패했습니다.");
 }
