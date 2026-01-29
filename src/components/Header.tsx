@@ -1,10 +1,27 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import { getToken, logoutFromOAuth2, revokeToken } from "../api/auth";
-import { BookIcon, KeyIcon, ChartBarIcon, MenuIcon, XIcon } from "./Icons";
+import {
+  getToken,
+  useVerifyToken,
+  logoutFromOAuth2,
+  revokeToken,
+} from "../api/auth";
+import {
+  BookIcon,
+  KeyIcon,
+  ChartBarIcon,
+  MenuIcon,
+  XIcon,
+  UploadIcon,
+} from "./Icons";
+
+const SUPER_ADMIN = "SUPER_ADMIN";
 
 export default function Header() {
-  const isAuthenticated = !!getToken();
+  const hasToken = !!getToken();
+  const { data: verifyData } = useVerifyToken(hasToken);
+  const isSuperAdmin = verifyData?.role === SUPER_ADMIN;
+  const isAuthenticated = hasToken;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -69,6 +86,15 @@ export default function Header() {
               <ChartBarIcon className="w-4 h-4" />
               대시보드
             </Link>
+            {isSuperAdmin && (
+              <Link
+                to="/upload"
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200 inline-flex items-center gap-1.5"
+              >
+                <UploadIcon className="w-4 h-4" />
+                파일추가
+              </Link>
+            )}
             {isAuthenticated && (
               <button
                 onClick={handleLogout}
@@ -128,6 +154,16 @@ export default function Header() {
             >
               <KeyIcon className="w-4 h-4" />키 발급
             </Link>
+            {isSuperAdmin && (
+              <button
+                type="button"
+                onClick={closeMobileMenu}
+                className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200 w-full justify-start"
+              >
+                <UploadIcon className="w-4 h-4" />
+                파일추가
+              </button>
+            )}
             {isAuthenticated && (
               <button
                 onClick={handleLogout}
