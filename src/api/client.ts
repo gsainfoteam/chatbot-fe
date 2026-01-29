@@ -23,7 +23,7 @@ apiClient.interceptors.request.use(
     if (config.url?.includes("/v1/auth/admin/refresh")) {
       return config;
     }
-    
+
     const token = localStorage.getItem("authToken");
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -32,7 +32,7 @@ apiClient.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // 응답 인터셉터: 에러 처리 및 토큰 자동 갱신
@@ -44,7 +44,7 @@ let failedQueue: Array<{
 
 const processQueue = (
   error: AxiosError | null,
-  token: string | null = null
+  token: string | null = null,
 ) => {
   failedQueue.forEach((prom) => {
     if (error) {
@@ -148,12 +148,12 @@ apiClient.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 // 타입 안전한 API 응답 래퍼 (기존 코드와의 호환성을 위해 유지)
 export async function apiRequest<T>(
-  request: Promise<{ data: T }>
+  request: Promise<{ data: T }>,
 ): Promise<ApiResponse<T>> {
   try {
     const response = await request;
@@ -186,21 +186,21 @@ export async function apiGet<T>(endpoint: string): Promise<ApiResponse<T>> {
 
 export async function apiPost<T>(
   endpoint: string,
-  body?: unknown
+  body?: unknown,
 ): Promise<ApiResponse<T>> {
   return apiRequest<T>(apiClient.post<T>(endpoint, body));
 }
 
 export async function apiPut<T>(
   endpoint: string,
-  body?: unknown
+  body?: unknown,
 ): Promise<ApiResponse<T>> {
   return apiRequest<T>(apiClient.put<T>(endpoint, body));
 }
 
 export async function apiPatch<T>(
   endpoint: string,
-  body?: unknown
+  body?: unknown,
 ): Promise<ApiResponse<T>> {
   return apiRequest<T>(apiClient.patch<T>(endpoint, body));
 }

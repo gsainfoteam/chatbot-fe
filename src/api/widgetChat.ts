@@ -147,8 +147,9 @@ export async function sendWidgetChatMessage(
 
             // 리소스 정보 처리
             if (parsed.type === "resources") {
-              const RESOURCE_CENTER_BASE =
-                "https://resource-center-573707418062.us-central1.run.app/resource";
+              const RESOURCE_CENTER_BASE = `${
+                import.meta.env.VITE_RESOURCE_CENTER_URL
+              }/resource`;
 
               resources = (parsed.resources || []).map(
                 (resource: { type: string; url: string; title?: string }) => {

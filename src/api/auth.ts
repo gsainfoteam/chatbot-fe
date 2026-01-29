@@ -17,7 +17,7 @@ import { apiClient } from "./client";
 export async function login(credentials: LoginRequest): Promise<LoginResponse> {
   const response = await apiClient.post<LoginResponse>(
     "/auth/login",
-    credentials
+    credentials,
   );
   return response.data;
 }
@@ -28,7 +28,7 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
 export async function adminLogin(
   code: string,
   redirectUri: string,
-  codeVerifier: string
+  codeVerifier: string,
 ): Promise<AdminLoginResponse> {
   const response = await apiClient.post<AdminLoginResponse>(
     "/v1/auth/admin/login",
@@ -36,14 +36,14 @@ export async function adminLogin(
       code,
       redirect_uri: redirectUri,
       code_verifier: codeVerifier,
-    } as AdminLoginRequest
+    } as AdminLoginRequest,
   );
   return response.data;
 }
 
 export async function verifyToken(): Promise<VerifyTokenResponse> {
   const response = await apiClient.get<VerifyTokenResponse>(
-    "/v1/auth/admin/verify"
+    "/v1/auth/admin/verify",
   );
   return response.data;
 }
@@ -93,8 +93,8 @@ function generateRandomString(length: number = 32): string {
   crypto.getRandomValues(array);
   return Array.from(array, (byte) =>
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".charAt(
-      byte % 62
-    )
+      byte % 62,
+    ),
   ).join("");
 }
 
@@ -216,7 +216,7 @@ export async function refreshAccessToken(): Promise<AdminLoginResponse> {
   // 백엔드 refresh 엔드포인트 호출
   const response = await apiClient.post<AdminLoginResponse>(
     "/v1/auth/admin/refresh",
-    { refresh_token: refreshToken }
+    { refresh_token: refreshToken },
   );
 
   // 백엔드 토큰 저장
@@ -391,7 +391,7 @@ export function useOAuth2Logout() {
 
 // 기존 코드와의 호환성을 위한 함수 (deprecated)
 export async function loginWithResponse(
-  credentials: LoginRequest
+  credentials: LoginRequest,
 ): Promise<ApiResponse<LoginResponse>> {
   try {
     const data = await login(credentials);

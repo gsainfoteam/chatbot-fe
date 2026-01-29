@@ -48,6 +48,22 @@ export interface VerifyTokenResponse {
   uuid: string;
   email: string;
   name: string;
+  role?: string;
+}
+
+export interface UploadResponseMetadata {
+  resource_name?: string;
+  status?: string;
+  queued_for_processing?: boolean;
+  message_id?: string;
+  gcs_path?: string;
+}
+
+export interface UploadResponse {
+  id: string;
+  title: string;
+  metadata?: UploadResponseMetadata;
+  uploadedAt: string;
 }
 
 export interface ChatMessage {
