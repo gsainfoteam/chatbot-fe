@@ -14,7 +14,9 @@ import type {
 export async function getWidgetKeys(): Promise<WidgetKeyResponse[]> {
   const response = await apiGet<WidgetKeyResponse[]>("/v1/admin/widget-keys");
   if (!response.success || !response.data) {
-    throw new Error(response.error || "위젯 키 목록을 불러오는데 실패했습니다.");
+    throw new Error(
+      response.error || "위젯 키 목록을 불러오는데 실패했습니다."
+    );
   }
   return response.data;
 }
