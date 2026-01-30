@@ -154,3 +154,27 @@ export interface WidgetKeyResponse {
   allowedDomains: string[];
   createdAt: string;
 }
+
+// 대시보드 사용량 API 타입
+export interface UsageData {
+  date: string;
+  tokens: number;
+  requests: number;
+  domain?: string;
+}
+
+export interface DomainStat {
+  domain: string;
+  tokens: number;
+  requests: number;
+}
+
+export interface WidgetKeyStats {
+  widgetKeyId: string;
+  widgetKeyName: string;
+  widgetKey: string;
+  totalTokens: number;
+  totalRequests: number;
+  usageData: UsageData[];
+  domainStats: DomainStat[];
+}

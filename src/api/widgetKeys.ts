@@ -37,6 +37,25 @@ export async function createWidgetKey(
 }
 
 /**
+ * 위젯 키의 등록된 도메인 목록 조회
+ * GET /api/v1/admin/widget-keys/{widgetKeyId}/domains
+ */
+export async function getWidgetKeyDomains(
+  widgetKeyId: string
+): Promise<string[]> {
+  const response = await apiGet<string[] | { domains?: string[] }>(
+    `/v1/admin/widget-keys/${widgetKeyId}/domains`
+  );
+  if (!response.success) {
+    throw new Error(response.error || "도메인 목록을 불러오는데 실패했습니다.");
+  }
+  const data = response.data;
+  if (Array.isArray(data)) return data;
+  if (data?.domains && Array.isArray(data.domains)) return data.domains;
+  return [];
+}
+
+/**
  * 위젯 키에 도메인 추가
  * POST /api/v1/admin/widget-keys/{widgetKeyId}/domains
  */
