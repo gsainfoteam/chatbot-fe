@@ -24,3 +24,32 @@ export function getTooltipDateLabel(
   end.setDate(end.getDate() + (groupBy === "7d" ? 6 : 29));
   return `${dateStr} ~ ${end.toISOString().split("T")[0]}`;
 }
+
+/** startDate~endDate 범위의 모든 날짜(또는 그룹 키) 생성 (groupedData와 동일한 키 계산) */
+export function getDateKeysInRange(
+  startDate: string,
+  endDate: string,
+  groupBy: "1d" | "7d" | "30d"
+): string[] {
+  const keys = new Set<string>();
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const groupDays = groupBy === "7d" ? 7 : groupBy === "30d" ? 30 : 1;
+
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    if (groupBy === "1d") {
+      keys.add(d.toISOString().split("T")[0]);
+    } else {
+      const groupKey = new Date(
+        d.getFullYear(),
+        d.getMonth(),
+        Math.floor(d.getDate() / groupDays) * groupDays
+      )
+        .toISOString()
+        .split("T")[0];
+      keys.add(groupKey);
+    }
+  }
+
+  return Array.from(keys).sort();
+}

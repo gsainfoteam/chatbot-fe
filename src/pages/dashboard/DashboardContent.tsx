@@ -17,7 +17,7 @@ import { getWidgetKeys, getWidgetKeyDomains } from "../../api/widgetKeys";
 import FilterSelect from "../../components/FilterSelect";
 import type { UsageData, DomainStat } from "../../api/types";
 import ChartTooltip from "./components/ChartTooltip";
-import { getDateRange, getTooltipDateLabel } from "./utils";
+import { getDateRange, getDateKeysInRange, getTooltipDateLabel } from "./utils";
 
 export default function DashboardContent() {
   const [selectedWidgetKey, setSelectedWidgetKey] = useState<string | "all">(
@@ -187,6 +187,20 @@ export default function DashboardContent() {
     );
   }, [usageData, groupBy]);
 
+  // 차트용 데이터: startDate~endDate 전체를 채우고, 없는 날짜는 0으로
+  const chartData = useMemo(() => {
+    const dataByDate = new Map<string, { tokens: number; requests: number }>();
+    groupedData.forEach((d) => {
+      dataByDate.set(d.date, { tokens: d.tokens, requests: d.requests });
+    });
+
+    return getDateKeysInRange(startDate, endDate, groupBy).map((date) => ({
+      date,
+      tokens: dataByDate.get(date)?.tokens ?? 0,
+      requests: dataByDate.get(date)?.requests ?? 0,
+    }));
+  }, [startDate, endDate, groupBy, groupedData]);
+
   // 총 사용량 계산 (API가 이미 필터링된 데이터 반환)
   const totalTokens = usageData.reduce((sum, d) => sum + d.tokens, 0);
   const totalRequests = usageData.reduce((sum, d) => sum + d.requests, 0);
@@ -302,14 +316,14 @@ export default function DashboardContent() {
                   <div className="h-44 flex items-center justify-center text-gray-500">
                     로딩 중...
                   </div>
-                ) : groupedData.length === 0 ? (
+                ) : chartData.length === 0 ? (
                   <div className="h-44 flex items-center justify-center text-gray-500">
                     데이터가 없습니다.
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height={180}>
                     <ComposedChart
-                      data={groupedData.map((d) => ({
+                      data={chartData.map((d) => ({
                         date: new Date(d.date).toLocaleDateString("ko-KR", {
                           month: "short",
                           day: "numeric",
@@ -408,14 +422,14 @@ export default function DashboardContent() {
                   <div className="h-44 flex items-center justify-center text-gray-500">
                     로딩 중...
                   </div>
-                ) : groupedData.length === 0 ? (
+                ) : chartData.length === 0 ? (
                   <div className="h-44 flex items-center justify-center text-gray-500">
                     데이터가 없습니다.
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height={180}>
                     <BarChart
-                      data={groupedData.map((d) => ({
+                      data={chartData.map((d) => ({
                         date: new Date(d.date).toLocaleDateString("ko-KR", {
                           month: "short",
                           day: "numeric",
