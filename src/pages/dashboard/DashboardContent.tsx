@@ -17,7 +17,13 @@ import { getWidgetKeys, getWidgetKeyDomains } from "../../api/widgetKeys";
 import FilterSelect from "../../components/FilterSelect";
 import type { UsageData, DomainStat } from "../../api/types";
 import ChartTooltip from "./components/ChartTooltip";
-import { getDateRange, getDateKeysInRange, getTooltipDateLabel } from "./utils";
+import {
+  getDateRange,
+  getDateKeysInRange,
+  getGroupKeyForDate,
+  getTooltipDateLabel,
+  getChartDateLabel,
+} from "./utils";
 
 export default function DashboardContent() {
   const [selectedWidgetKey, setSelectedWidgetKey] = useState<string | "all">(
@@ -161,17 +167,9 @@ export default function DashboardContent() {
     if (groupBy === "1d") return usageData;
 
     const grouped = new Map<string, UsageData>();
-    const groupDays = groupBy === "7d" ? 7 : 30;
 
     usageData.forEach((data) => {
-      const date = new Date(data.date);
-      const groupKey = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        Math.floor(date.getDate() / groupDays) * groupDays
-      )
-        .toISOString()
-        .split("T")[0];
+      const groupKey = getGroupKeyForDate(data.date, groupBy === "7d" ? "7d" : "30d");
 
       const existing = grouped.get(groupKey);
       if (existing) {
@@ -324,10 +322,7 @@ export default function DashboardContent() {
                   <ResponsiveContainer width="100%" height={180}>
                     <ComposedChart
                       data={chartData.map((d) => ({
-                        date: new Date(d.date).toLocaleDateString("ko-KR", {
-                          month: "short",
-                          day: "numeric",
-                        }),
+                        date: getChartDateLabel(d.date, groupBy),
                         tokens: d.tokens,
                         fullDate: getTooltipDateLabel(d.date, groupBy),
                       }))}
@@ -430,10 +425,7 @@ export default function DashboardContent() {
                   <ResponsiveContainer width="100%" height={180}>
                     <BarChart
                       data={chartData.map((d) => ({
-                        date: new Date(d.date).toLocaleDateString("ko-KR", {
-                          month: "short",
-                          day: "numeric",
-                        }),
+                        date: getChartDateLabel(d.date, groupBy),
                         requests: d.requests,
                         fullDate: getTooltipDateLabel(d.date, groupBy),
                       }))}
