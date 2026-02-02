@@ -194,6 +194,12 @@ export const XIcon = createIcon(
   "w-6 h-6"
 );
 
+export const ChevronDownIcon = createIcon(
+  "0 0 24 24",
+  ["M19 9l-7 7-7-7"],
+  "w-4 h-4"
+);
+
 // 파일 업로드 (ArrowUpTray 스타일)
 export const UploadIcon = createIcon(
   "0 0 24 24",
