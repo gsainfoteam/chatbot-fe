@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChatMessage, ColorTheme, WidgetContext, Source } from "./types";
 import { uid, applyColorTheme, renderMarkdown } from "./utils";
-import { LinkIcon, ExternalLinkIcon, PhotoIcon } from "../components/Icons";
+import { LinkIcon, ExternalLinkIcon } from "../components/Icons";
 import {
   createWidgetSession,
   sendWidgetChatMessage,
@@ -13,52 +13,31 @@ import {
   isRateLimitError,
 } from "../api/widgetChat";
 
-// 출처 배지 컴포넌트
+// 출처 배지 (PDF 등 URL용)
 function SourceBadge({ source }: { source: Source }) {
-  if (source.type === "url") {
-    return (
-      <a
-        href={source.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition hover:opacity-80"
-        style={{
-          backgroundColor: "var(--color-background, #f8fafc)",
-          borderColor: "var(--color-border, #e2e8f0)",
-          color: "var(--color-text, #1e293b)",
-        }}
-      >
-        <LinkIcon className="w-3 h-3 shrink-0" />
-        <span className="max-w-[200px] truncate">
-          {source.title || new URL(source.url).hostname}
-        </span>
-        <ExternalLinkIcon className="w-3 h-3 shrink-0" />
-      </a>
-    );
-  }
-
-  if (source.type === "image") {
-    if (source.title) {
-      return (
-        <div
-          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border"
-          style={{
-            backgroundColor: "var(--color-background, #f8fafc)",
-            borderColor: "var(--color-border, #e2e8f0)",
-            color: "var(--color-text, #1e293b)",
-          }}
-        >
-          <PhotoIcon className="w-3 h-3 shrink-0" />
-          <span className="max-w-[200px] truncate">{source.title}</span>
-        </div>
-      );
-    }
-    return <></>;
-  }
-  return null;
+  if (source.type !== "url") return null;
+  return (
+    <a
+      href={source.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition hover:opacity-80 min-w-0 max-w-full shrink"
+      style={{
+        backgroundColor: "var(--color-background, #f8fafc)",
+        borderColor: "var(--color-border, #e2e8f0)",
+        color: "var(--color-text, #1e293b)",
+      }}
+    >
+      <LinkIcon className="w-3 h-3 shrink-0" />
+      <span className="truncate min-w-0">
+        {source.title || "참고자료"}
+      </span>
+      <ExternalLinkIcon className="w-3 h-3 shrink-0" />
+    </a>
+  );
 }
 
-// 이미지 컴포넌트 (로딩 skeleton 포함)
+// 이미지 컴포넌트 (클릭 시 URL로 이동)
 function SourceImage({ source }: { source: Source }) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -68,7 +47,12 @@ function SourceImage({ source }: { source: Source }) {
   }
 
   return (
-    <div className="mt-2 relative">
+    <a
+      href={source.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-2 block relative cursor-pointer"
+    >
       {/* Skeleton UI */}
       {isLoading && (
         <div
@@ -86,14 +70,13 @@ function SourceImage({ source }: { source: Source }) {
         src={source.url}
         alt={source.title || "출처 이미지"}
         className={`rounded-lg border ${
-          isLoading ? "absolute opacity-0" : "opacity-100"
-        }`}
+          isLoading ? "absolute inset-0 opacity-0 w-full h-full object-contain" : "opacity-100 block"
+        } hover:opacity-90 transition-opacity`}
         style={{
           maxWidth: "100%",
           width: "100%",
           height: "auto",
           borderColor: "var(--color-border, #e2e8f0)",
-          transition: "opacity 0.2s ease-in-out",
         }}
         onLoad={() => {
           setIsLoading(false);
@@ -103,7 +86,7 @@ function SourceImage({ source }: { source: Source }) {
           setHasError(true);
         }}
       />
-    </div>
+    </a>
   );
 }
 
@@ -514,7 +497,7 @@ export default function ChatWidget({
               }`}
             >
               <div
-                className="max-w-[80%] text-[14px] leading-snug px-3 py-2 rounded-2xl border"
+                className="max-w-[80%] min-w-0 text-[14px] leading-snug px-3 py-2 rounded-2xl border"
                 style={
                   m.role === "user"
                     ? {
@@ -558,15 +541,17 @@ export default function ChatWidget({
                 {m.role === "assistant" &&
                   m.sources &&
                   m.sources.length > 0 && (
-                    <div className="mt-2 pt-3 border-t border-slate-200 flex flex-col gap-1">
-                      {/* 출처 배지 */}
-                      <div className="flex flex-wrap gap-1.5">
-                        {m.sources.map((source, idx) => (
-                          <SourceBadge key={idx} source={source} />
-                        ))}
+                    <div className="mt-2 pt-3 border-t border-slate-200 flex flex-col gap-1 min-w-0 overflow-hidden">
+                      {/* PDF 등 URL 출처 배지 */}
+                      <div className="flex flex-wrap gap-1.5 min-w-0">
+                        {m.sources
+                          .filter((s) => s.type === "url")
+                          .map((source, idx) => (
+                            <SourceBadge key={idx} source={source} />
+                          ))}
                       </div>
 
-                      {/* 이미지 출처 표시 */}
+                      {/* 이미지 출처 (버튼 없이 이미지만, 클릭 시 URL 이동) */}
                       {m.sources
                         .filter((s) => s.type === "image")
                         .map((source, idx) => (
