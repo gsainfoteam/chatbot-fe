@@ -67,10 +67,9 @@ export function renderMarkdown(text: string): React.ReactNode {
 
       // 토큰화
       const tokens: Array<{
-        type: "bold" | "italic" | "code" | "text" | "header" | "url";
+        type: "bold" | "italic" | "code" | "text" | "header";
         content: string;
         level?: number;
-        url?: string;
       }> = [];
       let i = 0;
 
@@ -151,41 +150,13 @@ export function renderMarkdown(text: string): React.ReactNode {
             continue;
           }
         }
-        // [텍스트](URL) 링크 처리
-        else if (line[i] === "[") {
-          const closeBracket = line.indexOf("]", i + 1);
-          if (closeBracket !== -1 && line[closeBracket + 1] === "(") {
-            const closeParen = line.indexOf(")", closeBracket + 2);
-            if (closeParen !== -1) {
-              const linkText = line.slice(i + 1, closeBracket);
-              const linkUrl = line.slice(closeBracket + 2, closeParen);
-              tokens.push({
-                type: "url",
-                content: linkText,
-                url: linkUrl,
-              });
-              i = closeParen + 1;
-              continue;
-            }
-          }
-          // 링크 형식이 아니면 일반 텍스트로 처리
-          if (tokens.length > 0 && tokens[tokens.length - 1].type === "text") {
-            tokens[tokens.length - 1].content += "[";
-          } else {
-            tokens.push({ type: "text", content: "[" });
-          }
-          i++;
-          continue;
-        }
-
         // 일반 텍스트 처리
         const textStart = i;
         while (
           i < line.length &&
           !line.slice(i).startsWith("**") &&
           line[i] !== "*" &&
-          line[i] !== "`" &&
-          line[i] !== "["
+          line[i] !== "`"
         ) {
           i++;
         }
@@ -240,24 +211,6 @@ export function renderMarkdown(text: string): React.ReactNode {
           case "text":
             parts.push(
               React.createElement("span", { key: key++ }, token.content),
-            );
-            break;
-          case "url":
-            parts.push(
-              React.createElement(
-                "a",
-                {
-                  key: key++,
-                  href: token.url,
-                  target: "_blank",
-                  rel: "noopener noreferrer",
-                  style: {
-                    color: "var(--color-primary, #df3326)",
-                    textDecoration: "underline",
-                  },
-                },
-                token.content,
-              ),
             );
             break;
           case "header": {

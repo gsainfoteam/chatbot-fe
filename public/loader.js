@@ -24,14 +24,13 @@
   // 위젯 origin 결정: 스크립트가 로드되는 origin 기반으로 설정
   // 보안: 스크립트의 origin을 사용하여 조작 불가능
   const scriptOrigin = scriptEl.src ? new URL(scriptEl.src).origin : null;
-  const isLocalDev = scriptOrigin && (
-    scriptOrigin === "http://localhost:5173" || 
-    scriptOrigin === "http://127.0.0.1:5173"
-  );
-  
-  const WIDGET_ORIGIN = isLocalDev && scriptOrigin 
-    ? scriptOrigin 
-    : "https://chatbot.gistory.me";
+  const isLocalDev =
+    scriptOrigin &&
+    (scriptOrigin === "http://localhost:5173" ||
+      scriptOrigin === "http://127.0.0.1:5173");
+
+  const WIDGET_ORIGIN =
+    isLocalDev && scriptOrigin ? scriptOrigin : "https://chatbot.gistory.me";
   const IFRAME_URL = WIDGET_ORIGIN + "/widget/";
 
   // iframe 내부이거나 위젯 origin의 /widget/ 경로에서는 실행하지 않음 (무한 루프 방지)
@@ -163,24 +162,30 @@
     transition: opacity 180ms ease, transform 180ms ease;
   `;
 
-  // 모바일 풀스크린
-  const mq = window.matchMedia("(max-width: 480px)");
+  // 모바일: floating bottom sheet / 데스크톱: floating card
+  const mq = window.matchMedia("(max-width: 640px)");
   function applyResponsive() {
     if (mq.matches) {
-      wrap.style.left = "0";
-      wrap.style.right = "0";
-      wrap.style.bottom = "0";
-      wrap.style.width = "100vw";
-      wrap.style.height = "100vh";
-      wrap.style.borderRadius = "0";
+      wrap.style.left = "12px";
+      wrap.style.right = "12px";
+      wrap.style.top = "auto";
+      wrap.style.bottom = "12px";
+      wrap.style.width = "calc(100vw - 24px)";
+      wrap.style.height = "85vh";
+      wrap.style.maxHeight = "85vh";
+      wrap.style.borderRadius = "20px 20px 0 0";
+      wrap.style.boxShadow = "0 16px 40px rgba(0,0,0,.22)";
+      wrap.style[config.position] = ""; // 데스크톱 위치 스타일 제거
     } else {
       wrap.style.left = "";
       wrap.style.right = "";
       wrap.style.borderRadius = "18px";
       wrap.style.width = config.width + "px";
       wrap.style.height = config.height + "px";
+      wrap.style.maxHeight = "";
       wrap.style.bottom = config.offset + BTN_SIZE + 12 + "px";
       wrap.style[config.position] = config.offset + "px";
+      wrap.style.boxShadow = "0 16px 40px rgba(0,0,0,.22)";
     }
   }
   applyResponsive();

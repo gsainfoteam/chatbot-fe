@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChatMessage, ColorTheme, WidgetContext, Source } from "./types";
 import { uid, applyColorTheme, renderMarkdown } from "./utils";
-import { LinkIcon, ExternalLinkIcon, PhotoIcon } from "../components/Icons";
+import { LinkIcon, ExternalLinkIcon, PhotoIcon, ArrowUpIcon } from "../components/Icons";
 import {
   createWidgetSession,
   sendWidgetChatMessage,
@@ -245,7 +245,7 @@ export default function ChatWidget({
 
   const canSend = useMemo(
     () => input.trim().length > 0 && !loading,
-    [input, loading],
+    [input, loading]
   );
 
   const send = async () => {
@@ -284,7 +284,7 @@ export default function ChatWidget({
             role: userMsg.role,
           },
         },
-        "*",
+        "*"
       );
     }
 
@@ -308,7 +308,7 @@ export default function ChatWidget({
         });
         saveSessionToken(
           sessionResponse.sessionToken,
-          sessionResponse.expiresIn,
+          sessionResponse.expiresIn
         );
         sessionToken = sessionResponse.sessionToken;
       }
@@ -358,7 +358,7 @@ export default function ChatWidget({
               sources: finalResponse.sources,
             };
             return prev.map((msg) =>
-              msg.id === assistantMsgId ? updatedMessage : msg,
+              msg.id === assistantMsgId ? updatedMessage : msg
             );
           });
           setLoading(false);
@@ -367,7 +367,7 @@ export default function ChatWidget({
           if (isInIframe) {
             setMessages((prev) => {
               const assistantMsg = prev.find(
-                (msg) => msg.id === assistantMsgId,
+                (msg) => msg.id === assistantMsgId
               );
               if (assistantMsg) {
                 window.parent?.postMessage(
@@ -379,13 +379,13 @@ export default function ChatWidget({
                       role: assistantMsg.role,
                     },
                   },
-                  "*",
+                  "*"
                 );
               }
               return prev;
             });
           }
-        },
+        }
       ).catch((error) => {
         // 스트림 에러 발생 시 처리
         setLoading(false);
@@ -393,7 +393,7 @@ export default function ChatWidget({
           const retryAt = getSessionExpiresAt();
           if (retryAt) setRateLimitWarning({ retryAt });
           setMessages((prev) =>
-            prev.filter((msg) => msg.id !== assistantMsgId),
+            prev.filter((msg) => msg.id !== assistantMsgId)
           );
           return;
         }
@@ -411,7 +411,7 @@ export default function ChatWidget({
                   ...msg,
                   text: "죄송합니다. 응답을 받는 중 오류가 발생했습니다.",
                 }
-              : msg,
+              : msg
           );
         });
         throw error; // 상위 catch로 전파
@@ -442,31 +442,33 @@ export default function ChatWidget({
     <div className={className || "h-screen w-screen bg-transparent p-0"}>
       <div
         className="h-full w-full bg-white border border-slate-200 shadow-[0_16px_40px_rgba(0,0,0,0.22)] overflow-hidden flex flex-col"
-        style={{ borderRadius: "18px" }}
+        style={{ borderRadius: "24px" }}
       >
         {/* Header */}
         <div
-          className="flex items-center justify-between px-3 py-2 border-b bg-white"
+          className="flex items-center justify-between px-4 py-3 border-b"
           style={{
             borderColor: "var(--color-border, #e2e8f0)",
             backgroundColor: "var(--color-background, #ffffff)",
           }}
         >
-          <div className="flex items-center gap-2">
-            <span
-              className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: "var(--color-primary, #ff4500)" }}
+          <div className="flex items-center gap-3 min-w-0">
+            <img
+              src="/logo.svg"
+              alt=""
+              className="w-8 h-8 shrink-0 object-contain"
+              aria-hidden
             />
-            <div>
+            <div className="min-w-0">
               <div
-                className="text-sm font-extrabold"
+                className="text-[15px] font-semibold tracking-tight truncate"
                 style={{ color: "var(--color-text, #1e293b)" }}
               >
                 GIST 챗봇
               </div>
               <div
-                className="text-xs mt-0.5"
-                style={{ color: "var(--color-text-secondary, #64748b)" }}
+                className="text-xs mt-0.5 tracking-tight"
+                style={{ color: "var(--color-text-secondary, #94a3b8)" }}
               >
                 궁금한 내용을 질문해보세요.
               </div>
@@ -474,7 +476,7 @@ export default function ChatWidget({
           </div>
 
           <button
-            className="p-2 rounded-lg active:scale-[0.98] transition"
+            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg active:scale-[0.98] transition"
             style={{
               color: "var(--color-text-secondary, #64748b)",
             }}
@@ -582,7 +584,7 @@ export default function ChatWidget({
           {loading &&
             !messages.some(
               (m) =>
-                m.role === "assistant" && m.text && m.text.trim().length > 0,
+                m.role === "assistant" && m.text && m.text.trim().length > 0
             ) && (
               <div className="flex mb-2 justify-start">
                 <div
@@ -635,7 +637,7 @@ export default function ChatWidget({
 
         {/* Input */}
         <form
-          className="border-t p-2 flex gap-2"
+          className="border-t p-2 flex gap-2 items-center"
           style={{
             borderColor: "var(--color-border, #e2e8f0)",
             backgroundColor: "var(--color-background, #ffffff)",
@@ -646,7 +648,7 @@ export default function ChatWidget({
           }}
         >
           <textarea
-            className="flex-1 resize-none border rounded-xl px-3 py-2 text-sm outline-none transition"
+            className="flex-1 resize-none border rounded-2xl px-4 py-2.5 text-sm outline-none transition min-h-10"
             style={{
               borderColor: "var(--color-border, #e2e8f0)",
               color: "var(--color-text, #1e293b)",
@@ -700,12 +702,13 @@ export default function ChatWidget({
           <button
             type="submit"
             disabled={!canSend}
-            className="px-4 rounded-xl font-extrabold text-white disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition"
+            className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition"
             style={{
               backgroundColor: "var(--color-primary, #ff4500)",
             }}
+            aria-label="전송"
           >
-            전송
+            <ArrowUpIcon className="w-6 h-6" />
           </button>
         </form>
       </div>
