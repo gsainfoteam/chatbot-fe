@@ -30,7 +30,7 @@ widgetApiClient.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  },
+  }
 );
 
 /**
@@ -43,7 +43,7 @@ widgetApiClient.interceptors.request.use(
 export async function sendWidgetChatMessage(
   request: SendChatRequest,
   onChunk?: (text: string, isComplete: boolean) => void,
-  onComplete?: (response: SendChatResponse) => void,
+  onComplete?: (response: SendChatResponse) => void
 ): Promise<void> {
   const sessionToken = getSessionToken();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
@@ -57,20 +57,20 @@ export async function sendWidgetChatMessage(
         ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
       },
       body: JSON.stringify(request),
-    },
+    }
   );
 
   if (!response.ok) {
     const errorText = await response.text();
     if (response.status === 429) {
       const err = new Error(
-        `HTTP error! status: ${response.status}, error: ${errorText}`,
+        `HTTP error! status: ${response.status}, error: ${errorText}`
       ) as Error & { status: number };
       err.status = 429;
       throw err;
     }
     throw new Error(
-      `HTTP error! status: ${response.status}, error: ${errorText}`,
+      `HTTP error! status: ${response.status}, error: ${errorText}`
     );
   }
 
@@ -119,12 +119,9 @@ export async function sendWidgetChatMessage(
 
           // 종료 신호 처리
           if (data === "[DONE]") {
-            // 스트리밍 완료
+            const finalResponse = { answer: fullText, sources: resources };
             if (onComplete) {
-              onComplete({
-                answer: fullText,
-                sources: resources,
-              });
+              onComplete(finalResponse);
             }
             return;
           }
@@ -147,84 +144,65 @@ export async function sendWidgetChatMessage(
 
             // 리소스 정보 처리
             if (parsed.type === "resources") {
+              const rawResources = parsed.resources || [];
               const RESOURCE_CENTER_BASE = `${
                 import.meta.env.VITE_RESOURCE_CENTER_URL
               }/resource`;
 
-              resources = (parsed.resources || []).map(
-                (resource: { type: string; url: string; title?: string }) => {
+              resources = rawResources.map(
+                (resource: {
+                  formats: string[];
+                  path: string;
+                  url: string;
+                }) => {
                   const url = resource.url || "";
 
-                  // URL에서 path만 추출
                   let path = url;
-
-                  // 절대 URL인 경우 path만 추출
                   try {
                     const urlObj = new URL(url);
                     path = urlObj.pathname;
                   } catch {
-                    // URL 파싱 실패 시 원본 사용 (상대 경로일 가능성)
                     path = url;
                   }
 
-                  // path에서 앞의 / 제거 (있으면)
                   let cleanPath = path.startsWith("/") ? path.slice(1) : path;
 
-                  // 확장자 체크
-                  const lowerPath = cleanPath.toLowerCase();
-                  const hasPdfExtension = lowerPath.endsWith(".pdf");
-                  const hasPngExtension = lowerPath.endsWith(".png");
-                  const hasJpgExtension =
-                    lowerPath.endsWith(".jpg") || lowerPath.endsWith(".jpeg");
-                  const hasExtension =
-                    hasPdfExtension || hasPngExtension || hasJpgExtension;
+                  // formats 기반 확장자: ['pdf'] | ['png'] 만 존재
+                  const formats = (resource.formats || []).map((f) =>
+                    String(f).toLowerCase()
+                  );
+                  const hasExt =
+                    cleanPath.toLowerCase().endsWith(".pdf") ||
+                    cleanPath.toLowerCase().endsWith(".png");
 
-                  // 확장자가 없으면 서버에서 온 type을 기반으로 추가
-                  if (!hasExtension) {
-                    if (resource.type === "image" || resource.type === "png") {
+                  if (!hasExt) {
+                    if (formats.includes("png")) {
                       cleanPath = `${cleanPath}.png`;
-                    } else if (resource.type === "pdf") {
+                    } else if (formats.includes("pdf")) {
                       cleanPath = `${cleanPath}.pdf`;
                     } else {
-                      // 기본값: PDF로 처리 (문서일 가능성이 높음)
                       cleanPath = `${cleanPath}.pdf`;
                     }
                   }
 
                   const finalUrl = `${RESOURCE_CENTER_BASE}/${cleanPath}`;
+                  const isImage = cleanPath.toLowerCase().endsWith(".png");
 
-                  // PNG, JPG 등 이미지 확장자면 image 타입으로 설정
-                  const finalLowerPath = cleanPath.toLowerCase();
-                  const isImage =
-                    finalLowerPath.endsWith(".png") ||
-                    finalLowerPath.endsWith(".jpg") ||
-                    finalLowerPath.endsWith(".jpeg") ||
-                    resource.type === "image";
-
-                  // 파일명에서 제목 추출 (확장자 제거, URL 디코딩, 8글자 제한)
-                  let title = resource.title;
+                  let title = resource.path;
                   if (!title) {
-                    // URL에서 파일명 추출
                     const pathParts = cleanPath.split("/");
                     let fileName =
                       pathParts[pathParts.length - 1] || "참고자료";
-
-                    // URL 디코딩
                     try {
                       fileName = decodeURIComponent(fileName);
                     } catch {
-                      console.log("[widgetChat] URL 디코딩 실패:", fileName);
+                      void 0;
                     }
-
-                    // 확장자 제거
                     fileName = fileName.replace(/\.(pdf|png|jpg|jpeg)$/i, "");
-
-                    // 8글자로 제한하고 ... 추가
-                    if (fileName.length > 20) {
-                      title = fileName.slice(0, 20) + "...";
-                    } else {
-                      title = fileName;
-                    }
+                    title =
+                      fileName.length > 20
+                        ? fileName.slice(0, 20) + "..."
+                        : fileName;
                   }
 
                   return {
@@ -232,7 +210,7 @@ export async function sendWidgetChatMessage(
                     url: finalUrl,
                     title: title,
                   };
-                },
+                }
               );
             }
           } catch (e) {
@@ -253,11 +231,9 @@ export async function sendWidgetChatMessage(
     }
 
     // 스트리밍이 정상적으로 종료되지 않은 경우
+    const finalResponse = { answer: fullText, sources: resources };
     if (onComplete) {
-      onComplete({
-        answer: fullText,
-        sources: resources,
-      });
+      onComplete(finalResponse);
     }
   } catch (error) {
     // 에러 발생 시 리더 정리
@@ -282,11 +258,11 @@ export async function sendWidgetChatMessage(
  * POST /api/v1/widget/auth/session
  */
 export async function createWidgetSession(
-  request: CreateSessionRequest,
+  request: CreateSessionRequest
 ): Promise<CreateSessionResponse> {
   const response = await widgetApiClient.post<CreateSessionResponse>(
     "/v1/widget/auth/session",
-    request,
+    request
   );
   return response.data;
 }
