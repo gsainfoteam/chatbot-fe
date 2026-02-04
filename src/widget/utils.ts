@@ -21,25 +21,25 @@ export function applyColorTheme(colors: ColorTheme): void {
   root.style.setProperty("--color-primary", `#${colors.primary || "ff4500"}`);
   root.style.setProperty(
     "--color-button",
-    `#${colors.button || colors.primary || "ff4500"}`,
+    `#${colors.button || colors.primary || "ff4500"}`
   );
   root.style.setProperty(
     "--color-background",
-    `#${colors.background || "ffffff"}`,
+    `#${colors.background || "ffffff"}`
   );
   root.style.setProperty("--color-text", `#${colors.text || "1e293b"}`);
   root.style.setProperty(
     "--color-text-secondary",
-    `#${colors.textSecondary || "64748b"}`,
+    `#${colors.textSecondary || "64748b"}`
   );
   root.style.setProperty("--color-border", `#${colors.border || "e2e8f0"}`);
   root.style.setProperty(
     "--color-user-message-bg",
-    `#${colors.userMessageBg || colors.primary || "ff4500"}`,
+    `#${colors.userMessageBg || colors.primary || "ff4500"}`
   );
   root.style.setProperty(
     "--color-assistant-message-bg",
-    `#${colors.assistantMessageBg || "ffffff"}`,
+    `#${colors.assistantMessageBg || "ffffff"}`
   );
 
   console.log("CSS 변수 업데이트 완료");
@@ -58,7 +58,16 @@ export function renderMarkdown(text: string): React.ReactNode {
 
     lines.forEach((line, lineIndex) => {
       if (lineIndex > 0) {
-        parts.push(React.createElement("br", { key: key++ }));
+        parts.push(
+          React.createElement("span", {
+            key: key++,
+            style: {
+              display: "block",
+              height: "0.5em",
+              lineHeight: 0,
+            },
+          })
+        );
       }
 
       if (!line) {
@@ -182,12 +191,12 @@ export function renderMarkdown(text: string): React.ReactNode {
         switch (token.type) {
           case "bold":
             parts.push(
-              React.createElement("strong", { key: key++ }, token.content),
+              React.createElement("strong", { key: key++ }, token.content)
             );
             break;
           case "italic":
             parts.push(
-              React.createElement("em", { key: key++ }, token.content),
+              React.createElement("em", { key: key++ }, token.content)
             );
             break;
           case "code":
@@ -204,13 +213,13 @@ export function renderMarkdown(text: string): React.ReactNode {
                     fontFamily: "monospace",
                   },
                 },
-                token.content,
-              ),
+                token.content
+              )
             );
             break;
           case "text":
             parts.push(
-              React.createElement("span", { key: key++ }, token.content),
+              React.createElement("span", { key: key++ }, token.content)
             );
             break;
           case "header": {
@@ -224,12 +233,12 @@ export function renderMarkdown(text: string): React.ReactNode {
               | "h6";
             // 레벨에 따른 폰트 크기 설정
             const fontSizeMap: Record<number, string> = {
-              1: "1.5em",
-              2: "1.3em",
-              3: "1.1em",
-              4: "1em",
-              5: "0.9em",
-              6: "0.8em",
+              1: "1.8rem",
+              2: "1.5rem",
+              3: "1.25rem",
+              4: "1rem",
+              5: "0.75rem",
+              6: "0.5rem",
             };
             parts.push(
               React.createElement(
@@ -239,19 +248,19 @@ export function renderMarkdown(text: string): React.ReactNode {
                   style: {
                     fontSize: fontSizeMap[level] || "1.1em",
                     fontWeight: "bold",
-                    marginTop: level <= 2 ? "0.6em" : "0.4em",
+                    marginTop: level <= 2 ? "0.5em" : "0.5em",
                     marginBottom: level <= 2 ? "0.2em" : "0.15em",
                     color: "var(--color-text, #1e293b)",
                   },
                 },
-                token.content,
-              ),
+                token.content
+              )
             );
             break;
           }
           default:
             parts.push(
-              React.createElement("span", { key: key++ }, token.content),
+              React.createElement("span", { key: key++ }, token.content)
             );
             break;
         }
