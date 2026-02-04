@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChatMessage, ColorTheme, WidgetContext, Source } from "./types";
 import { uid, applyColorTheme, renderMarkdown } from "./utils";
-import { LinkIcon, ExternalLinkIcon, PhotoIcon, ArrowUpIcon } from "../components/Icons";
+import { LinkIcon, ExternalLinkIcon, PhotoIcon, ArrowUpIcon, StopIcon } from "../components/Icons";
 import {
   createWidgetSession,
   sendWidgetChatMessage,
@@ -21,7 +21,7 @@ function SourceBadge({ source }: { source: Source }) {
         href={source.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition hover:opacity-80"
+        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition hover:opacity-80 max-w-full min-w-0"
         style={{
           backgroundColor: "var(--color-background, #f8fafc)",
           borderColor: "var(--color-border, #e2e8f0)",
@@ -29,7 +29,7 @@ function SourceBadge({ source }: { source: Source }) {
         }}
       >
         <LinkIcon className="w-3 h-3 shrink-0" />
-        <span className="max-w-[200px] truncate">
+        <span className="min-w-0 flex-1 truncate">
           {source.title || new URL(source.url).hostname}
         </span>
         <ExternalLinkIcon className="w-3 h-3 shrink-0" />
@@ -41,7 +41,7 @@ function SourceBadge({ source }: { source: Source }) {
     if (source.title) {
       return (
         <div
-          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border"
+          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border max-w-full min-w-0"
           style={{
             backgroundColor: "var(--color-background, #f8fafc)",
             borderColor: "var(--color-border, #e2e8f0)",
@@ -49,7 +49,7 @@ function SourceBadge({ source }: { source: Source }) {
           }}
         >
           <PhotoIcon className="w-3 h-3 shrink-0" />
-          <span className="max-w-[200px] truncate">{source.title}</span>
+          <span className="min-w-0 flex-1 truncate">{source.title}</span>
         </div>
       );
     }
@@ -131,6 +131,8 @@ export default function ChatWidget({
   } | null>(null);
   const [rateLimitRemainingText, setRateLimitRemainingText] = useState("");
   const isComposingRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const streamingMessageIdRef = useRef<string | null>(null);
 
   // iframe 환경인지 확인 (React 앱 내부에서는 false)
   const isInIframe = typeof window !== "undefined" && window.parent !== window;
@@ -321,6 +323,10 @@ export default function ChatWidget({
         sources: [],
       };
       setMessages((prev) => [...prev, initialMessage]);
+      streamingMessageIdRef.current = assistantMsgId;
+
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
 
       // 채팅 메시지 전송 (스트리밍)
       await sendWidgetChatMessage(
@@ -349,6 +355,8 @@ export default function ChatWidget({
         },
         // onComplete: 전체 응답 완료 시 호출
         (finalResponse) => {
+          abortControllerRef.current = null;
+          streamingMessageIdRef.current = null;
           // 함수형 업데이트를 사용하여 최종 메시지 업데이트 (sources 포함)
           setMessages((prev) => {
             const updatedMessage: ChatMessage = {
@@ -385,10 +393,20 @@ export default function ChatWidget({
               return prev;
             });
           }
-        }
+        },
+        { signal: controller.signal },
       ).catch((error) => {
+        abortControllerRef.current = null;
+        streamingMessageIdRef.current = null;
         // 스트림 에러 발생 시 처리
         setLoading(false);
+        // 사용자가 중지한 경우: 받은 내용만 유지, 에러 메시지 표시 안 함 (UI는 이미 중지 버튼에서 처리됨)
+        if (typeof DOMException !== "undefined" && error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
         if (isRateLimitError(error)) {
           const retryAt = getSessionExpiresAt();
           if (retryAt) setRateLimitWarning({ retryAt });
@@ -417,8 +435,18 @@ export default function ChatWidget({
         throw error; // 상위 catch로 전파
       });
     } catch (error) {
+      abortControllerRef.current = null;
+      streamingMessageIdRef.current = null;
       console.error("Failed to send chat message:", error);
       setLoading(false);
+
+      // 사용자가 중지한 경우: 에러 메시지 표시 안 함
+      const isAbortError =
+        (typeof DOMException !== "undefined" && error instanceof DOMException && (error as DOMException).name === "AbortError") ||
+        (error instanceof Error && error.name === "AbortError");
+      if (isAbortError) {
+        return;
+      }
 
       if (isRateLimitError(error)) {
         const retryAt = getSessionExpiresAt();
@@ -699,17 +727,50 @@ export default function ChatWidget({
               }
             }}
           />
-          <button
-            type="submit"
-            disabled={!canSend}
-            className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition"
-            style={{
-              backgroundColor: "var(--color-primary, #ff4500)",
-            }}
-            aria-label="전송"
-          >
-            <ArrowUpIcon className="w-6 h-6" />
-          </button>
+          {loading ? (
+            <button
+              type="button"
+              onClick={() => {
+                const msgId = streamingMessageIdRef.current;
+                setLoading(false);
+                if (msgId) {
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === msgId
+                        ? {
+                            ...msg,
+                            text: msg.text.trim()
+                              ? `${msg.text}\n\n_(응답이 중지되었습니다)_`
+                              : "응답이 중지되었습니다.",
+                          }
+                        : msg
+                    )
+                  );
+                  streamingMessageIdRef.current = null;
+                }
+                abortControllerRef.current?.abort();
+              }}
+              className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white active:scale-[0.98] transition hover:opacity-90"
+              style={{
+                backgroundColor: "var(--color-primary, #df3326)",
+              }}
+              aria-label="응답 중지"
+            >
+              <StopIcon className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!canSend}
+              className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition"
+              style={{
+                backgroundColor: "var(--color-primary, #ff4500)",
+              }}
+              aria-label="전송"
+            >
+              <ArrowUpIcon className="w-6 h-6" />
+            </button>
+          )}
         </form>
       </div>
     </div>

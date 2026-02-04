@@ -225,3 +225,10 @@ export const ArrowUpIcon = ({ className = "w-4 h-4" }: IconProps) => (
     />
   </svg>
 );
+
+// 중지 (스트리밍 중단용, 둥근 사각형)
+export const StopIcon = ({ className = "w-4 h-4" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <rect x="4" y="4" width="16" height="16" rx="3" ry="3" />
+  </svg>
+);
