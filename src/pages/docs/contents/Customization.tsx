@@ -75,6 +75,15 @@ export default function Customization() {
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">light</td>
                 </tr>
+                <tr>
+                  <td className="px-4 py-3 text-sm font-mono text-gray-900">
+                    data-button-icon
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    채팅 열기 버튼 아이콘 (logo: G 로고 / chat 또는 bubble: 말풍선 / robot: 로봇)
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">logo</td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -196,6 +205,7 @@ export default function Customization() {
   src="https://chatbot.gistory.me/loader.js"
   data-widget-key="wk_live_abc123"
   data-position="right"
+  data-button-icon="chat"
   data-primary-color="3b82f6"
   data-button-color="2563eb"
   data-user-message-bg="3b82f6"

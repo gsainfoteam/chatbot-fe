@@ -15,6 +15,8 @@ import {
   DocumentIcon,
 } from "@/components/Icons";
 import AnimatedBackground from "@/components/AnimatedBackground";
+import HeroMouseInteraction from "@/components/HeroMouseInteraction";
+import WarpedText from "@/components/WarpedText";
 import CodeBlock from "@/components/CodeBlock";
 
 export default function LandingPage() {
@@ -51,82 +53,91 @@ export default function LandingPage() {
       <AnimatedBackground />
 
       <div className="relative z-10">
-        {/* Hero Section */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20 lg:py-32">
-          <div
-            className={`max-w-4xl mx-auto text-center transition-all duration-1000 ${
-              isVisible
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-10"
-            }`}
-          >
-            <div className="inline-block mb-4 sm:mb-6">
-              <span className="px-3 py-1.5 sm:px-4 sm:py-2 bg-red-50 text-[#df3326] rounded-full text-xs sm:text-sm font-medium border border-red-100">
-                GIST 학생들을 위한 챗봇 서비스
-              </span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight px-2">
-              스크립트 한 줄로
-              <br />
-              <span className="text-[#df3326]">챗봇을 시작하세요</span>
-            </h1>
-            <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 mb-3 sm:mb-4 leading-relaxed max-w-3xl mx-auto px-2">
-              iframe 기반 챗봇 위젯으로 CSS/JS 충돌 없이
-              <br className="hidden sm:block" />
-              <span className="sm:hidden"> </span>
-              안정적이고 강력한 고객 지원을 제공하세요
-            </p>
-            <p className="text-sm sm:text-base text-gray-500 mb-8 sm:mb-12 px-2">
-              복잡한 설정 없이, 몇 분 안에 웹사이트에 통합할 수 있습니다
-            </p>
-          </div>
-
-          {/* Code Example */}
-          <div
-            className={`max-w-4xl mx-auto mt-8 sm:mt-12 transition-all duration-1000 delay-300 ${
-              isVisible
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-10"
-            }`}
-          >
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm mx-2 sm:mx-0">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-400"></div>
-                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-400"></div>
-                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-400"></div>
-                  <span className="ml-2 sm:ml-4 text-xs sm:text-sm font-medium text-gray-700">
-                    설치 코드
-                  </span>
-                </div>
-                <button
-                  onClick={copyToClipboard}
-                  className={`px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
-                    isCopied
-                      ? "bg-[#df3326] text-white border border-[#df3326]"
-                      : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  {isCopied ? "복사됨!" : "복사하기"}
-                </button>
+        {/* Hero Section - 커서 추적 글로우 + 미세 틸트 (전체 가로 폭) */}
+        <HeroMouseInteraction className="w-full py-12 sm:py-16 md:py-20 lg:py-32">
+          {/* 틸트 적용: 타이틀·설명만 */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div
+              className={`max-w-4xl mx-auto text-center transition-all duration-1000 ${
+                isVisible
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 translate-y-10"
+              }`}
+            >
+              <div className="inline-block mb-4 sm:mb-6">
+                <span className="px-3 py-1.5 sm:px-4 sm:py-2 bg-red-50 text-[#df3326] rounded-full text-xs sm:text-sm font-medium border border-red-100">
+                  GIST 학생들을 위한 챗봇 서비스
+                </span>
               </div>
-              <CodeBlock
-                code={`<script
-  src="https://chatbot.gistory.me/loader.js"
-  data-widget-key="YOUR_WIDGET_KEY"
-></script>`}
-                language="html"
-              />
-              <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-500 px-1 flex items-center gap-1.5 flex-wrap">
-                <span className="font-medium">💡 팁:</span> 이 코드를 웹사이트의{" "}
-                <code className="px-1 py-0.5 bg-gray-200 rounded text-xs font-mono">
-                  &lt;body&gt;
-                </code>{" "}
-                태그 하단에 추가하세요
+              <div className="mb-4 sm:mb-6 px-2">
+                <WarpedText
+                  line1="GIST 학생들을 위한"
+                  line2="정보 제공 챗봇 서비스"
+                  line2ClassName="text-[#df3326]"
+                  className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-gray-900"
+                />
+              </div>
+              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 mb-3 sm:mb-4 leading-relaxed max-w-3xl mx-auto px-2">
+                iframe 기반 챗봇 위젯으로 CSS/JS 충돌 없이
+                <br className="hidden sm:block" />
+                <span className="sm:hidden"> </span>
+                안정적이고 강력한 챗봇 서비스를 제공하세요
+              </p>
+              <p className="text-sm sm:text-base text-gray-500 mb-8 sm:mb-12 px-2">
+                복잡한 설정 없이, 몇 분 안에 웹사이트에 통합할 수 있습니다
               </p>
             </div>
           </div>
-        </section>
+
+          {/* 틸트 없음: 코드 예제 고정 */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div
+              className={`max-w-4xl mx-auto mt-8 sm:mt-12 transition-all duration-1000 delay-300 ${
+                isVisible
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 translate-y-10"
+              }`}
+            >
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 sm:p-6 shadow-sm mx-2 sm:mx-0">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-400"></div>
+                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-400"></div>
+                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-400"></div>
+                    <span className="ml-2 sm:ml-4 text-xs sm:text-sm font-medium text-gray-700">
+                      설치 코드
+                    </span>
+                  </div>
+                  <button
+                    onClick={copyToClipboard}
+                    className={`px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                      isCopied
+                        ? "bg-[#df3326] text-white border border-[#df3326]"
+                        : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {isCopied ? "복사됨!" : "복사하기"}
+                  </button>
+                </div>
+                <CodeBlock
+                  code={`<script
+  src="https://chatbot.gistory.me/loader.js"
+  data-widget-key="YOUR_WIDGET_KEY"
+></script>`}
+                  language="html"
+                />
+                <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-500 px-1 flex items-center gap-1.5 flex-wrap">
+                  <span className="font-medium">💡 팁:</span> 이 코드를
+                  웹사이트의{" "}
+                  <code className="px-1 py-0.5 bg-gray-200 rounded text-xs font-mono">
+                    &lt;body&gt;
+                  </code>{" "}
+                  태그 하단에 추가하세요
+                </p>
+              </div>
+            </div>
+          </div>
+        </HeroMouseInteraction>
 
         {/* About Chatbot Section */}
         <section className="bg-white py-12 sm:py-16 md:py-20 lg:py-32">

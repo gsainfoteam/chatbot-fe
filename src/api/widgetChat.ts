@@ -39,11 +39,13 @@ widgetApiClient.interceptors.request.use(
  * @param request 요청 데이터
  * @param onChunk 스트림 청크를 받을 때마다 호출되는 콜백 (텍스트, 완료 여부)
  * @param onComplete 전체 응답이 완료되었을 때 호출되는 콜백 (최종 응답)
+ * @param options.signal 중지 시 사용할 AbortSignal (중지 버튼 등)
  */
 export async function sendWidgetChatMessage(
   request: SendChatRequest,
   onChunk?: (text: string, isComplete: boolean) => void,
-  onComplete?: (response: SendChatResponse) => void
+  onComplete?: (response: SendChatResponse) => void,
+  options?: { signal?: AbortSignal }
 ): Promise<void> {
   const sessionToken = getSessionToken();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
@@ -57,6 +59,7 @@ export async function sendWidgetChatMessage(
         ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
       },
       body: JSON.stringify(request),
+      signal: options?.signal,
     }
   );
 
@@ -82,6 +85,17 @@ export async function sendWidgetChatMessage(
 
   if (!reader) {
     throw new Error("Response body is not readable");
+  }
+
+  // 중지 시 스트림 읽기 취소 (응답 수신 중일 때 즉시 반응)
+  if (options?.signal) {
+    options.signal.addEventListener(
+      "abort",
+      () => {
+        reader.cancel().catch(() => {});
+      },
+      { once: true }
+    );
   }
 
   try {
