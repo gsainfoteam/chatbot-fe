@@ -158,6 +158,17 @@
   }
 }
 
+/* Hero 커서 추적 글로우 - GPU 가속 */
+.hero-cursor-glow {
+  will-change: left, top;
+}
+
+@media (hover: none) {
+  .hero-cursor-glow {
+    opacity: 0.35 !important;
+  }
+}
+
 .loading-text-shimmer {
   position: relative;
   display: inline-block;
