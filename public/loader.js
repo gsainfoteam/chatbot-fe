@@ -58,6 +58,15 @@
   );
   console.log("[loader.js] dataset 객체:", ds);
 
+  // 런처 버튼 아이콘: "logo" (G 로고) | "chat" (말풍선) | "robot" (로봇)
+  const rawButtonIcon = (ds.buttonIcon || "logo").toLowerCase();
+  const buttonIcon =
+    rawButtonIcon === "chat" || rawButtonIcon === "bubble"
+      ? "chat"
+      : rawButtonIcon === "robot"
+      ? "robot"
+      : "logo";
+
   const config = {
     widgetKey: ds.widgetKey || "dev",
     position: ds.position === "left" ? "left" : "right",
@@ -65,6 +74,7 @@
     width: clampInt(ds.width, 360, 280, 520),
     height: clampInt(ds.height, 520, 360, 860),
     theme: ds.theme || "light",
+    buttonIcon: buttonIcon,
     // 색상 옵션들
     primaryColor: validateColor(ds.primaryColor, "df3326"),
     buttonColor: validateColor(ds.buttonColor, ds.primaryColor || "df3326"),
@@ -106,11 +116,14 @@
     transition: transform 160ms ease;
   `;
 
-  btn.innerHTML = `
-    <svg viewBox="0 0 173 150" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 28px; height: auto;">
-      <path d="M83.7427 87.1014L109.873 87.108V114.663H78.4867C56.3773 114.663 38.456 96.74 38.456 74.632C38.456 52.524 56.3773 34.6014 78.4867 34.6014H137.464L172.871 4.57764e-05H74.632C33.4147 4.57764e-05 0 33.4134 0 74.632C0 115.849 33.4147 149.264 74.632 149.264H112.308H147.541H147.544V58.7254H147.541H112.779L83.7427 87.1014Z" fill="white"/>
-    </svg>
-  `;
+  // 런처 버튼 아이콘 SVG (버튼 배경색 위에 흰색으로 표시)
+  const buttonIconSVG = {
+    logo: '<svg viewBox="0 0 173 150" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 28px; height: auto;"><path d="M83.7427 87.1014L109.873 87.108V114.663H78.4867C56.3773 114.663 38.456 96.74 38.456 74.632C38.456 52.524 56.3773 34.6014 78.4867 34.6014H137.464L172.871 4.57764e-05H74.632C33.4147 4.57764e-05 0 33.4134 0 74.632C0 115.849 33.4147 149.264 74.632 149.264H112.308H147.541H147.544V58.7254H147.541H112.779L83.7427 87.1014Z" fill="white"/></svg>',
+    chat: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" transform="matrix(-1, 0, 0, 1, 0, 0)" style="width: 34px; height: auto;"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 13.5997 2.37562 15.1116 3.04346 16.4525C3.22094 16.8088 3.28001 17.2161 3.17712 17.6006L2.58151 19.8267C2.32295 20.793 3.20701 21.677 4.17335 21.4185L6.39939 20.8229C6.78393 20.72 7.19121 20.7791 7.54753 20.9565C8.88837 21.6244 10.4003 22 12 22Z" fill="#ffffff"></path> </g></svg>',
+    robot:
+      '<svg fill="#ffffff" viewBox="0 -64 640 640" xmlns="http://www.w3.org/2000/svg" stroke="#ffffff" style="width: 34px; height: auto;"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M32,224H64V416H32A31.96166,31.96166,0,0,1,0,384V256A31.96166,31.96166,0,0,1,32,224Zm512-48V448a64.06328,64.06328,0,0,1-64,64H160a64.06328,64.06328,0,0,1-64-64V176a79.974,79.974,0,0,1,80-80H288V32a32,32,0,0,1,64,0V96H464A79.974,79.974,0,0,1,544,176ZM264,256a40,40,0,1,0-40,40A39.997,39.997,0,0,0,264,256Zm-8,128H192v32h64Zm96,0H288v32h64ZM456,256a40,40,0,1,0-40,40A39.997,39.997,0,0,0,456,256Zm-8,128H384v32h64ZM640,256V384a31.96166,31.96166,0,0,1-32,32H576V224h32A31.96166,31.96166,0,0,1,640,256Z"></path></g></svg>',
+  };
+  btn.innerHTML = buttonIconSVG[config.buttonIcon] || buttonIconSVG.logo;
 
   // hover/press 효과
   btn.addEventListener(

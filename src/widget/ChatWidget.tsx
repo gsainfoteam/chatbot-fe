@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChatMessage, ColorTheme, WidgetContext, Source } from "./types";
 import { uid, applyColorTheme, renderMarkdown } from "./utils";
-import { LinkIcon, ExternalLinkIcon, PhotoIcon, ArrowUpIcon, StopIcon } from "../components/Icons";
+import {
+  LinkIcon,
+  ExternalLinkIcon,
+  ArrowUpIcon,
+  StopIcon,
+} from "../components/Icons";
 import {
   createWidgetSession,
   sendWidgetChatMessage,
@@ -37,24 +42,6 @@ function SourceBadge({ source }: { source: Source }) {
     );
   }
 
-  if (source.type === "image") {
-    if (source.title) {
-      return (
-        <div
-          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border max-w-full min-w-0"
-          style={{
-            backgroundColor: "var(--color-background, #f8fafc)",
-            borderColor: "var(--color-border, #e2e8f0)",
-            color: "var(--color-text, #1e293b)",
-          }}
-        >
-          <PhotoIcon className="w-3 h-3 shrink-0" />
-          <span className="min-w-0 flex-1 truncate">{source.title}</span>
-        </div>
-      );
-    }
-    return <></>;
-  }
   return null;
 }
 
@@ -68,7 +55,12 @@ function SourceImage({ source }: { source: Source }) {
   }
 
   return (
-    <div className="mt-2 relative">
+    <a
+      href={source.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group mt-2 relative block cursor-pointer overflow-hidden rounded-lg"
+    >
       {/* Skeleton UI */}
       {isLoading && (
         <div
@@ -81,7 +73,7 @@ function SourceImage({ source }: { source: Source }) {
         />
       )}
 
-      {/* 실제 이미지 */}
+      {/* 실제 이미지 - 클릭 시 해당 url 새 탭에서 열림 */}
       <img
         src={source.url}
         alt={source.title || "출처 이미지"}
@@ -103,7 +95,12 @@ function SourceImage({ source }: { source: Source }) {
           setHasError(true);
         }}
       />
-    </div>
+      {/* 호버 시 은은한 흰색 오버레이 - 클릭 유도 */}
+      <div
+        className="absolute inset-0 rounded-lg bg-white opacity-0 transition-opacity duration-200 group-hover:opacity-20 pointer-events-none"
+        aria-hidden
+      />
+    </a>
   );
 }
 
@@ -394,14 +391,18 @@ export default function ChatWidget({
             });
           }
         },
-        { signal: controller.signal },
+        { signal: controller.signal }
       ).catch((error) => {
         abortControllerRef.current = null;
         streamingMessageIdRef.current = null;
         // 스트림 에러 발생 시 처리
         setLoading(false);
         // 사용자가 중지한 경우: 받은 내용만 유지, 에러 메시지 표시 안 함 (UI는 이미 중지 버튼에서 처리됨)
-        if (typeof DOMException !== "undefined" && error instanceof DOMException && error.name === "AbortError") {
+        if (
+          typeof DOMException !== "undefined" &&
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
           return;
         }
         if (error instanceof Error && error.name === "AbortError") {
@@ -442,7 +443,9 @@ export default function ChatWidget({
 
       // 사용자가 중지한 경우: 에러 메시지 표시 안 함
       const isAbortError =
-        (typeof DOMException !== "undefined" && error instanceof DOMException && (error as DOMException).name === "AbortError") ||
+        (typeof DOMException !== "undefined" &&
+          error instanceof DOMException &&
+          (error as DOMException).name === "AbortError") ||
         (error instanceof Error && error.name === "AbortError");
       if (isAbortError) {
         return;
