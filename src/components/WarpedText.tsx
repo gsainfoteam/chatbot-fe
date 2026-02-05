@@ -1,8 +1,8 @@
 import { useRef, useEffect } from "react";
 
 const RADIUS = 140; // 커서와 이 거리 안쪽일 때만 글자 반응
-const MAX_DISPLACE = 28; // 최대 밀림(px)
-const MAX_ROTATE = 14; // 최대 회전(deg) - 뒤틀림 느낌
+const MAX_DISPLACE = 60; // 최대 밀림(px)
+const MAX_ROTATE = 36; // 최대 회전(deg) - 뒤틀림 느낌
 const LERP = 0.14;
 
 type Displacement = { x: number; y: number; r: number };
