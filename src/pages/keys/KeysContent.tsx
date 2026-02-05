@@ -222,26 +222,15 @@ export default function KeysContent() {
     if (!confirm("위젯 키를 폐기하시겠습니까?")) return;
 
     try {
-      const response = await revokeWidgetKey(keyId);
+      await revokeWidgetKey(keyId);
 
-      // API 응답을 WidgetKey 타입으로 변환
-      const updatedKey: WidgetKey = {
-        id: response.id,
-        name: response.name,
-        widgetKey: response.secretKey,
-        createdAt: response.createdAt,
-        domains: response.allowedDomains,
-        status: response.status,
-      };
+      // 목록에서 삭제하여 화면에서 제거
+      const nextKeys = widgetKeys.filter((key) => key.id !== keyId);
+      setWidgetKeys(nextKeys);
 
-      // 위젯 키 목록 업데이트
-      setWidgetKeys(
-        widgetKeys.map((key) => (key.id === keyId ? updatedKey : key))
-      );
-
-      // 선택된 키가 폐기된 키라면 선택 해제
+      // 선택된 키가 폐기된 키였다면 선택 해제 또는 다른 키 선택
       if (selectedKey?.id === keyId) {
-        setSelectedKey(null);
+        setSelectedKey(nextKeys.length > 0 ? nextKeys[0] : null);
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : "위젯 키 폐기에 실패했습니다.");
