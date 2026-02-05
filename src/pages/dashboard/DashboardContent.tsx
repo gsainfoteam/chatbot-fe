@@ -27,7 +27,7 @@ import {
 
 export default function DashboardContent() {
   const [selectedWidgetKey, setSelectedWidgetKey] = useState<string | "all">(
-    "all"
+    "all",
   );
   const [selectedDomain, setSelectedDomain] = useState<string | "all">("all");
   const [dateRange, setDateRange] = useState<"7d" | "30d" | "90d">("30d");
@@ -35,7 +35,7 @@ export default function DashboardContent() {
 
   const { startDate, endDate } = useMemo(
     () => getDateRange(dateRange),
-    [dateRange]
+    [dateRange],
   );
 
   // 위젯 키 목록 조회
@@ -54,7 +54,7 @@ export default function DashboardContent() {
     queryFn: () =>
       selectedWidgetKey === "all"
         ? Promise.resolve(
-            [...new Set(widgetKeys.flatMap((k) => k.allowedDomains))].sort()
+            [...new Set(widgetKeys.flatMap((k) => k.allowedDomains))].sort(),
           )
         : getWidgetKeyDomains(selectedWidgetKey),
     enabled:
@@ -134,7 +134,7 @@ export default function DashboardContent() {
       });
 
       const usageData = Array.from(combinedUsageData.values()).sort((a, b) =>
-        a.date.localeCompare(b.date)
+        a.date.localeCompare(b.date),
       );
       return {
         widgetKeyName: "모든 위젯 키",
@@ -145,7 +145,7 @@ export default function DashboardContent() {
           ([domain, stats]) => ({
             domain,
             ...stats,
-          })
+          }),
         ),
       };
     }
@@ -158,7 +158,7 @@ export default function DashboardContent() {
   const usageData = useMemo(() => {
     if (!filteredStats?.usageData) return [];
     return [...filteredStats.usageData].sort((a, b) =>
-      a.date.localeCompare(b.date)
+      a.date.localeCompare(b.date),
     );
   }, [filteredStats]);
 
@@ -169,7 +169,10 @@ export default function DashboardContent() {
     const grouped = new Map<string, UsageData>();
 
     usageData.forEach((data) => {
-      const groupKey = getGroupKeyForDate(data.date, groupBy === "7d" ? "7d" : "30d");
+      const groupKey = getGroupKeyForDate(
+        data.date,
+        groupBy === "7d" ? "7d" : "30d",
+      );
 
       const existing = grouped.get(groupKey);
       if (existing) {
@@ -181,7 +184,7 @@ export default function DashboardContent() {
     });
 
     return Array.from(grouped.values()).sort((a, b) =>
-      a.date.localeCompare(b.date)
+      a.date.localeCompare(b.date),
     );
   }, [usageData, groupBy]);
 
@@ -224,11 +227,11 @@ export default function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">대시보드</h1>
-          <p className="mt-1 text-sm text-gray-600">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">대시보드</h1>
+          <p className="mt-2 text-sm text-gray-600">
             위젯 키별 및 도메인별 사용량 통계를 확인하세요.
           </p>
         </div>
@@ -250,8 +253,8 @@ export default function DashboardContent() {
               selectedLabel={
                 selectedWidgetKey === "all"
                   ? "모든 위젯 키"
-                  : widgetKeys.find((k) => k.id === selectedWidgetKey)?.name ??
-                    "모든 위젯 키"
+                  : (widgetKeys.find((k) => k.id === selectedWidgetKey)?.name ??
+                    "모든 위젯 키")
               }
               width="lg"
               disabled={keysLoading}
@@ -468,7 +471,7 @@ export default function DashboardContent() {
               const dailyAvgRequests = Math.floor(totalRequests / dayCount);
               const peakDay = usageData.length
                 ? usageData.reduce((best, d) =>
-                    d.tokens > best.tokens ? d : best
+                    d.tokens > best.tokens ? d : best,
                   )
                 : null;
               return (
@@ -516,7 +519,7 @@ export default function DashboardContent() {
                       <p className="text-lg font-semibold text-gray-900 tabular-nums mt-0.5">
                         {totalRequests > 0
                           ? Math.floor(
-                              totalTokens / totalRequests
+                              totalTokens / totalRequests,
                             ).toLocaleString()
                           : 0}
                       </p>
@@ -575,7 +578,7 @@ export default function DashboardContent() {
                             평균{" "}
                             {ds.requests > 0
                               ? Math.floor(
-                                  ds.tokens / ds.requests
+                                  ds.tokens / ds.requests,
                                 ).toLocaleString()
                               : "—"}
                             /건
@@ -604,7 +607,7 @@ export default function DashboardContent() {
                       .map((stat, idx) => {
                         const totalAll = allStats.reduce(
                           (s, x) => s + x.totalTokens,
-                          0
+                          0,
                         );
                         const pct =
                           totalAll > 0
