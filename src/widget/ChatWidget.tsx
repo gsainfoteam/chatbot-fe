@@ -8,6 +8,7 @@ import {
   ExternalLinkIcon,
   ArrowUpIcon,
   StopIcon,
+  InfoIcon,
 } from "../components/Icons";
 import {
   createWidgetSession,
@@ -134,12 +135,34 @@ export default function ChatWidget({
   // iframe 환경인지 확인 (React 앱 내부에서는 false)
   const isInIframe = typeof window !== "undefined" && window.parent !== window;
 
+  const [showInfoTooltip, setShowInfoTooltip] = useState(false);
+  const infoTooltipRef = useRef<HTMLDivElement | null>(null);
+
   const [ctx, setCtx] = useState<WidgetContext>({});
   const listRef = useRef<HTMLDivElement | null>(null);
 
   // 미리보기 모드 확인 (URL 파라미터)
   const isPreviewMode =
     new URLSearchParams(window.location.search).get("preview") === "true";
+
+  // 툴팁 바깥 클릭 시 닫기
+  useEffect(() => {
+    if (!showInfoTooltip) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (
+        infoTooltipRef.current &&
+        !infoTooltipRef.current.contains(e.target as Node)
+      ) {
+        setShowInfoTooltip(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [showInfoTooltip]);
 
   useEffect(() => {
     // iframe 환경에서만 postMessage 사용
@@ -492,10 +515,22 @@ export default function ChatWidget({
             />
             <div className="min-w-0">
               <div
-                className="text-[15px] font-semibold tracking-tight truncate"
+                className="flex items-center gap-1.5 text-[15px] font-semibold tracking-tight truncate"
                 style={{ color: "var(--color-text, #1e293b)" }}
               >
                 GIST 챗봇
+                <span
+                  className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium leading-none"
+                  style={{
+                    backgroundColor:
+                      "color-mix(in srgb, var(--color-primary, #df3326) 10%, transparent)",
+                    color: "var(--color-primary, #df3326)",
+                    boxShadow:
+                      "inset 0 0 0 1px color-mix(in srgb, var(--color-primary, #df3326) 20%, transparent)",
+                  }}
+                >
+                  Beta
+                </span>
               </div>
               <div
                 className="text-xs mt-0.5 tracking-tight"
@@ -506,29 +541,71 @@ export default function ChatWidget({
             </div>
           </div>
 
-          <button
-            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg active:scale-[0.98] transition"
-            style={{
-              color: "var(--color-text-secondary, #64748b)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.05)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "transparent";
-            }}
-            onClick={() => {
-              if (isInIframe) {
-                window.parent?.postMessage({ type: "WM_REQUEST_CLOSE" }, "*");
-              } else if (onClose) {
-                onClose();
-              }
-            }}
-            aria-label="닫기"
-            title="닫기"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            {/* 면책 안내 아이콘 + 툴팁 */}
+            <div className="relative group" ref={infoTooltipRef}>
+              <button
+                type="button"
+                className="w-8 h-8 flex items-center justify-center rounded-lg transition"
+                style={{
+                  color: "var(--color-text-secondary, #94a3b8)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.05)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+                onClick={() => setShowInfoTooltip((prev) => !prev)}
+                aria-label="안내"
+              >
+                <InfoIcon className="w-[18px] h-[18px]" />
+              </button>
+              <div
+                className={`absolute right-0 top-full mt-1.5 w-52 px-2.5 py-1.5 rounded-lg border text-[11px] leading-relaxed z-50 shadow-md transition-all duration-200 pointer-events-none ${
+                  showInfoTooltip
+                    ? "opacity-100 visible"
+                    : "opacity-0 invisible group-hover:opacity-100 group-hover:visible"
+                }`}
+                style={{
+                  backgroundColor:
+                    "color-mix(in srgb, var(--color-primary, #df3326) 8%, #ffffff)",
+                  borderColor:
+                    "color-mix(in srgb, var(--color-primary, #df3326) 20%, transparent)",
+                  color: "var(--color-text, #1e293b)",
+                }}
+              >
+                챗봇의 답변은 부정확할 수 있으니
+                <br />
+                공식 자료를 다시 한 번 확인해 주세요.
+              </div>
+            </div>
+
+            {/* 닫기 버튼 */}
+            <button
+              className="w-8 h-8 flex items-center justify-center rounded-lg active:scale-[0.98] transition"
+              style={{
+                color: "var(--color-text-secondary, #64748b)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.05)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+              onClick={() => {
+                if (isInIframe) {
+                  window.parent?.postMessage({ type: "WM_REQUEST_CLOSE" }, "*");
+                } else if (onClose) {
+                  onClose();
+                }
+              }}
+              aria-label="닫기"
+              title="닫기"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Messages */}
