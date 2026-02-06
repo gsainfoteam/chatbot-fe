@@ -244,7 +244,7 @@ export default function ChatWidget({
 
   const canSend = useMemo(
     () => input.trim().length > 0 && !loading,
-    [input, loading]
+    [input, loading],
   );
 
   const send = async () => {
@@ -283,7 +283,7 @@ export default function ChatWidget({
             role: userMsg.role,
           },
         },
-        "*"
+        "*",
       );
     }
 
@@ -307,7 +307,7 @@ export default function ChatWidget({
         });
         saveSessionToken(
           sessionResponse.sessionToken,
-          sessionResponse.expiresIn
+          sessionResponse.expiresIn,
         );
         sessionToken = sessionResponse.sessionToken;
       }
@@ -363,7 +363,7 @@ export default function ChatWidget({
               sources: finalResponse.sources,
             };
             return prev.map((msg) =>
-              msg.id === assistantMsgId ? updatedMessage : msg
+              msg.id === assistantMsgId ? updatedMessage : msg,
             );
           });
           setLoading(false);
@@ -372,7 +372,7 @@ export default function ChatWidget({
           if (isInIframe) {
             setMessages((prev) => {
               const assistantMsg = prev.find(
-                (msg) => msg.id === assistantMsgId
+                (msg) => msg.id === assistantMsgId,
               );
               if (assistantMsg) {
                 window.parent?.postMessage(
@@ -384,14 +384,14 @@ export default function ChatWidget({
                       role: assistantMsg.role,
                     },
                   },
-                  "*"
+                  "*",
                 );
               }
               return prev;
             });
           }
         },
-        { signal: controller.signal }
+        { signal: controller.signal },
       ).catch((error) => {
         abortControllerRef.current = null;
         streamingMessageIdRef.current = null;
@@ -412,7 +412,7 @@ export default function ChatWidget({
           const retryAt = getSessionExpiresAt();
           if (retryAt) setRateLimitWarning({ retryAt });
           setMessages((prev) =>
-            prev.filter((msg) => msg.id !== assistantMsgId)
+            prev.filter((msg) => msg.id !== assistantMsgId),
           );
           return;
         }
@@ -430,7 +430,7 @@ export default function ChatWidget({
                   ...msg,
                   text: "죄송합니다. 응답을 받는 중 오류가 발생했습니다.",
                 }
-              : msg
+              : msg,
           );
         });
         throw error; // 상위 catch로 전파
@@ -615,7 +615,7 @@ export default function ChatWidget({
           {loading &&
             !messages.some(
               (m) =>
-                m.role === "assistant" && m.text && m.text.trim().length > 0
+                m.role === "assistant" && m.text && m.text.trim().length > 0,
             ) && (
               <div className="flex mb-2 justify-start">
                 <div
@@ -746,8 +746,8 @@ export default function ChatWidget({
                               ? `${msg.text}\n\n_(응답이 중지되었습니다)_`
                               : "응답이 중지되었습니다.",
                           }
-                        : msg
-                    )
+                        : msg,
+                    ),
                   );
                   streamingMessageIdRef.current = null;
                 }
