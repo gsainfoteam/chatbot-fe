@@ -1,6 +1,6 @@
 // 채팅 위젯 메인 컴포넌트
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { ChatMessage, ColorTheme, WidgetContext, Source } from "./types";
 import { uid, applyColorTheme, renderMarkdown } from "./utils";
 import {
@@ -18,6 +18,7 @@ import {
   getSessionExpiresAt,
   isRateLimitError,
 } from "../api/widgetChat";
+import frequentQuestions from "./frequentQuestions";
 
 // 출처 배지 컴포넌트
 function SourceBadge({ source }: { source: Source }) {
@@ -270,8 +271,13 @@ export default function ChatWidget({
     [input, loading],
   );
 
-  const send = async () => {
-    const text = input.trim();
+  // 자주 묻는 질문이 숨겨졌는지 여부 (한 번이라도 사용자가 메시지를 보내면 숨김)
+  const showFrequentQuestions = useMemo(() => {
+    return messages.every((m) => m.role === "assistant");
+  }, [messages]);
+
+  const send = async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
     if (!text || loading) return;
 
     // 미리보기 모드에서는 전송 비활성화
@@ -611,14 +617,14 @@ export default function ChatWidget({
         {/* Messages */}
         <div
           ref={listRef}
-          className="flex-1 overflow-auto px-3 py-3"
+          className="flex-1 overflow-auto px-3 py-3 flex flex-col"
           style={{
             backgroundColor: "var(--color-background, #f8fafc)",
           }}
         >
-          {messages.map((m) => (
+          {messages.map((m, msgIdx) => (
+            <Fragment key={m.id}>
             <div
-              key={m.id}
               className={`flex mb-2 ${
                 m.role === "user" ? "justify-end" : "justify-start"
               }`}
@@ -686,6 +692,57 @@ export default function ChatWidget({
                   )}
               </div>
             </div>
+
+            {/* 첫 번째 메시지 뒤에 자주 묻는 질문 표시 */}
+            {msgIdx === 0 &&
+              showFrequentQuestions &&
+              frequentQuestions.length > 0 && (
+                <div className="mt-1 mb-2 w-full">
+                  <div
+                    className="text-[11px] font-medium mb-1.5 px-0.5"
+                    style={{
+                      color: "var(--color-text-secondary, #94a3b8)",
+                    }}
+                  >
+                    이런 것들을 물어보세요
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {frequentQuestions.map((fq, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-left transition-all duration-150 active:scale-[0.98] cursor-pointer"
+                        style={{
+                          backgroundColor:
+                            "var(--color-assistant-message-bg, #ffffff)",
+                          borderColor: "var(--color-border, #e2e8f0)",
+                          color: "var(--color-text, #1e293b)",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor =
+                            "color-mix(in srgb, var(--color-primary, #df3326) 40%, var(--color-border, #e2e8f0))";
+                          e.currentTarget.style.boxShadow =
+                            "0 1px 4px rgba(0,0,0,0.06)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor =
+                            "var(--color-border, #e2e8f0)";
+                          e.currentTarget.style.boxShadow = "none";
+                        }}
+                        onClick={() => send(fq.question || fq.label)}
+                      >
+                        <span className="text-base leading-none shrink-0">
+                          {fq.icon}
+                        </span>
+                        <span className="text-xs font-medium truncate">
+                          {fq.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Fragment>
           ))}
 
           {/* 로딩 표시는 메시지가 생성되기 전에만 표시 (텍스트가 있는 assistant 메시지가 없을 때만) */}
@@ -717,6 +774,7 @@ export default function ChatWidget({
                 </div>
               </div>
             )}
+
         </div>
 
         {/* 429 경고 */}
