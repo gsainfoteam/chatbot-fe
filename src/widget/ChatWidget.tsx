@@ -18,6 +18,7 @@ import {
   getSessionExpiresAt,
   isRateLimitError,
 } from "../api/widgetChat";
+import frequentQuestions from "./frequentQuestions";
 
 // 출처 배지 컴포넌트
 function SourceBadge({ source }: { source: Source }) {
@@ -270,8 +271,15 @@ export default function ChatWidget({
     [input, loading],
   );
 
-  const send = async () => {
-    const text = input.trim();
+  // 자주 묻는 질문이 숨겨졌는지 여부 (한 번이라도 사용자가 메시지를 보내면 숨김)
+  const showFrequentQuestions = useMemo(() => {
+    return messages.every(
+      (m) => m.role === "assistant",
+    );
+  }, [messages]);
+
+  const send = async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
     if (!text || loading) return;
 
     // 미리보기 모드에서는 전송 비활성화
@@ -611,7 +619,7 @@ export default function ChatWidget({
         {/* Messages */}
         <div
           ref={listRef}
-          className="flex-1 overflow-auto px-3 py-3"
+          className="flex-1 overflow-auto px-3 py-3 flex flex-col"
           style={{
             backgroundColor: "var(--color-background, #f8fafc)",
           }}
@@ -717,6 +725,41 @@ export default function ChatWidget({
                 </div>
               </div>
             )}
+
+          {/* 자주 묻는 질문 배지 — 채팅 영역 하단 */}
+          {showFrequentQuestions && frequentQuestions.length > 0 && (
+            <div className="mt-auto pt-2 flex flex-wrap gap-1.5 px-1">
+              {frequentQuestions.map((fq, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 hover:shadow-sm active:scale-[0.97] cursor-pointer"
+                  style={{
+                    backgroundColor:
+                      "color-mix(in srgb, var(--color-primary, #df3326) 6%, var(--color-background, #ffffff))",
+                    borderColor:
+                      "color-mix(in srgb, var(--color-primary, #df3326) 20%, var(--color-border, #e2e8f0))",
+                    color: "var(--color-text, #1e293b)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      "color-mix(in srgb, var(--color-primary, #df3326) 12%, var(--color-background, #ffffff))";
+                    e.currentTarget.style.borderColor =
+                      "color-mix(in srgb, var(--color-primary, #df3326) 35%, var(--color-border, #e2e8f0))";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      "color-mix(in srgb, var(--color-primary, #df3326) 6%, var(--color-background, #ffffff))";
+                    e.currentTarget.style.borderColor =
+                      "color-mix(in srgb, var(--color-primary, #df3326) 20%, var(--color-border, #e2e8f0))";
+                  }}
+                  onClick={() => send(fq.question || fq.label)}
+                >
+                  {fq.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 429 경고 */}
