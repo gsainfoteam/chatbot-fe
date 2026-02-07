@@ -34,10 +34,6 @@ const frequentQuestions: FrequentQuestion[] = [
     question: "캠퍼스 지도와 주요 건물 위치를 알려주세요.",
   },
   {
-    label: "도서관 이용",
-    question: "도서관 이용 방법을 알려주세요.",
-  },
-  {
     label: "졸업 요건 확인",
     question: "졸업 요건을 알려주세요.",
   },
