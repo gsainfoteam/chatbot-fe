@@ -10,7 +10,7 @@ export interface FrequentQuestion {
 
 const frequentQuestions: FrequentQuestion[] = [
   {
-    label: "학사 일정이 궁금해요",
+    label: "학사 일정",
     question: "이번 학기 학사 일정을 알려주세요.",
   },
   {
@@ -22,10 +22,6 @@ const frequentQuestions: FrequentQuestion[] = [
     question: "장학금 종류와 신청 방법을 알려주세요.",
   },
   {
-    label: "캠퍼스 맵 & 건물 위치",
-    question: "캠퍼스 지도와 주요 건물 위치를 알려주세요.",
-  },
-  {
     label: "학생증 발급",
     question: "학생증은 어디서 어떻게 발급받나요?",
   },
@@ -34,8 +30,12 @@ const frequentQuestions: FrequentQuestion[] = [
     question: "학교 Wi-Fi는 어떻게 연결하나요?",
   },
   {
-    label: "등록금 납부 방법",
-    question: "등록금 납부 방법을 알려주세요.",
+    label: "캠퍼스 맵",
+    question: "캠퍼스 지도와 주요 건물 위치를 알려주세요.",
+  },
+  {
+    label: "도서관 이용",
+    question: "도서관 이용 방법을 알려주세요.",
   },
   {
     label: "졸업 요건 확인",
