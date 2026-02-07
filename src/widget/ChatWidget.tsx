@@ -624,124 +624,124 @@ export default function ChatWidget({
         >
           {messages.map((m, msgIdx) => (
             <Fragment key={m.id}>
-            <div
-              className={`flex mb-2 ${
-                m.role === "user" ? "justify-end" : "justify-start"
-              }`}
-            >
               <div
-                className="max-w-[80%] text-[14px] leading-snug px-3 py-2 rounded-2xl border break-words"
-                style={
-                  m.role === "user"
-                    ? {
-                        backgroundColor: `color-mix(in srgb, var(--color-user-message-bg, var(--color-primary, #ff4500)) 10%, transparent)`,
-                        borderColor: `color-mix(in srgb, var(--color-user-message-bg, var(--color-primary, #ff4500)) 25%, transparent)`,
-                        color: "var(--color-text, #1e293b)",
-                      }
-                    : {
-                        backgroundColor:
-                          "var(--color-assistant-message-bg, #ffffff)",
-                        borderColor: "var(--color-border, #e2e8f0)",
-                        color: "var(--color-text, #1e293b)",
-                      }
-                }
+                className={`flex mb-2 ${
+                  m.role === "user" ? "justify-end" : "justify-start"
+                }`}
               >
-                {m.role === "assistant" ? (
-                  m.text ? (
-                    renderMarkdown(m.text)
-                  ) : (
-                    <div className="flex items-center gap-1.5">
-                      <span className="loading-text-shimmer">
-                        {loadingMessage}
-                      </span>
-                      <span
-                        className="flex items-center gap-1.5"
-                        style={{
-                          color: "var(--color-text-secondary, #64748b)",
-                        }}
-                      >
-                        <span className="thinking-dot"></span>
-                        <span className="thinking-dot"></span>
-                        <span className="thinking-dot"></span>
-                      </span>
-                    </div>
-                  )
-                ) : (
-                  m.text
-                )}
-
-                {/* 출처 정보 표시 (assistant 메시지만) */}
-                {m.role === "assistant" &&
-                  m.sources &&
-                  m.sources.length > 0 && (
-                    <div className="mt-2 pt-3 border-t border-slate-200 flex flex-col gap-1">
-                      {/* 출처 배지 */}
-                      <div className="flex flex-wrap gap-1.5">
-                        {m.sources.map((source, idx) => (
-                          <SourceBadge key={idx} source={source} />
-                        ))}
-                      </div>
-
-                      {/* 이미지 출처 표시 */}
-                      {m.sources
-                        .filter((s) => s.type === "image")
-                        .map((source, idx) => (
-                          <SourceImage key={`img-${idx}`} source={source} />
-                        ))}
-                    </div>
-                  )}
-              </div>
-            </div>
-
-            {/* 첫 번째 메시지 뒤에 자주 묻는 질문 표시 */}
-            {msgIdx === 0 &&
-              showFrequentQuestions &&
-              frequentQuestions.length > 0 && (
-                <div className="mt-1 mb-2 w-full">
-                  <div
-                    className="text-[11px] font-medium mb-1.5 px-0.5"
-                    style={{
-                      color: "var(--color-text-secondary, #94a3b8)",
-                    }}
-                  >
-                    이런 것들을 물어보세요
-                  </div>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {frequentQuestions.map((fq, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        className="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-left transition-all duration-150 active:scale-[0.98] cursor-pointer"
-                        style={{
+                <div
+                  className="max-w-[80%] text-[14px] leading-snug px-3 py-2 rounded-2xl border wrap-break-words"
+                  style={
+                    m.role === "user"
+                      ? {
+                          backgroundColor: `color-mix(in srgb, var(--color-user-message-bg, var(--color-primary, #ff4500)) 10%, transparent)`,
+                          borderColor: `color-mix(in srgb, var(--color-user-message-bg, var(--color-primary, #ff4500)) 25%, transparent)`,
+                          color: "var(--color-text, #1e293b)",
+                        }
+                      : {
                           backgroundColor:
                             "var(--color-assistant-message-bg, #ffffff)",
                           borderColor: "var(--color-border, #e2e8f0)",
                           color: "var(--color-text, #1e293b)",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor =
-                            "color-mix(in srgb, var(--color-primary, #df3326) 40%, var(--color-border, #e2e8f0))";
-                          e.currentTarget.style.boxShadow =
-                            "0 1px 4px rgba(0,0,0,0.06)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor =
-                            "var(--color-border, #e2e8f0)";
-                          e.currentTarget.style.boxShadow = "none";
-                        }}
-                        onClick={() => send(fq.question || fq.label)}
-                      >
-                        <span className="text-base leading-none shrink-0">
-                          {fq.icon}
+                        }
+                  }
+                >
+                  {m.role === "assistant" ? (
+                    m.text ? (
+                      renderMarkdown(m.text)
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <span className="loading-text-shimmer">
+                          {loadingMessage}
                         </span>
-                        <span className="text-xs font-medium truncate">
-                          {fq.label}
+                        <span
+                          className="flex items-center gap-1.5"
+                          style={{
+                            color: "var(--color-text-secondary, #64748b)",
+                          }}
+                        >
+                          <span className="thinking-dot"></span>
+                          <span className="thinking-dot"></span>
+                          <span className="thinking-dot"></span>
                         </span>
-                      </button>
-                    ))}
-                  </div>
+                      </div>
+                    )
+                  ) : (
+                    m.text
+                  )}
+
+                  {/* 출처 정보 표시 (assistant 메시지만) */}
+                  {m.role === "assistant" &&
+                    m.sources &&
+                    m.sources.length > 0 && (
+                      <div className="mt-2 pt-3 border-t border-slate-200 flex flex-col gap-1">
+                        {/* 출처 배지 */}
+                        <div className="flex flex-wrap gap-1.5">
+                          {m.sources.map((source, idx) => (
+                            <SourceBadge key={idx} source={source} />
+                          ))}
+                        </div>
+
+                        {/* 이미지 출처 표시 */}
+                        {m.sources
+                          .filter((s) => s.type === "image")
+                          .map((source, idx) => (
+                            <SourceImage key={`img-${idx}`} source={source} />
+                          ))}
+                      </div>
+                    )}
                 </div>
-              )}
+              </div>
+
+              {/* 첫 번째 메시지 뒤에 자주 묻는 질문 표시 */}
+              {msgIdx === 0 &&
+                showFrequentQuestions &&
+                frequentQuestions.length > 0 && (
+                  <div className="mt-1 mb-2 w-full">
+                    <div
+                      className="text-[11px] font-medium mb-1.5 px-0.5"
+                      style={{
+                        color: "var(--color-text-secondary, #94a3b8)",
+                      }}
+                    >
+                      이런 것들을 물어보세요
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {frequentQuestions.map((fq, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          className="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-left transition-all duration-150 active:scale-[0.98] cursor-pointer"
+                          style={{
+                            backgroundColor:
+                              "var(--color-assistant-message-bg, #ffffff)",
+                            borderColor: "var(--color-border, #e2e8f0)",
+                            color: "var(--color-text, #1e293b)",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor =
+                              "color-mix(in srgb, var(--color-primary, #df3326) 40%, var(--color-border, #e2e8f0))";
+                            e.currentTarget.style.boxShadow =
+                              "0 1px 4px rgba(0,0,0,0.06)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor =
+                              "var(--color-border, #e2e8f0)";
+                            e.currentTarget.style.boxShadow = "none";
+                          }}
+                          onClick={() => send(fq.question || fq.label)}
+                        >
+                          <span className="text-base leading-none shrink-0">
+                            {fq.icon}
+                          </span>
+                          <span className="text-xs font-medium truncate">
+                            {fq.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
             </Fragment>
           ))}
 
@@ -774,7 +774,6 @@ export default function ChatWidget({
                 </div>
               </div>
             )}
-
         </div>
 
         {/* 429 경고 */}
