@@ -192,3 +192,8 @@
     #64748b
   ); /* fallback for browsers that don't support background-clip */
 }
+
+/* 스크롤바 숨기기 유틸리티 */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
