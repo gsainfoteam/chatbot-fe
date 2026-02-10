@@ -51,6 +51,16 @@ const frequentQuestions: FrequentQuestion[] = [
     label: "전공 선언 방법",
     question: "전공 선언 방법을 알려주세요.",
   },
+  {
+    icon: "📞",
+    label: "주요 부서 연락처",
+    question: "주요 부서 연락처를 알려주세요.",
+  },
+  {
+    icon: "🏫",
+    label: "휴학/복학 절차",
+    question: "휴학/복학 절차를 알려주세요.",
+  },
 ];
 
 export default frequentQuestions;
