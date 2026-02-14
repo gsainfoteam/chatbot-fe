@@ -5,7 +5,11 @@ import {
   addDomainToWidgetKey,
   removeDomainFromWidgetKey,
   revokeWidgetKey,
+  inviteCollaborator,
+  getCollaborators,
+  removeCollaborator,
 } from "../../api/widgetKeys";
+import type { CollaboratorResponse } from "../../api/types";
 
 type WidgetKey = {
   id: string;
@@ -14,6 +18,8 @@ type WidgetKey = {
   createdAt: string;
   domains: string[];
   status?: "ACTIVE" | "REVOKED";
+  /** secretKey === "***" 이면 공유받은 키 */
+  isShared?: boolean;
 };
 
 type ColorSettings = {
@@ -34,6 +40,18 @@ type LayoutSettings = {
   height: number;
   theme: "light" | "dark";
 };
+
+function validateEmail(email: string): { isValid: boolean; error?: string } {
+  const trimmed = email.trim().toLowerCase();
+  if (!trimmed) {
+    return { isValid: false, error: "이메일을 입력해주세요." };
+  }
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(trimmed)) {
+    return { isValid: false, error: "유효한 이메일 형식이 아닙니다." };
+  }
+  return { isValid: true };
+}
 
 function validateDomain(domain: string): { isValid: boolean; error?: string } {
   const trimmed = domain.trim();
@@ -93,6 +111,13 @@ export default function KeysContent() {
   const isComposingKeyNameRef = useRef(false);
   const isComposingDomainRef = useRef(false);
 
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [collaborators, setCollaborators] = useState<CollaboratorResponse[]>(
+    [],
+  );
+  const [collaboratorsLoading, setCollaboratorsLoading] = useState(false);
+  const [inviteLoading, setInviteLoading] = useState(false);
+
   const [colorSettings, setColorSettings] = useState<ColorSettings>({
     primary: "#df3326",
     button: "#df3326",
@@ -130,13 +155,16 @@ export default function KeysContent() {
         createdAt: response.createdAt,
         domains: response.allowedDomains,
         status: response.status,
+        isShared: response.secretKey === "***",
       };
 
       setWidgetKeys([...widgetKeys, newKey]);
       setNewKeyName("");
       setSelectedKey(newKey);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "위젯 키 생성에 실패했습니다.");
+      alert(
+        err instanceof Error ? err.message : "위젯 키 생성에 실패했습니다.",
+      );
       console.error("Failed to create widget key:", err);
     } finally {
       setIsCreating(false);
@@ -172,13 +200,12 @@ export default function KeysContent() {
         createdAt: response.createdAt,
         domains: response.allowedDomains,
         status: response.status,
+        isShared: response.secretKey === "***",
       };
 
       // 위젯 키 목록 업데이트
       setWidgetKeys(
-        widgetKeys.map((key) =>
-          key.id === selectedKey.id ? updatedKey : key
-        )
+        widgetKeys.map((key) => (key.id === selectedKey.id ? updatedKey : key)),
       );
       setNewDomain("");
       setSelectedKey(updatedKey);
@@ -203,6 +230,7 @@ export default function KeysContent() {
         createdAt: key.createdAt,
         domains: key.allowedDomains,
         status: key.status,
+        isShared: key.secretKey === "***",
       }));
 
       setWidgetKeys(convertedKeys);
@@ -233,7 +261,9 @@ export default function KeysContent() {
         setSelectedKey(nextKeys.length > 0 ? nextKeys[0] : null);
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : "위젯 키 폐기에 실패했습니다.");
+      alert(
+        err instanceof Error ? err.message : "위젯 키 폐기에 실패했습니다.",
+      );
       console.error("Failed to revoke widget key:", err);
     }
   };
@@ -263,14 +293,14 @@ export default function KeysContent() {
             assistantMessageBg: newColors.assistantMessageBg.replace("#", ""),
           },
         },
-        "*"
+        "*",
       );
     }
   };
 
   const handleLayoutChange = (
     key: keyof LayoutSettings,
-    value: string | number
+    value: string | number,
   ) => {
     const newLayout = { ...layoutSettings, [key]: value };
     setLayoutSettings(newLayout);
@@ -282,7 +312,7 @@ export default function KeysContent() {
           type: "WM_UPDATE_LAYOUT",
           layout: newLayout,
         },
-        "*"
+        "*",
       );
     }
   };
@@ -294,7 +324,7 @@ export default function KeysContent() {
         setIsLoading(true);
         setError(null);
         const response = await getWidgetKeys();
-        
+
         // API 응답을 WidgetKey 타입으로 변환
         const convertedKeys: WidgetKey[] = response.map((key) => ({
           id: key.id,
@@ -303,16 +333,21 @@ export default function KeysContent() {
           createdAt: key.createdAt,
           domains: key.allowedDomains,
           status: key.status,
+          isShared: key.secretKey === "***",
         }));
-        
+
         setWidgetKeys(convertedKeys);
-        
-        // 첫 번째 키를 자동으로 선택
-        if (convertedKeys.length > 0 && !selectedKey) {
+
+        // 첫 번째 키를 자동으로 선택 (초기 로드 시에만)
+        if (convertedKeys.length > 0) {
           setSelectedKey(convertedKeys[0]);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "위젯 키 목록을 불러오는데 실패했습니다.");
+        setError(
+          err instanceof Error
+            ? err.message
+            : "위젯 키 목록을 불러오는데 실패했습니다.",
+        );
         console.error("Failed to fetch widget keys:", err);
       } finally {
         setIsLoading(false);
@@ -321,6 +356,65 @@ export default function KeysContent() {
 
     fetchWidgetKeys();
   }, []);
+
+  // 소유 키(공유받은 키 아님)이고 REVOKED가 아닐 때만 협업자 목록 조회
+  const canManageCollaborators =
+    selectedKey && !selectedKey.isShared && selectedKey.status !== "REVOKED";
+
+  useEffect(() => {
+    if (!canManageCollaborators) {
+      setCollaborators([]);
+      return;
+    }
+    const fetchCollaborators = async () => {
+      try {
+        setCollaboratorsLoading(true);
+        const list = await getCollaborators(selectedKey!.id);
+        setCollaborators(list);
+      } catch {
+        setCollaborators([]);
+      } finally {
+        setCollaboratorsLoading(false);
+      }
+    };
+    fetchCollaborators();
+  }, [selectedKey, canManageCollaborators]);
+
+  const handleInviteCollaborator = async () => {
+    if (!selectedKey || !inviteEmail.trim()) return;
+
+    const validation = validateEmail(inviteEmail.trim());
+    if (!validation.isValid) {
+      alert(validation.error || "유효하지 않은 이메일입니다.");
+      return;
+    }
+
+    try {
+      setInviteLoading(true);
+      await inviteCollaborator(selectedKey.id, {
+        inviteeEmail: inviteEmail.trim().toLowerCase(),
+      });
+      setInviteEmail("");
+      const list = await getCollaborators(selectedKey.id);
+      setCollaborators(list);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "협업자 초대에 실패했습니다.");
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const handleRemoveCollaborator = async (inviteeId: string) => {
+    if (!selectedKey || !confirm("이 협업자를 제거하시겠습니까?")) return;
+
+    try {
+      await removeCollaborator(selectedKey.id, inviteeId);
+      const list = await getCollaborators(selectedKey.id);
+      setCollaborators(list);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "협업자 제거에 실패했습니다.");
+    }
+  };
 
   useEffect(() => {
     // 미리보기 iframe이 로드되면 초기 색상 및 레이아웃 설정
@@ -342,12 +436,12 @@ export default function KeysContent() {
               userMessageBg: colorSettings.userMessageBg.replace("#", ""),
               assistantMessageBg: colorSettings.assistantMessageBg.replace(
                 "#",
-                ""
+                "",
               ),
             },
             layout: layoutSettings,
           },
-          "*"
+          "*",
         );
       };
       iframe.addEventListener("load", handleLoad);
@@ -429,21 +523,28 @@ export default function KeysContent() {
                       setIsLoading(true);
                       getWidgetKeys()
                         .then((response) => {
-                          const convertedKeys: WidgetKey[] = response.map((key) => ({
-                            id: key.id,
-                            name: key.name,
-                            widgetKey: key.secretKey,
-                            createdAt: key.createdAt,
-                            domains: key.allowedDomains,
-                            status: key.status,
-                          }));
+                          const convertedKeys: WidgetKey[] = response.map(
+                            (key) => ({
+                              id: key.id,
+                              name: key.name,
+                              widgetKey: key.secretKey,
+                              createdAt: key.createdAt,
+                              domains: key.allowedDomains,
+                              status: key.status,
+                              isShared: key.secretKey === "***",
+                            }),
+                          );
                           setWidgetKeys(convertedKeys);
                           if (convertedKeys.length > 0 && !selectedKey) {
                             setSelectedKey(convertedKeys[0]);
                           }
                         })
                         .catch((err) => {
-                          setError(err instanceof Error ? err.message : "위젯 키 목록을 불러오는데 실패했습니다.");
+                          setError(
+                            err instanceof Error
+                              ? err.message
+                              : "위젯 키 목록을 불러오는데 실패했습니다.",
+                          );
                         })
                         .finally(() => {
                           setIsLoading(false);
@@ -473,9 +574,25 @@ export default function KeysContent() {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">
-                          {key.name}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-gray-900">
+                            {key.name}
+                          </h3>
+                          <span
+                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
+                              key.isShared
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-gray-100 text-gray-700"
+                            }`}
+                          >
+                            {key.isShared ? "공유받음" : "소유"}
+                          </span>
+                          {key.status === "REVOKED" && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                              폐기됨
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-gray-500 mt-1 font-mono">
                           {key.widgetKey}
                         </p>
@@ -483,15 +600,17 @@ export default function KeysContent() {
                           {new Date(key.createdAt).toLocaleDateString("ko-KR")}
                         </p>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteKey(key.id);
-                        }}
-                        className="ml-4 text-red-500 hover:text-red-700 text-sm"
-                      >
-                        삭제
-                      </button>
+                      {!key.isShared && key.status !== "REVOKED" && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteKey(key.id);
+                          }}
+                          className="ml-4 text-red-500 hover:text-red-700 text-sm"
+                        >
+                          삭제
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))
@@ -522,59 +641,65 @@ export default function KeysContent() {
                         readOnly
                         className="flex-1 px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-md font-mono text-sm"
                       />
-                      <button
-                        onClick={() =>
-                          handleCopyWidgetKey(selectedKey.widgetKey)
-                        }
-                        className="px-4 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-md hover:bg-gray-200 active:scale-[0.98] transition-all duration-150"
-                      >
-                        복사
-                      </button>
+                      {!selectedKey.isShared && (
+                        <button
+                          onClick={() =>
+                            handleCopyWidgetKey(selectedKey.widgetKey)
+                          }
+                          className="px-4 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-md hover:bg-gray-200 active:scale-[0.98] transition-all duration-150"
+                        >
+                          복사
+                        </button>
+                      )}
                     </div>
                     <p className="mt-2 text-xs text-gray-500">
-                      이 키를 웹사이트에 위젯을 설치할 때 사용하세요.
+                      {selectedKey.isShared
+                        ? "공유받은 키는 실제 키 값을 확인할 수 없습니다. 사용량은 대시보드에서 확인할 수 있습니다."
+                        : "이 키를 웹사이트에 위젯을 설치할 때 사용하세요."}
                     </p>
                   </div>
 
-                  {/* Domains Section */}
+                  {/* Domains Section - 소유 키만 추가/삭제 가능 */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       허용 도메인
                     </label>
-                    <div className="flex gap-2 mb-3">
-                      <input
-                        type="text"
-                        placeholder="example.com"
-                        value={newDomain}
-                        onChange={(e) => setNewDomain(e.target.value)}
-                        onCompositionStart={() => {
-                          isComposingDomainRef.current = true;
-                        }}
-                        onCompositionEnd={() => {
-                          setTimeout(() => {
-                            isComposingDomainRef.current = false;
-                          }, 0);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            if (
-                              isComposingDomainRef.current ||
-                              (e.nativeEvent as KeyboardEvent).isComposing
-                            ) {
-                              return;
+                    {!selectedKey.isShared && (
+                      <div className="flex gap-2 mb-3">
+                        <input
+                          type="text"
+                          placeholder="example.com"
+                          value={newDomain}
+                          onChange={(e) => setNewDomain(e.target.value)}
+                          onCompositionStart={() => {
+                            isComposingDomainRef.current = true;
+                          }}
+                          onCompositionEnd={() => {
+                            setTimeout(() => {
+                              isComposingDomainRef.current = false;
+                            }, 0);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              if (
+                                isComposingDomainRef.current ||
+                                (e.nativeEvent as KeyboardEvent).isComposing
+                              ) {
+                                return;
+                              }
+                              handleAddDomain();
                             }
-                            handleAddDomain();
-                          }
-                        }}
-                        className="flex-1 px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#de3624] focus:border-transparent transition-all duration-150"
-                      />
-                      <button
-                        onClick={handleAddDomain}
-                        className="px-4 py-2.5 bg-[#df3326] text-white font-medium rounded-md hover:bg-[#c72a1f] active:scale-[0.98] transition-all duration-150"
-                      >
-                        추가
-                      </button>
-                    </div>
+                          }}
+                          className="flex-1 px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#de3624] focus:border-transparent transition-all duration-150"
+                        />
+                        <button
+                          onClick={handleAddDomain}
+                          className="px-4 py-2.5 bg-[#df3326] text-white font-medium rounded-md hover:bg-[#c72a1f] active:scale-[0.98] transition-all duration-150"
+                        >
+                          추가
+                        </button>
+                      </div>
+                    )}
 
                     {selectedKey.domains.length === 0 ? (
                       <div className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg text-center">
@@ -591,14 +716,16 @@ export default function KeysContent() {
                               <span className="text-sm font-mono text-gray-900">
                                 {domain}
                               </span>
-                              <button
-                                onClick={() => handleRemoveDomain(domain)}
-                                className="text-red-500 hover:text-red-700 text-sm font-medium"
-                              >
-                                삭제
-                              </button>
+                              {!selectedKey.isShared && (
+                                <button
+                                  onClick={() => handleRemoveDomain(domain)}
+                                  className="text-red-500 hover:text-red-700 text-sm font-medium"
+                                >
+                                  삭제
+                                </button>
+                              )}
                             </div>
-                          )
+                          ),
                         )}
                       </div>
                     )}
@@ -658,14 +785,91 @@ export default function KeysContent() {
                     </p>
                   </div>
 
-                  {/* Usage Example */}
+                  {/* 협업자 관리 - 소유 키이고 REVOKED가 아닐 때만 표시 */}
+                  {canManageCollaborators && (
+                    <div className="pt-4 border-t border-gray-200">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        협업자 관리
+                      </label>
+                      <p className="text-xs text-gray-500 mb-3">
+                        이메일로 Admin을 초대하여 사용량을 함께 볼 수 있습니다.
+                      </p>
+                      <div className="flex gap-2 mb-4">
+                        <input
+                          type="email"
+                          placeholder="collaborator@example.com"
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleInviteCollaborator();
+                            }
+                          }}
+                          className="flex-1 px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#de3624] focus:border-transparent"
+                        />
+                        <button
+                          onClick={handleInviteCollaborator}
+                          disabled={inviteLoading || !inviteEmail.trim()}
+                          className="px-4 py-2.5 bg-[#df3326] text-white font-medium rounded-md hover:bg-[#c72a1f] active:scale-[0.98] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {inviteLoading ? "초대 중..." : "초대"}
+                        </button>
+                      </div>
+                      {collaboratorsLoading ? (
+                        <p className="text-sm text-gray-500">
+                          협업자 목록 불러오는 중...
+                        </p>
+                      ) : collaborators.length === 0 ? (
+                        <div className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg text-center">
+                          초대된 협업자가 없습니다.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {collaborators.map((c) => (
+                            <div
+                              key={c.id}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                            >
+                              <div>
+                                <span className="text-sm font-medium text-gray-900">
+                                  {c.inviteeEmail}
+                                </span>
+                                <span className="ml-2 text-xs text-gray-500">
+                                  {c.status === "ACCEPTED"
+                                    ? "수락됨"
+                                    : "대기 중"}
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => handleRemoveCollaborator(c.id)}
+                                className="text-red-500 hover:text-red-700 text-sm font-medium"
+                              >
+                                제거
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Usage Example - 공유받은 키는 설치 코드 비표시 */}
                   <div className="pt-4 border-t border-gray-200">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       설치 코드
                     </label>
-                    <div className="p-4 bg-gray-900 rounded-lg">
-                      <pre className="text-xs text-gray-100 overflow-x-auto">
-                        {`<script
+                    {selectedKey.isShared ? (
+                      <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <p className="text-sm text-gray-600">
+                          공유받은 키는 설치 코드를 확인할 수 없습니다. 위젯
+                          설치가 필요한 경우 소유자에게 문의하세요.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-gray-900 rounded-lg">
+                        <pre className="text-xs text-gray-100 overflow-x-auto">
+                          {`<script
   src="https://chatbot.gistory.me/loader.js"
   data-widget-key="${selectedKey.widgetKey}"
   data-position="${layoutSettings.position}"
@@ -682,13 +886,16 @@ export default function KeysContent() {
   data-user-message-bg="${colorSettings.userMessageBg.replace("#", "")}"
   data-assistant-message-bg="${colorSettings.assistantMessageBg.replace(
     "#",
-    ""
+    "",
   )}"
 ></script>`}
-                      </pre>
-                    </div>
+                        </pre>
+                      </div>
+                    )}
                     <p className="mt-2 text-xs text-gray-500">
-                      이 코드를 웹사이트의 &lt;body&gt; 태그 하단에 추가하세요.
+                      {selectedKey.isShared
+                        ? "사용량은 대시보드에서 확인할 수 있습니다."
+                        : "이 코드를 웹사이트의 &lt;body&gt; 태그 하단에 추가하세요."}
                     </p>
                   </div>
                 </div>
@@ -936,7 +1143,7 @@ export default function KeysContent() {
                             onChange={(e) =>
                               handleLayoutChange(
                                 "position",
-                                e.target.value as "right" | "left"
+                                e.target.value as "right" | "left",
                               )
                             }
                             className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md"
@@ -954,7 +1161,7 @@ export default function KeysContent() {
                             onChange={(e) =>
                               handleLayoutChange(
                                 "theme",
-                                e.target.value as "light" | "dark"
+                                e.target.value as "light" | "dark",
                               )
                             }
                             className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md"
@@ -973,7 +1180,7 @@ export default function KeysContent() {
                             onChange={(e) =>
                               handleLayoutChange(
                                 "width",
-                                parseInt(e.target.value) || 0
+                                parseInt(e.target.value) || 0,
                               )
                             }
                             className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md"
@@ -991,7 +1198,7 @@ export default function KeysContent() {
                             onChange={(e) =>
                               handleLayoutChange(
                                 "height",
-                                parseInt(e.target.value) || 0
+                                parseInt(e.target.value) || 0,
                               )
                             }
                             className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md"
@@ -1009,7 +1216,7 @@ export default function KeysContent() {
                             onChange={(e) =>
                               handleLayoutChange(
                                 "offset",
-                                parseInt(e.target.value) || 0
+                                parseInt(e.target.value) || 0,
                               )
                             }
                             className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md"
@@ -1132,7 +1339,7 @@ export default function KeysContent() {
                               onChange={(e) =>
                                 handleColorChange(
                                   "textSecondary",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               className="w-10 h-8 rounded border border-gray-300 cursor-pointer"
@@ -1143,7 +1350,7 @@ export default function KeysContent() {
                               onChange={(e) =>
                                 handleColorChange(
                                   "textSecondary",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               className="w-20 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
@@ -1186,7 +1393,7 @@ export default function KeysContent() {
                               onChange={(e) =>
                                 handleColorChange(
                                   "userMessageBg",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               className="w-10 h-8 rounded border border-gray-300 cursor-pointer"
@@ -1197,7 +1404,7 @@ export default function KeysContent() {
                               onChange={(e) =>
                                 handleColorChange(
                                   "userMessageBg",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               className="w-20 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"
@@ -1216,7 +1423,7 @@ export default function KeysContent() {
                               onChange={(e) =>
                                 handleColorChange(
                                   "assistantMessageBg",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               className="w-10 h-8 rounded border border-gray-300 cursor-pointer"
@@ -1227,7 +1434,7 @@ export default function KeysContent() {
                               onChange={(e) =>
                                 handleColorChange(
                                   "assistantMessageBg",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               className="w-20 px-2 py-1.5 text-xs border border-gray-300 rounded-md font-mono"

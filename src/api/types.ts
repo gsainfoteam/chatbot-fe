@@ -155,6 +155,31 @@ export interface WidgetKeyResponse {
   createdAt: string;
 }
 
+// 협업자 관련 타입
+export interface CollaboratorResponse {
+  id: string;
+  inviteeEmail: string;
+  role: "VIEWER";
+  status: "PENDING" | "ACCEPTED";
+  createdAt: string;
+}
+
+export interface InviteCollaboratorRequest {
+  inviteeEmail: string;
+}
+
+export interface InviteCollaboratorResponse {
+  id: string;
+  inviteeEmail: string;
+  role: "VIEWER";
+  status: "PENDING" | "ACCEPTED";
+  createdAt: string;
+}
+
+export interface RemoveCollaboratorResponse {
+  message: string;
+}
+
 // 대시보드 사용량 API 타입
 export interface UsageData {
   date: string;
