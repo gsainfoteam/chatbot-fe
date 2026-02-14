@@ -5,6 +5,10 @@ import type {
   CreateWidgetKeyRequest,
   AddDomainRequest,
   WidgetKeyResponse,
+  InviteCollaboratorRequest,
+  InviteCollaboratorResponse,
+  CollaboratorResponse,
+  RemoveCollaboratorResponse,
 } from "./types";
 
 /**
@@ -107,4 +111,54 @@ export async function revokeWidgetKey(
     throw new Error(response.error || "위젯 키 폐기에 실패했습니다.");
   }
   return response.data;
+}
+
+/**
+ * 협업자 초대
+ * POST /api/v1/admin/widget-keys/{widgetKeyId}/collaborators
+ */
+export async function inviteCollaborator(
+  widgetKeyId: string,
+  request: InviteCollaboratorRequest
+): Promise<InviteCollaboratorResponse> {
+  const response = await apiPost<InviteCollaboratorResponse>(
+    `/v1/admin/widget-keys/${widgetKeyId}/collaborators`,
+    request
+  );
+  if (!response.success || !response.data) {
+    throw new Error(response.error || "협업자 초대에 실패했습니다.");
+  }
+  return response.data;
+}
+
+/**
+ * 협업자 목록 조회
+ * GET /api/v1/admin/widget-keys/{widgetKeyId}/collaborators
+ */
+export async function getCollaborators(
+  widgetKeyId: string
+): Promise<CollaboratorResponse[]> {
+  const response = await apiGet<CollaboratorResponse[]>(
+    `/v1/admin/widget-keys/${widgetKeyId}/collaborators`
+  );
+  if (!response.success) {
+    throw new Error(response.error || "협업자 목록을 불러오는데 실패했습니다.");
+  }
+  return Array.isArray(response.data) ? response.data : [];
+}
+
+/**
+ * 협업자 제거
+ * DELETE /api/v1/admin/widget-keys/{widgetKeyId}/collaborators/{inviteeId}
+ */
+export async function removeCollaborator(
+  widgetKeyId: string,
+  inviteeId: string
+): Promise<void> {
+  const response = await apiDelete<RemoveCollaboratorResponse>(
+    `/v1/admin/widget-keys/${widgetKeyId}/collaborators/${inviteeId}`
+  );
+  if (!response.success) {
+    throw new Error(response.error || "협업자 제거에 실패했습니다.");
+  }
 }

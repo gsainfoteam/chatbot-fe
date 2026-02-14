@@ -247,7 +247,7 @@ export default function DashboardContent() {
                 { value: "all", label: "모든 위젯 키" },
                 ...widgetKeys.map((key) => ({
                   value: key.id,
-                  label: `${key.name} (${key.secretKey})`,
+                  label: `${key.name}${key.secretKey === "***" ? " (공유받음)" : ""} (${key.secretKey})`,
                 })),
               ]}
               selectedLabel={
@@ -626,9 +626,16 @@ export default function DashboardContent() {
                                 {idx + 1}
                               </span>
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium text-gray-900 truncate">
-                                  {stat.widgetKeyName}
-                                </p>
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-sm font-medium text-gray-900 truncate">
+                                    {stat.widgetKeyName}
+                                  </p>
+                                  {stat.widgetKey === "***" && (
+                                    <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800">
+                                      읽기 전용
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="text-xs text-gray-500 font-mono mt-0.5 truncate">
                                   {stat.widgetKey}
                                 </p>
