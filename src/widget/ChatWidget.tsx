@@ -1,6 +1,13 @@
 // 채팅 위젯 메인 컴포넌트
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { ChatMessage, ColorTheme, WidgetContext, Source } from "./types";
 import { uid, applyColorTheme, renderMarkdown } from "./utils";
 import {
@@ -145,6 +152,26 @@ export default function ChatWidget({
   // 미리보기 모드 확인 (URL 파라미터)
   const isPreviewMode =
     new URLSearchParams(window.location.search).get("preview") === "true";
+
+  // pageUrl: loader가 iframe URL에 포함시키므로 postMessage 타이밍에 의존하지 않음
+  const pageUrlFromUrl = useMemo(() => {
+    try {
+      const p = new URLSearchParams(window.location.search).get("pageUrl");
+      return p ? decodeURIComponent(p) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // 세션 발급 시 사용할 pageUrl (우선순위: URL 파라미터 > WM_INIT > document.referrer > location.href)
+  const getEffectivePageUrl = useCallback(() => {
+    return (
+      pageUrlFromUrl ||
+      ctx.pageUrl ||
+      (isInIframe ? document.referrer : null) ||
+      window.location.href
+    );
+  }, [pageUrlFromUrl, ctx.pageUrl, isInIframe]);
 
   // 툴팁 바깥 클릭 시 닫기
   useEffect(() => {
@@ -292,6 +319,21 @@ export default function ChatWidget({
         text: "위젯 키가 설정되지 않았습니다. 위젯을 다시 로드해주세요.",
       };
       setMessages((prev) => [...prev, errorMsg]);
+      setLoading(false);
+      return;
+    }
+
+    // 세션 발급 시 pageUrl 필수 (origin 식별용). 없으면 잘못된 origin으로 기록될 수 있음
+    const sessionToken = getSessionToken();
+    const pageUrl = getEffectivePageUrl();
+    if (!sessionToken && !pageUrl?.trim()) {
+      const errorMsg: ChatMessage = {
+        id: uid(),
+        role: "assistant",
+        text: "페이지 정보를 확인할 수 없습니다. 위젯을 다시 열어주세요.",
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+      setLoading(false);
       return;
     }
 
@@ -324,12 +366,8 @@ export default function ChatWidget({
       // 세션 토큰 확인 및 발급
       let sessionToken = getSessionToken();
       if (!sessionToken) {
-        // 세션이 없으면 발급
-        // iframe 내부에서는 부모 페이지의 URL을 사용해야 함
-        // ctx.pageUrl은 loader.js에서 부모 페이지의 location.href로 설정됨
-        const pageUrl =
-          ctx.pageUrl ||
-          (isInIframe ? document.referrer : window.location.href);
+        // 세션이 없으면 발급 (pageUrl은 getEffectivePageUrl에서 이미 검증됨)
+        const pageUrl = getEffectivePageUrl();
         const sessionResponse = await createWidgetSession({
           widgetKey: ctx.widgetKey,
           pageUrl: pageUrl,

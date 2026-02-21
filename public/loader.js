@@ -205,7 +205,9 @@
   mq.addEventListener?.("change", applyResponsive);
 
   const iframe = document.createElement("iframe");
-  iframe.src = IFRAME_URL;
+  // pageUrl을 URL에 포함시켜 postMessage 타이밍에 의존하지 않고 즉시 사용 가능하게 함
+  const pageUrlParam = encodeURIComponent(location.href);
+  iframe.src = IFRAME_URL + "?pageUrl=" + pageUrlParam;
   iframe.title = "Chatbot";
   iframe.style.cssText = `width:100%; height:100%; border:0; background:transparent;`;
   iframe.allow = "clipboard-read; clipboard-write";
