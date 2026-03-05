@@ -16,6 +16,7 @@ import {
   ArrowUpIcon,
   StopIcon,
   InfoIcon,
+  FlagIcon,
 } from "../components/Icons";
 import {
   createWidgetSession,
@@ -586,6 +587,27 @@ export default function ChatWidget({
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
+            {/* 신고 버튼 (경고 아이콘) */}
+            <a
+              href="https://cs.gistory.me?service=chatbot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-8 h-8 flex items-center justify-center rounded-lg transition shrink-0"
+              style={{
+                color: "var(--color-text-secondary, #94a3b8)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.05)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+              aria-label="신고"
+              title="신고"
+            >
+              <FlagIcon className="w-[18px] h-[18px]" />
+            </a>
+
             {/* 면책 안내 아이콘 + 툴팁 */}
             <div className="relative group" ref={infoTooltipRef}>
               <button
