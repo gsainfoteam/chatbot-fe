@@ -8,8 +8,10 @@ import {
   useRef,
   useState,
 } from "react";
+import { Streamdown } from "streamdown";
+import { code } from "@streamdown/code";
 import type { ChatMessage, ColorTheme, WidgetContext, Source } from "./types";
-import { uid, applyColorTheme, renderMarkdown } from "./utils";
+import { uid, applyColorTheme } from "./utils";
 import {
   LinkIcon,
   ExternalLinkIcon,
@@ -708,7 +710,17 @@ export default function ChatWidget({
                 >
                   {m.role === "assistant" ? (
                     m.text ? (
-                      renderMarkdown(m.text)
+                      <Streamdown
+                        plugins={{ code }}
+                        isAnimating={
+                          loading &&
+                          msgIdx === messages.length - 1 &&
+                          m.role === "assistant"
+                        }
+                        className="text-(--color-text,#1e293b) [&_a]:text-(--color-primary,var(--color-button,#df3326))"
+                      >
+                        {m.text}
+                      </Streamdown>
                     ) : (
                       <div className="flex items-center gap-1.5">
                         <span className="loading-text-shimmer">

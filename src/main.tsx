@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./index.css";
+import "streamdown/styles.css";
 import App from "./App.tsx";
 
 // React Query 클라이언트 설정

@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Streamdown 마크다운 렌더러 스타일 소스 */
+@source "../node_modules/streamdown/dist/*.js";
+@source "../node_modules/@streamdown/code/dist/*.js";
+
 /* 색상 테마 기본값 */
 :root {
   --color-primary: #df3326;
