@@ -717,7 +717,7 @@ export default function ChatWidget({
                           msgIdx === messages.length - 1 &&
                           m.role === "assistant"
                         }
-                        className="text-(--color-text,#1e293b) [&_a]:text-(--color-primary,var(--color-button,#df3326))"
+                        className="text-[var(--color-text,#1e293b)] [&_a]:text-[var(--color-primary,var(--color-button,#df3326))]"
                       >
                         {m.text}
                       </Streamdown>
