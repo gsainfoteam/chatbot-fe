@@ -146,12 +146,22 @@ export interface AddDomainRequest {
   domain: string;
 }
 
+export interface AddAppIdRequest {
+  appId: string;
+}
+
+export interface AppIdsResponse {
+  appIds: string[];
+}
+
 export interface WidgetKeyResponse {
   id: string;
   name: string;
   secretKey: string;
   status: "ACTIVE" | "REVOKED";
   allowedDomains: string[];
+  /** 웹 도메인 + 모바일 앱 ID(허용 출처). 미제공 시 빈 배열로 처리 */
+  allowedAppIds?: string[];
   createdAt: string;
 }
 

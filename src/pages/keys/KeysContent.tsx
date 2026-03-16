@@ -4,6 +4,8 @@ import {
   createWidgetKey,
   addDomainToWidgetKey,
   removeDomainFromWidgetKey,
+  addAppIdToWidgetKey,
+  removeAppIdFromWidgetKey,
   revokeWidgetKey,
   inviteCollaborator,
   getCollaborators,
@@ -17,6 +19,7 @@ type WidgetKey = {
   widgetKey: string;
   createdAt: string;
   domains: string[];
+  appIds: string[];
   status?: "ACTIVE" | "REVOKED";
   /** secretKey === "***" 이면 공유받은 키 */
   isShared?: boolean;
@@ -101,15 +104,34 @@ function validateDomain(domain: string): { isValid: boolean; error?: string } {
   };
 }
 
+function validateAppId(appId: string): { isValid: boolean; error?: string } {
+  const trimmed = appId.trim();
+  if (!trimmed) {
+    return { isValid: false, error: "앱 ID를 입력해주세요." };
+  }
+  // Android applicationId / iOS bundle identifier (예: com.company.myapp)
+  const segment = /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)*$/;
+  if (!segment.test(trimmed)) {
+    return {
+      isValid: false,
+      error:
+        "유효한 앱 ID 형식이 아닙니다. (예: com.company.myapp, io.example.app)",
+    };
+  }
+  return { isValid: true };
+}
+
 export default function KeysContent() {
   const [widgetKeys, setWidgetKeys] = useState<WidgetKey[]>([]);
   const [newKeyName, setNewKeyName] = useState("");
   const [selectedKey, setSelectedKey] = useState<WidgetKey | null>(null);
   const [newDomain, setNewDomain] = useState("");
+  const [newAppId, setNewAppId] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isComposingKeyNameRef = useRef(false);
   const isComposingDomainRef = useRef(false);
+  const isComposingAppIdRef = useRef(false);
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [collaborators, setCollaborators] = useState<CollaboratorResponse[]>(
@@ -154,6 +176,7 @@ export default function KeysContent() {
         widgetKey: response.secretKey,
         createdAt: response.createdAt,
         domains: response.allowedDomains,
+        appIds: response.allowedAppIds ?? [],
         status: response.status,
         isShared: response.secretKey === "***",
       };
@@ -199,6 +222,7 @@ export default function KeysContent() {
         widgetKey: response.secretKey,
         createdAt: response.createdAt,
         domains: response.allowedDomains,
+        appIds: response.allowedAppIds ?? [],
         status: response.status,
         isShared: response.secretKey === "***",
       };
@@ -229,6 +253,7 @@ export default function KeysContent() {
         widgetKey: key.secretKey,
         createdAt: key.createdAt,
         domains: key.allowedDomains,
+        appIds: key.allowedAppIds ?? [],
         status: key.status,
         isShared: key.secretKey === "***",
       }));
@@ -243,6 +268,67 @@ export default function KeysContent() {
     } catch (err) {
       alert(err instanceof Error ? err.message : "도메인 삭제에 실패했습니다.");
       console.error("Failed to remove domain:", err);
+    }
+  };
+
+  const handleAddAppId = async () => {
+    if (!selectedKey || !newAppId.trim()) return;
+
+    const appId = newAppId.trim();
+    const validation = validateAppId(appId);
+    if (!validation.isValid) {
+      alert(validation.error || "유효하지 않은 앱 ID입니다.");
+      return;
+    }
+    if (selectedKey.appIds.includes(appId)) {
+      alert("이미 등록된 앱 ID입니다.");
+      return;
+    }
+
+    try {
+      const response = await addAppIdToWidgetKey(selectedKey.id, { appId });
+      const updatedKey: WidgetKey = {
+        id: response.id,
+        name: response.name,
+        widgetKey: response.secretKey,
+        createdAt: response.createdAt,
+        domains: response.allowedDomains,
+        appIds: response.allowedAppIds ?? [],
+        status: response.status,
+        isShared: response.secretKey === "***",
+      };
+      setWidgetKeys(
+        widgetKeys.map((key) => (key.id === selectedKey.id ? updatedKey : key)),
+      );
+      setNewAppId("");
+      setSelectedKey(updatedKey);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "앱 ID 추가에 실패했습니다.");
+      console.error("Failed to add app ID:", err);
+    }
+  };
+
+  const handleRemoveAppId = async (appId: string) => {
+    if (!selectedKey) return;
+    try {
+      await removeAppIdFromWidgetKey(selectedKey.id, appId);
+      const response = await getWidgetKeys();
+      const convertedKeys: WidgetKey[] = response.map((key) => ({
+        id: key.id,
+        name: key.name,
+        widgetKey: key.secretKey,
+        createdAt: key.createdAt,
+        domains: key.allowedDomains,
+        appIds: key.allowedAppIds ?? [],
+        status: key.status,
+        isShared: key.secretKey === "***",
+      }));
+      setWidgetKeys(convertedKeys);
+      const updatedKey = convertedKeys.find((key) => key.id === selectedKey.id);
+      if (updatedKey) setSelectedKey(updatedKey);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "앱 ID 삭제에 실패했습니다.");
+      console.error("Failed to remove app ID:", err);
     }
   };
 
@@ -332,6 +418,7 @@ export default function KeysContent() {
           widgetKey: key.secretKey,
           createdAt: key.createdAt,
           domains: key.allowedDomains,
+          appIds: key.allowedAppIds ?? [],
           status: key.status,
           isShared: key.secretKey === "***",
         }));
@@ -530,6 +617,7 @@ export default function KeysContent() {
                               widgetKey: key.secretKey,
                               createdAt: key.createdAt,
                               domains: key.allowedDomains,
+                              appIds: key.allowedAppIds ?? [],
                               status: key.status,
                               isShared: key.secretKey === "***",
                             }),
@@ -782,6 +870,110 @@ export default function KeysContent() {
                     </div>
                     <p className="mt-2 text-xs text-gray-500">
                       이 Widget Key가 사용될 수 있는 도메인 목록입니다.
+                    </p>
+                  </div>
+
+                  {/* 허용 앱 ID - 모바일 앱(Flutter 등)용 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      허용 앱 ID
+                    </label>
+                    {!selectedKey.isShared && (
+                      <div className="flex gap-2 mb-3">
+                        <input
+                          type="text"
+                          placeholder="com.company.myapp"
+                          value={newAppId}
+                          onChange={(e) => setNewAppId(e.target.value)}
+                          onCompositionStart={() => {
+                            isComposingAppIdRef.current = true;
+                          }}
+                          onCompositionEnd={() => {
+                            setTimeout(() => {
+                              isComposingAppIdRef.current = false;
+                            }, 0);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              if (
+                                isComposingAppIdRef.current ||
+                                (e.nativeEvent as KeyboardEvent).isComposing
+                              ) {
+                                return;
+                              }
+                              handleAddAppId();
+                            }
+                          }}
+                          className="flex-1 px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#de3624] focus:border-transparent transition-all duration-150"
+                        />
+                        <button
+                          onClick={handleAddAppId}
+                          className="px-4 py-2.5 bg-[#df3326] text-white font-medium rounded-md hover:bg-[#c72a1f] active:scale-[0.98] transition-all duration-150"
+                        >
+                          추가
+                        </button>
+                      </div>
+                    )}
+
+                    {selectedKey.appIds.length === 0 ? (
+                      <div className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg text-center">
+                        등록된 앱 ID가 없습니다.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {selectedKey.appIds.map(
+                          (appId: string, index: number) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                            >
+                              <span className="text-sm font-mono text-gray-900">
+                                {appId}
+                              </span>
+                              {!selectedKey.isShared && (
+                                <button
+                                  onClick={() => handleRemoveAppId(appId)}
+                                  className="text-red-500 hover:text-red-700 text-sm font-medium"
+                                >
+                                  삭제
+                                </button>
+                              )}
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    )}
+                    <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                      <p className="text-xs font-medium text-amber-900 mb-2">
+                        📱 앱 ID 등록 가이드
+                      </p>
+                      <ul className="text-xs text-amber-800 space-y-1 list-disc list-inside">
+                        <li>
+                          <strong>Android:</strong>{" "}
+                          <code className="bg-amber-100 px-1 rounded">
+                            applicationId
+                          </code>
+                          (build.gradle)와 동일하게 입력하세요.
+                        </li>
+                        <li>
+                          <strong>iOS:</strong>{" "}
+                          <code className="bg-amber-100 px-1 rounded">
+                            Bundle Identifier
+                          </code>
+                          와 동일하게 입력하세요.
+                        </li>
+                        <li>
+                          <strong>형식:</strong> 프로토콜 없이 앱 ID만 입력 (예:{" "}
+                          <code className="bg-amber-100 px-1 rounded">
+                            com.company.myapp
+                          </code>
+                          ).
+                        </li>
+                      </ul>
+                    </div>
+                    <p className="mt-2 text-xs text-gray-500">
+                      모바일 앱(Flutter 등)에서 이 위젯 키를 사용할 때 허용할 앱
+                      ID 목록입니다. 세션 발급 시 <code className="bg-gray-100 px-1 rounded">clientType: &quot;app&quot;</code>, <code className="bg-gray-100 px-1 rounded">appId</code>를 전달해야 합니다.
                     </p>
                   </div>
 

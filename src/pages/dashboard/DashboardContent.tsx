@@ -13,7 +13,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { getWidgetKeysUsage } from "../../api/usage";
-import { getWidgetKeys, getWidgetKeyDomains } from "../../api/widgetKeys";
+import { getWidgetKeys } from "../../api/widgetKeys";
 import FilterSelect from "../../components/FilterSelect";
 import type { UsageData, DomainStat } from "../../api/types";
 import ChartTooltip from "./components/ChartTooltip";
@@ -48,19 +48,30 @@ export default function DashboardContent() {
     queryFn: getWidgetKeys,
   });
 
-  // 선택된 위젯 키의 도메인 목록 조회 (전체 선택 시 allowedDomains 합침, 특정 키 시 API 호출)
-  const { data: domains = [] } = useQuery({
-    queryKey: ["widgetKeyDomains", selectedWidgetKey, widgetKeys.length],
-    queryFn: () =>
+  // 출처(도메인 + 앱 ID) 목록: 선택된 위젯 키 기준으로 allowedDomains + allowedAppIds 합침
+  const sources = useMemo(() => {
+    if (widgetKeys.length === 0) return [];
+    const list =
       selectedWidgetKey === "all"
-        ? Promise.resolve(
-            [...new Set(widgetKeys.flatMap((k) => k.allowedDomains))].sort(),
-          )
-        : getWidgetKeyDomains(selectedWidgetKey),
-    enabled:
-      widgetKeys.length > 0 &&
-      (selectedWidgetKey === "all" || !!selectedWidgetKey),
-  });
+        ? [
+            ...new Set([
+              ...widgetKeys.flatMap((k) => k.allowedDomains ?? []),
+              ...widgetKeys.flatMap((k) => k.allowedAppIds ?? []),
+            ]),
+          ]
+        : (() => {
+            const k = widgetKeys.find((x) => x.id === selectedWidgetKey);
+            return k
+              ? [
+                  ...new Set([
+                    ...(k.allowedDomains ?? []),
+                    ...(k.allowedAppIds ?? []),
+                  ]),
+                ]
+              : [];
+          })();
+    return [...list].sort();
+  }, [widgetKeys, selectedWidgetKey]);
 
   const handleWidgetKeyChange = (widgetKeyId: string) => {
     setSelectedWidgetKey(widgetKeyId);
@@ -232,7 +243,7 @@ export default function DashboardContent() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">대시보드</h1>
           <p className="mt-2 text-sm text-gray-600">
-            위젯 키별 및 도메인별 사용량 통계를 확인하세요.
+            위젯 키별·출처(도메인 또는 앱 ID)별 사용량 통계를 확인하세요.
           </p>
         </div>
 
@@ -260,12 +271,12 @@ export default function DashboardContent() {
               disabled={keysLoading}
             />
             <FilterSelect
-              label="도메인"
+              label="출처(도메인 또는 앱 ID)"
               value={selectedDomain}
               onChange={setSelectedDomain}
               options={[
-                { value: "all", label: "모든 도메인" },
-                ...domains.map((domain) => ({ value: domain, label: domain })),
+                { value: "all", label: "모든 출처" },
+                ...sources.map((source) => ({ value: source, label: source })),
               ]}
               width="lg"
             />
@@ -542,31 +553,43 @@ export default function DashboardContent() {
               );
             })()}
 
-            {/* Domain Stats */}
+            {/* 출처(도메인/앱 ID)별 통계 */}
             <div className="bg-white rounded-lg border border-gray-200 p-4">
               <h3 className="text-sm font-semibold text-gray-900 mb-3">
-                도메인별 통계
+                출처별 통계 (도메인 / 앱 ID)
               </h3>
               {filteredStats.domainStats.length === 0 ? (
                 <p className="text-sm text-gray-400 py-6 text-center">
-                  도메인 데이터가 없습니다.
+                  출처 데이터가 없습니다.
                 </p>
               ) : (
                 <ul className="space-y-1.5">
                   {filteredStats.domainStats
                     .sort((a, b) => b.tokens - a.tokens)
-                    .map((ds) => (
+                    .map((ds) => {
+                      const isAppId =
+                        /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/.test(
+                          ds.domain,
+                        ) && !ds.domain.includes(" ");
+                      return (
                       <li
                         key={ds.domain}
                         className="px-2.5 py-2 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 transition-colors"
                         title={ds.domain}
                       >
-                        <p
-                          className="text-sm text-gray-900 truncate mb-1 font-medium"
-                          title={ds.domain}
-                        >
-                          {ds.domain}
-                        </p>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p
+                            className="text-sm text-gray-900 truncate font-medium flex-1 min-w-0"
+                            title={ds.domain}
+                          >
+                            {ds.domain}
+                          </p>
+                          {isAppId && (
+                            <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800">
+                              앱
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-3 text-xs text-gray-500">
                           <span className="tabular-nums font-medium text-gray-900">
                             {ds.tokens.toLocaleString()} 토큰
@@ -585,7 +608,8 @@ export default function DashboardContent() {
                           </span>
                         </div>
                       </li>
-                    ))}
+                    );
+                    })}
                 </ul>
               )}
             </div>

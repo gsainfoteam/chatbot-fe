@@ -4,7 +4,9 @@ import { apiGet, apiPost, apiPatch, apiDelete } from "./client";
 import type {
   CreateWidgetKeyRequest,
   AddDomainRequest,
+  AddAppIdRequest,
   WidgetKeyResponse,
+  AppIdsResponse,
   InviteCollaboratorRequest,
   InviteCollaboratorResponse,
   CollaboratorResponse,
@@ -94,6 +96,61 @@ export async function removeDomainFromWidgetKey(
   );
   if (!response.success) {
     throw new Error(response.error || "도메인 삭제에 실패했습니다.");
+  }
+}
+
+/**
+ * 위젯 키의 등록된 앱 ID 목록 조회
+ * GET /api/v1/admin/widget-keys/{widgetKeyId}/app-ids
+ */
+export async function getWidgetKeyAppIds(
+  widgetKeyId: string
+): Promise<string[]> {
+  const response = await apiGet<AppIdsResponse | string[]>(
+    `/v1/admin/widget-keys/${widgetKeyId}/app-ids`
+  );
+  if (!response.success) {
+    throw new Error(response.error || "앱 ID 목록을 불러오는데 실패했습니다.");
+  }
+  const data = response.data;
+  if (Array.isArray(data)) return data;
+  if (data?.appIds && Array.isArray(data.appIds)) return data.appIds;
+  return [];
+}
+
+/**
+ * 위젯 키에 앱 ID 추가
+ * POST /api/v1/admin/widget-keys/{widgetKeyId}/app-ids
+ */
+export async function addAppIdToWidgetKey(
+  widgetKeyId: string,
+  request: AddAppIdRequest
+): Promise<WidgetKeyResponse> {
+  const response = await apiPost<WidgetKeyResponse>(
+    `/v1/admin/widget-keys/${widgetKeyId}/app-ids`,
+    request
+  );
+  if (!response.success || !response.data) {
+    throw new Error(response.error || "앱 ID 추가에 실패했습니다.");
+  }
+  return response.data;
+}
+
+/**
+ * 위젯 키에서 앱 ID 삭제
+ * DELETE /api/v1/admin/widget-keys/{widgetKeyId}/app-ids/{appId}
+ * appId에 점(.)이 포함되므로 encodeURIComponent 적용
+ */
+export async function removeAppIdFromWidgetKey(
+  widgetKeyId: string,
+  appId: string
+): Promise<void> {
+  const encodedAppId = encodeURIComponent(appId);
+  const response = await apiDelete<void>(
+    `/v1/admin/widget-keys/${widgetKeyId}/app-ids/${encodedAppId}`
+  );
+  if (!response.success) {
+    throw new Error(response.error || "앱 ID 삭제에 실패했습니다.");
   }
 }
 
