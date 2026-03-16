@@ -109,8 +109,8 @@ function validateAppId(appId: string): { isValid: boolean; error?: string } {
   if (!trimmed) {
     return { isValid: false, error: "앱 ID를 입력해주세요." };
   }
-  // Android applicationId / iOS bundle identifier (예: com.company.myapp)
-  const segment = /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)*$/;
+  // Android applicationId / iOS bundle identifier: at least one dot (e.g. com.company.myapp)
+  const segment = /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/;
   if (!segment.test(trimmed)) {
     return {
       isValid: false,
@@ -907,6 +907,7 @@ export default function KeysContent() {
                           className="flex-1 px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#de3624] focus:border-transparent transition-all duration-150"
                         />
                         <button
+                          type="button"
                           onClick={handleAddAppId}
                           className="px-4 py-2.5 bg-[#df3326] text-white font-medium rounded-md hover:bg-[#c72a1f] active:scale-[0.98] transition-all duration-150"
                         >
@@ -921,10 +922,9 @@ export default function KeysContent() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {selectedKey.appIds.map(
-                          (appId: string, index: number) => (
+                        {selectedKey.appIds.map((appId: string) => (
                             <div
-                              key={index}
+                              key={appId}
                               className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                             >
                               <span className="text-sm font-mono text-gray-900">
@@ -932,6 +932,7 @@ export default function KeysContent() {
                               </span>
                               {!selectedKey.isShared && (
                                 <button
+                                  type="button"
                                   onClick={() => handleRemoveAppId(appId)}
                                   className="text-red-500 hover:text-red-700 text-sm font-medium"
                                 >
@@ -939,8 +940,7 @@ export default function KeysContent() {
                                 </button>
                               )}
                             </div>
-                          ),
-                        )}
+                          ))}
                       </div>
                     )}
                     <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
