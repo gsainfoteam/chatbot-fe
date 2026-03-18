@@ -49,12 +49,21 @@
   // ---- 1) data-* 옵션 읽기 ----
   const ds = scriptEl.dataset;
 
+  // ---- 운영 공지: 현재 챗봇 사용 불가 ----
+  // NOTE: 장애/점검 기간 동안 위젯 UI는 유지하되 입력/대화를 비활성화합니다.
+  const WIDGET_DISABLED = true;
+  const DISABLED_TITLE =
+    ds.disabledTitle || "🚧 현재 챗봇 이용이 불가합니다 🚧";
+  const DISABLED_DESC =
+    ds.disabledDesc ||
+    "현재 점검/장애로 인해 챗봇을 사용할 수 없습니다. 불편을 드려 죄송합니다.";
+
   // 디버깅: 받은 데이터 속성 확인
   console.log(
     "[loader.js] 받은 data-* 속성:",
     Object.keys(ds).map(
-      (k) => `data-${k.replace(/([A-Z])/g, "-$1").toLowerCase()}`
-    )
+      (k) => `data-${k.replace(/([A-Z])/g, "-$1").toLowerCase()}`,
+    ),
   );
   console.log("[loader.js] dataset 객체:", ds);
 
@@ -64,8 +73,8 @@
     rawButtonIcon === "chat" || rawButtonIcon === "bubble"
       ? "chat"
       : rawButtonIcon === "robot"
-      ? "robot"
-      : "logo";
+        ? "robot"
+        : "logo";
 
   const config = {
     widgetKey: ds.widgetKey || "dev",
@@ -94,7 +103,10 @@
   // ---- 2) launcher button ----
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.setAttribute("aria-label", "챗봇 열기");
+  btn.setAttribute(
+    "aria-label",
+    WIDGET_DISABLED ? "챗봇 이용 불가 안내 열기" : "챗봇 열기",
+  );
   btn.style.cssText = `
     position:fixed;
     ${config.position}:${config.offset}px;
@@ -128,12 +140,12 @@
   // hover/press 효과
   btn.addEventListener(
     "mouseenter",
-    () => (btn.style.transform = "scale(1.05)")
+    () => (btn.style.transform = "scale(1.05)"),
   );
   btn.addEventListener("mouseleave", () => (btn.style.transform = "scale(1)"));
   btn.addEventListener(
     "mousedown",
-    () => (btn.style.transform = "scale(0.96)")
+    () => (btn.style.transform = "scale(0.96)"),
   );
   btn.addEventListener("mouseup", () => (btn.style.transform = "scale(1.05)"));
 
@@ -187,7 +199,8 @@
       wrap.style.height = "85vh";
       wrap.style.maxHeight = "85vh";
       wrap.style.borderRadius = "20px 20px 0 0";
-      wrap.style.boxShadow = "0 16px 40px rgba(0,0,0,.22)";
+      wrap.style.boxShadow =
+        "0 28px 90px rgba(15, 23, 42, 0.10), 0 10px 28px rgba(15, 23, 42, 0.08)";
       wrap.style[config.position] = ""; // 데스크톱 위치 스타일 제거
     } else {
       wrap.style.left = "";
@@ -198,7 +211,8 @@
       wrap.style.maxHeight = "";
       wrap.style.bottom = config.offset + BTN_SIZE + 12 + "px";
       wrap.style[config.position] = config.offset + "px";
-      wrap.style.boxShadow = "0 16px 40px rgba(0,0,0,.22)";
+      wrap.style.boxShadow =
+        "0 24px 80px rgba(15, 23, 42, 0.10), 0 8px 24px rgba(15, 23, 42, 0.08)";
     }
   }
   applyResponsive();
@@ -207,7 +221,19 @@
   const iframe = document.createElement("iframe");
   // pageUrl을 URL에 포함시켜 postMessage 타이밍에 의존하지 않고 즉시 사용 가능하게 함
   const pageUrlParam = encodeURIComponent(location.href);
-  iframe.src = IFRAME_URL + "?pageUrl=" + pageUrlParam;
+  const disabledParam = WIDGET_DISABLED ? "1" : "0";
+  const disabledTitleParam = encodeURIComponent(DISABLED_TITLE);
+  const disabledDescParam = encodeURIComponent(DISABLED_DESC);
+  iframe.src =
+    IFRAME_URL +
+    "?pageUrl=" +
+    pageUrlParam +
+    "&disabled=" +
+    disabledParam +
+    "&disabledTitle=" +
+    disabledTitleParam +
+    "&disabledDesc=" +
+    disabledDescParam;
   iframe.title = "Chatbot";
   iframe.style.cssText = `width:100%; height:100%; border:0; background:transparent;`;
   iframe.allow = "clipboard-read; clipboard-write";
@@ -247,7 +273,7 @@
         } catch (error) {
           console.error(
             `[ChatbotWidget] Error in ${eventName} handler:`,
-            error
+            error,
           );
         }
       });
@@ -265,6 +291,9 @@
       pageUrl: location.href,
       theme: config.theme,
       position: config.position,
+      disabled: WIDGET_DISABLED,
+      disabledTitle: DISABLED_TITLE,
+      disabledDesc: DISABLED_DESC,
       colors: {
         primary: config.primaryColor,
         button: config.buttonColor,
@@ -351,13 +380,13 @@
     if (newColors.primary) {
       config.primaryColor = validateColor(
         newColors.primary,
-        config.primaryColor
+        config.primaryColor,
       );
     }
     if (newColors.background) {
       config.backgroundColor = validateColor(
         newColors.background,
-        config.backgroundColor
+        config.backgroundColor,
       );
     }
     if (newColors.text) {
@@ -366,7 +395,7 @@
     if (newColors.textSecondary) {
       config.textSecondaryColor = validateColor(
         newColors.textSecondary,
-        config.textSecondaryColor
+        config.textSecondaryColor,
       );
     }
     if (newColors.border) {
@@ -375,13 +404,13 @@
     if (newColors.userMessageBg) {
       config.userMessageBg = validateColor(
         newColors.userMessageBg,
-        config.userMessageBg
+        config.userMessageBg,
       );
     }
     if (newColors.assistantMessageBg) {
       config.assistantMessageBg = validateColor(
         newColors.assistantMessageBg,
-        config.assistantMessageBg
+        config.assistantMessageBg,
       );
     }
 
@@ -474,7 +503,7 @@
       } else {
         console.warn(
           `[ChatbotWidget] Unknown event: ${eventName}. Available events:`,
-          Object.keys(eventHandlers).join(", ")
+          Object.keys(eventHandlers).join(", "),
         );
         return () => {};
       }
