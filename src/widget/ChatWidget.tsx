@@ -156,6 +156,30 @@ export default function ChatWidget({
   const isPreviewMode =
     new URLSearchParams(window.location.search).get("preview") === "true";
 
+  // 이용 불가 모드 (URL 파라미터 우선, 없으면 WM_INIT 컨텍스트 사용)
+  const disabledFromUrl = useMemo(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const v = sp.get("disabled");
+    return v === "1" || v === "true";
+  }, []);
+  const disabledTitleFromUrl = useMemo(() => {
+    const sp = new URLSearchParams(window.location.search);
+    return sp.get("disabledTitle");
+  }, []);
+  const disabledDescFromUrl = useMemo(() => {
+    const sp = new URLSearchParams(window.location.search);
+    return sp.get("disabledDesc");
+  }, []);
+  const isDisabled = disabledFromUrl || !!ctx.disabled;
+  const disabledTitle =
+    disabledTitleFromUrl ||
+    ctx.disabledTitle ||
+    "🚧 현재 챗봇 이용이 불가합니다 🚧";
+  const disabledDesc =
+    disabledDescFromUrl ||
+    ctx.disabledDesc ||
+    "현재 점검/장애로 인해 챗봇을 사용할 수 없습니다. 불편을 드려 죄송합니다.";
+
   // pageUrl: loader가 iframe URL에 포함시키므로 postMessage 타이밍에 의존하지 않음
   const pageUrlFromUrl = useMemo(() => {
     try {
@@ -214,6 +238,15 @@ export default function ChatWidget({
             widgetKey: data.widgetKey,
             pageUrl: data.pageUrl,
             colors: colors,
+            disabled: !!data.disabled,
+            disabledTitle:
+              typeof data.disabledTitle === "string"
+                ? data.disabledTitle
+                : undefined,
+            disabledDesc:
+              typeof data.disabledDesc === "string"
+                ? data.disabledDesc
+                : undefined,
           });
         }
         if (data.type === "WM_UPDATE_COLORS") {
@@ -297,8 +330,8 @@ export default function ChatWidget({
   }, [loading]);
 
   const canSend = useMemo(
-    () => input.trim().length > 0 && !loading,
-    [input, loading],
+    () => input.trim().length > 0 && !loading && !isDisabled,
+    [input, loading, isDisabled],
   );
 
   // 자주 묻는 질문이 숨겨졌는지 여부 (한 번이라도 사용자가 메시지를 보내면 숨김)
@@ -312,6 +345,8 @@ export default function ChatWidget({
 
     // 미리보기 모드에서는 전송 비활성화
     if (isPreviewMode) return;
+    // 이용 불가 모드에서는 전송 비활성화
+    if (isDisabled) return;
 
     // widgetKey가 없으면 전송 불가
     if (!ctx.widgetKey) {
@@ -849,7 +884,39 @@ export default function ChatWidget({
               )}
           </div>
 
-          {/* 이용 불가 오버레이는 disabled 모드일 때만 표시됩니다. */}
+          {/* 이용 불가 오버레이 (채팅 형태는 유지, 중앙 문구만 표시) */}
+          {isDisabled && (
+            <div
+              className="absolute inset-0 flex items-center justify-center px-6"
+              style={{
+                background:
+                  "linear-gradient(180deg, color-mix(in srgb, var(--color-background, #f8fafc) 75%, transparent), var(--color-background, #f8fafc))",
+              }}
+              aria-live="polite"
+            >
+              <div
+                className="w-full max-w-sm rounded-2xl border px-5 py-4 text-center"
+                style={{
+                  backgroundColor: "var(--color-assistant-message-bg, #ffffff)",
+                  borderColor:
+                    "color-mix(in srgb, var(--color-border, #e2e8f0) 55%, transparent)",
+                  color: "var(--color-text, #1e293b)",
+                  boxShadow:
+                    "0 18px 60px rgba(15, 23, 42, 0.06), 0 6px 18px rgba(15, 23, 42, 0.04)",
+                }}
+              >
+                <div className="text-[15px] font-semibold leading-snug">
+                  {disabledTitle}
+                </div>
+                <div
+                  className="mt-1.5 text-[13px] leading-relaxed"
+                  style={{ color: "var(--color-text-secondary, #64748b)" }}
+                >
+                  {disabledDesc}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 429 경고 */}
@@ -894,8 +961,9 @@ export default function ChatWidget({
               borderColor: "var(--color-border, #e2e8f0)",
               color: "var(--color-text, #1e293b)",
             }}
+            disabled={isDisabled}
             onFocus={(e) => {
-              if (isPreviewMode) return;
+              if (isPreviewMode || isDisabled) return;
               e.currentTarget.style.borderColor =
                 "var(--color-primary, #df3326)";
               e.currentTarget.style.boxShadow =
@@ -907,7 +975,9 @@ export default function ChatWidget({
               e.currentTarget.style.boxShadow = "none";
             }}
             rows={1}
-            placeholder="메시지를 입력하세요"
+            placeholder={
+              isDisabled ? "현재는 이용할 수 없습니다" : "메시지를 입력하세요"
+            }
             value={input}
             onChange={(e) => {
               setInput(e.target.value);
@@ -924,7 +994,7 @@ export default function ChatWidget({
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 // 미리보기 모드에서는 전송 비활성화
-                if (isPreviewMode) {
+                if (isPreviewMode || isDisabled) {
                   e.preventDefault();
                   return;
                 }
