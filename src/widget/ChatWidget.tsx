@@ -156,30 +156,6 @@ export default function ChatWidget({
   const isPreviewMode =
     new URLSearchParams(window.location.search).get("preview") === "true";
 
-  // 이용 불가 모드 (URL 파라미터 우선, 없으면 WM_INIT 컨텍스트 사용)
-  const disabledFromUrl = useMemo(() => {
-    const sp = new URLSearchParams(window.location.search);
-    const v = sp.get("disabled");
-    return v === "1" || v === "true";
-  }, []);
-  const disabledTitleFromUrl = useMemo(() => {
-    const sp = new URLSearchParams(window.location.search);
-    return sp.get("disabledTitle");
-  }, []);
-  const disabledDescFromUrl = useMemo(() => {
-    const sp = new URLSearchParams(window.location.search);
-    return sp.get("disabledDesc");
-  }, []);
-  const isDisabled = disabledFromUrl || !!ctx.disabled;
-  const disabledTitle =
-    disabledTitleFromUrl ||
-    ctx.disabledTitle ||
-    "🚧 현재 챗봇 이용이 불가합니다 🚧";
-  const disabledDesc =
-    disabledDescFromUrl ||
-    ctx.disabledDesc ||
-    "현재 점검/장애로 인해 챗봇을 사용할 수 없습니다. 불편을 드려 죄송합니다.";
-
   // pageUrl: loader가 iframe URL에 포함시키므로 postMessage 타이밍에 의존하지 않음
   const pageUrlFromUrl = useMemo(() => {
     try {
@@ -238,15 +214,6 @@ export default function ChatWidget({
             widgetKey: data.widgetKey,
             pageUrl: data.pageUrl,
             colors: colors,
-            disabled: !!data.disabled,
-            disabledTitle:
-              typeof data.disabledTitle === "string"
-                ? data.disabledTitle
-                : undefined,
-            disabledDesc:
-              typeof data.disabledDesc === "string"
-                ? data.disabledDesc
-                : undefined,
           });
         }
         if (data.type === "WM_UPDATE_COLORS") {
@@ -330,8 +297,8 @@ export default function ChatWidget({
   }, [loading]);
 
   const canSend = useMemo(
-    () => input.trim().length > 0 && !loading && !isDisabled,
-    [input, loading, isDisabled],
+    () => input.trim().length > 0 && !loading,
+    [input, loading],
   );
 
   // 자주 묻는 질문이 숨겨졌는지 여부 (한 번이라도 사용자가 메시지를 보내면 숨김)
@@ -345,8 +312,6 @@ export default function ChatWidget({
 
     // 미리보기 모드에서는 전송 비활성화
     if (isPreviewMode) return;
-    // 이용 불가 모드에서는 전송 비활성화
-    if (isDisabled) return;
 
     // widgetKey가 없으면 전송 불가
     if (!ctx.widgetKey) {
@@ -712,211 +677,175 @@ export default function ChatWidget({
         </div>
 
         {/* Messages */}
-        <div className="relative flex-1">
-          <div
-            ref={listRef}
-            className="h-full overflow-auto px-3 py-3 flex flex-col"
-            style={{
-              backgroundColor: "var(--color-background, #f8fafc)",
-            }}
-          >
-            {messages.map((m, msgIdx) => (
-              <Fragment key={m.id}>
+        <div
+          ref={listRef}
+          className="flex-1 overflow-auto px-3 py-3 flex flex-col"
+          style={{
+            backgroundColor: "var(--color-background, #f8fafc)",
+          }}
+        >
+          {messages.map((m, msgIdx) => (
+            <Fragment key={m.id}>
+              <div
+                className={`flex mb-2 ${
+                  m.role === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
                 <div
-                  className={`flex mb-2 ${
-                    m.role === "user" ? "justify-end" : "justify-start"
-                  }`}
+                  className="max-w-[80%] text-[14px] leading-snug px-3 py-2 rounded-2xl border wrap-break-words"
+                  style={
+                    m.role === "user"
+                      ? {
+                          backgroundColor: `color-mix(in srgb, var(--color-user-message-bg, var(--color-primary, #ff4500)) 10%, transparent)`,
+                          borderColor: `color-mix(in srgb, var(--color-user-message-bg, var(--color-primary, #ff4500)) 25%, transparent)`,
+                          color: "var(--color-text, #1e293b)",
+                        }
+                      : {
+                          backgroundColor:
+                            "var(--color-assistant-message-bg, #ffffff)",
+                          borderColor: "var(--color-border, #e2e8f0)",
+                          color: "var(--color-text, #1e293b)",
+                        }
+                  }
                 >
-                  <div
-                    className="max-w-[80%] text-[14px] leading-snug px-3 py-2 rounded-2xl border wrap-break-words"
-                    style={
-                      m.role === "user"
-                        ? {
-                            backgroundColor: `color-mix(in srgb, var(--color-user-message-bg, var(--color-primary, #ff4500)) 10%, transparent)`,
-                            borderColor: `color-mix(in srgb, var(--color-user-message-bg, var(--color-primary, #ff4500)) 25%, transparent)`,
-                            color: "var(--color-text, #1e293b)",
-                          }
-                        : {
+                  {m.role === "assistant" ? (
+                    m.text ? (
+                      <Streamdown
+                        plugins={{ code }}
+                        isAnimating={
+                          loading &&
+                          msgIdx === messages.length - 1 &&
+                          m.role === "assistant"
+                        }
+                        className="text-[var(--color-text,#1e293b)] [&_a]:text-[var(--color-primary,var(--color-button,#df3326))]"
+                      >
+                        {m.text}
+                      </Streamdown>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <span className="loading-text-shimmer">
+                          {loadingMessage}
+                        </span>
+                        <span
+                          className="flex items-center gap-1.5"
+                          style={{
+                            color: "var(--color-text-secondary, #64748b)",
+                          }}
+                        >
+                          <span className="thinking-dot"></span>
+                          <span className="thinking-dot"></span>
+                          <span className="thinking-dot"></span>
+                        </span>
+                      </div>
+                    )
+                  ) : (
+                    m.text
+                  )}
+
+                  {/* 출처 정보 표시 (assistant 메시지만) */}
+                  {m.role === "assistant" &&
+                    m.sources &&
+                    m.sources.length > 0 && (
+                      <div className="mt-2 pt-3 border-t border-slate-200 flex flex-col gap-1">
+                        {/* 출처 배지 */}
+                        <div className="flex flex-wrap gap-1.5">
+                          {m.sources.map((source, idx) => (
+                            <SourceBadge key={idx} source={source} />
+                          ))}
+                        </div>
+
+                        {/* 이미지 출처 표시 */}
+                        {m.sources
+                          .filter((s) => s.type === "image")
+                          .map((source, idx) => (
+                            <SourceImage key={`img-${idx}`} source={source} />
+                          ))}
+                      </div>
+                    )}
+                </div>
+              </div>
+
+              {/* 첫 번째 메시지 뒤에 자주 묻는 질문 표시 */}
+              {msgIdx === 0 &&
+                showFrequentQuestions &&
+                frequentQuestions.length > 0 && (
+                  <div className="mt-1 mb-2 w-full">
+                    <div
+                      className="text-[11px] font-medium mb-1.5 px-0.5"
+                      style={{
+                        color: "var(--color-text-secondary, #94a3b8)",
+                      }}
+                    >
+                      이런 것들을 물어보세요
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {frequentQuestions.map((fq, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          className="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-left transition-all duration-150 active:scale-[0.98] cursor-pointer"
+                          style={{
                             backgroundColor:
                               "var(--color-assistant-message-bg, #ffffff)",
                             borderColor: "var(--color-border, #e2e8f0)",
                             color: "var(--color-text, #1e293b)",
-                          }
-                    }
-                  >
-                    {m.role === "assistant" ? (
-                      m.text ? (
-                        <Streamdown
-                          plugins={{ code }}
-                          isAnimating={
-                            loading &&
-                            msgIdx === messages.length - 1 &&
-                            m.role === "assistant"
-                          }
-                          className="text-(--color-text,#1e293b) [&_a]:text-(--color-primary,var(--color-button,#df3326))"
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor =
+                              "color-mix(in srgb, var(--color-primary, #df3326) 40%, var(--color-border, #e2e8f0))";
+                            e.currentTarget.style.boxShadow =
+                              "0 1px 4px rgba(0,0,0,0.06)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor =
+                              "var(--color-border, #e2e8f0)";
+                            e.currentTarget.style.boxShadow = "none";
+                          }}
+                          onClick={() => send(fq.question || fq.label)}
                         >
-                          {m.text}
-                        </Streamdown>
-                      ) : (
-                        <div className="flex items-center gap-1.5">
-                          <span className="loading-text-shimmer">
-                            {loadingMessage}
+                          <span className="text-base leading-none shrink-0">
+                            {fq.icon}
                           </span>
-                          <span
-                            className="flex items-center gap-1.5"
-                            style={{
-                              color: "var(--color-text-secondary, #64748b)",
-                            }}
-                          >
-                            <span className="thinking-dot"></span>
-                            <span className="thinking-dot"></span>
-                            <span className="thinking-dot"></span>
+                          <span className="text-xs font-medium truncate">
+                            {fq.label}
                           </span>
-                        </div>
-                      )
-                    ) : (
-                      m.text
-                    )}
-
-                    {/* 출처 정보 표시 (assistant 메시지만) */}
-                    {m.role === "assistant" &&
-                      m.sources &&
-                      m.sources.length > 0 && (
-                        <div className="mt-2 pt-3 border-t border-slate-200 flex flex-col gap-1">
-                          {/* 출처 배지 */}
-                          <div className="flex flex-wrap gap-1.5">
-                            {m.sources.map((source, idx) => (
-                              <SourceBadge key={idx} source={source} />
-                            ))}
-                          </div>
-
-                          {/* 이미지 출처 표시 */}
-                          {m.sources
-                            .filter((s) => s.type === "image")
-                            .map((source, idx) => (
-                              <SourceImage key={`img-${idx}`} source={source} />
-                            ))}
-                        </div>
-                      )}
-                  </div>
-                </div>
-
-                {/* 첫 번째 메시지 뒤에 자주 묻는 질문 표시 */}
-                {msgIdx === 0 &&
-                  showFrequentQuestions &&
-                  frequentQuestions.length > 0 && (
-                    <div className="mt-1 mb-2 w-full">
-                      <div
-                        className="text-[11px] font-medium mb-1.5 px-0.5"
-                        style={{
-                          color: "var(--color-text-secondary, #94a3b8)",
-                        }}
-                      >
-                        이런 것들을 물어보세요
-                      </div>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {frequentQuestions.map((fq, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-left transition-all duration-150 active:scale-[0.98] cursor-pointer"
-                            style={{
-                              backgroundColor:
-                                "var(--color-assistant-message-bg, #ffffff)",
-                              borderColor: "var(--color-border, #e2e8f0)",
-                              color: "var(--color-text, #1e293b)",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.borderColor =
-                                "color-mix(in srgb, var(--color-primary, #df3326) 40%, var(--color-border, #e2e8f0))";
-                              e.currentTarget.style.boxShadow =
-                                "0 1px 4px rgba(0,0,0,0.06)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.borderColor =
-                                "var(--color-border, #e2e8f0)";
-                              e.currentTarget.style.boxShadow = "none";
-                            }}
-                            onClick={() => send(fq.question || fq.label)}
-                          >
-                            <span className="text-base leading-none shrink-0">
-                              {fq.icon}
-                            </span>
-                            <span className="text-xs font-medium truncate">
-                              {fq.label}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-              </Fragment>
-            ))}
-
-            {/* 로딩 표시는 메시지가 생성되기 전에만 표시 (텍스트가 있는 assistant 메시지가 없을 때만) */}
-            {loading &&
-              !messages.some(
-                (m) =>
-                  m.role === "assistant" && m.text && m.text.trim().length > 0,
-              ) && (
-                <div className="flex mb-2 justify-start">
-                  <div
-                    className="max-w-[80%] text-[14px] px-3 py-2 rounded-2xl border"
-                    style={{
-                      backgroundColor:
-                        "var(--color-assistant-message-bg, #ffffff)",
-                      borderColor: "var(--color-border, #e2e8f0)",
-                      color: "var(--color-text-secondary, #64748b)",
-                    }}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span className="loading-text-shimmer">
-                        {loadingMessage}
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="thinking-dot"></span>
-                        <span className="thinking-dot"></span>
-                        <span className="thinking-dot"></span>
-                      </span>
+                        </button>
+                      ))}
                     </div>
                   </div>
-                </div>
-              )}
-          </div>
+                )}
+            </Fragment>
+          ))}
 
-          {/* 이용 불가 오버레이 (채팅 형태는 유지, 중앙 문구만 표시) */}
-          {isDisabled && (
-            <div
-              className="absolute inset-0 flex items-center justify-center px-6"
-              style={{
-                background:
-                  "linear-gradient(180deg, color-mix(in srgb, var(--color-background, #f8fafc) 75%, transparent), var(--color-background, #f8fafc))",
-              }}
-              aria-live="polite"
-            >
-              <div
-                className="w-full max-w-sm rounded-2xl border px-5 py-4 text-center"
-                style={{
-                  backgroundColor: "var(--color-assistant-message-bg, #ffffff)",
-                  borderColor:
-                    "color-mix(in srgb, var(--color-border, #e2e8f0) 55%, transparent)",
-                  color: "var(--color-text, #1e293b)",
-                  boxShadow:
-                    "0 18px 60px rgba(15, 23, 42, 0.06), 0 6px 18px rgba(15, 23, 42, 0.04)",
-                }}
-              >
-                <div className="text-[15px] font-semibold leading-snug">
-                  {disabledTitle}
-                </div>
+          {/* 로딩 표시는 메시지가 생성되기 전에만 표시 (텍스트가 있는 assistant 메시지가 없을 때만) */}
+          {loading &&
+            !messages.some(
+              (m) =>
+                m.role === "assistant" && m.text && m.text.trim().length > 0,
+            ) && (
+              <div className="flex mb-2 justify-start">
                 <div
-                  className="mt-1.5 text-[13px] leading-relaxed"
-                  style={{ color: "var(--color-text-secondary, #64748b)" }}
+                  className="max-w-[80%] text-[14px] px-3 py-2 rounded-2xl border"
+                  style={{
+                    backgroundColor:
+                      "var(--color-assistant-message-bg, #ffffff)",
+                    borderColor: "var(--color-border, #e2e8f0)",
+                    color: "var(--color-text-secondary, #64748b)",
+                  }}
                 >
-                  {disabledDesc}
+                  <div className="flex items-center gap-1.5">
+                    <span className="loading-text-shimmer">
+                      {loadingMessage}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="thinking-dot"></span>
+                      <span className="thinking-dot"></span>
+                      <span className="thinking-dot"></span>
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
 
         {/* 429 경고 */}
@@ -961,9 +890,8 @@ export default function ChatWidget({
               borderColor: "var(--color-border, #e2e8f0)",
               color: "var(--color-text, #1e293b)",
             }}
-            disabled={isDisabled}
             onFocus={(e) => {
-              if (isPreviewMode || isDisabled) return;
+              if (isPreviewMode) return;
               e.currentTarget.style.borderColor =
                 "var(--color-primary, #df3326)";
               e.currentTarget.style.boxShadow =
@@ -975,9 +903,7 @@ export default function ChatWidget({
               e.currentTarget.style.boxShadow = "none";
             }}
             rows={1}
-            placeholder={
-              isDisabled ? "현재는 이용할 수 없습니다" : "메시지를 입력하세요"
-            }
+            placeholder="메시지를 입력하세요"
             value={input}
             onChange={(e) => {
               setInput(e.target.value);
@@ -994,7 +920,7 @@ export default function ChatWidget({
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 // 미리보기 모드에서는 전송 비활성화
-                if (isPreviewMode || isDisabled) {
+                if (isPreviewMode) {
                   e.preventDefault();
                   return;
                 }

@@ -32,7 +32,4 @@ export interface WidgetContext {
   widgetKey?: string;
   pageUrl?: string;
   colors?: ColorTheme;
-  disabled?: boolean;
-  disabledTitle?: string;
-  disabledDesc?: string;
 }
