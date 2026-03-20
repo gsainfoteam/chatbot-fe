@@ -49,15 +49,6 @@
   // ---- 1) data-* 옵션 읽기 ----
   const ds = scriptEl.dataset;
 
-  // ---- 운영 공지: 현재 챗봇 사용 불가 ----
-  // NOTE: 장애/점검 기간 동안 위젯 UI는 유지하되 입력/대화를 비활성화합니다.
-  const WIDGET_DISABLED = true;
-  const DISABLED_TITLE =
-    ds.disabledTitle || "🚧 현재 챗봇 이용이 불가합니다 🚧";
-  const DISABLED_DESC =
-    ds.disabledDesc ||
-    "현재 점검/장애로 인해 챗봇을 사용할 수 없습니다. 불편을 드려 죄송합니다.";
-
   // 디버깅: 받은 데이터 속성 확인
   console.log(
     "[loader.js] 받은 data-* 속성:",
@@ -103,10 +94,7 @@
   // ---- 2) launcher button ----
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.setAttribute(
-    "aria-label",
-    WIDGET_DISABLED ? "챗봇 이용 불가 안내 열기" : "챗봇 열기",
-  );
+  btn.setAttribute("aria-label", "챗봇 열기");
   btn.style.cssText = `
     position:fixed;
     ${config.position}:${config.offset}px;
@@ -221,19 +209,7 @@
   const iframe = document.createElement("iframe");
   // pageUrl을 URL에 포함시켜 postMessage 타이밍에 의존하지 않고 즉시 사용 가능하게 함
   const pageUrlParam = encodeURIComponent(location.href);
-  const disabledParam = WIDGET_DISABLED ? "1" : "0";
-  const disabledTitleParam = encodeURIComponent(DISABLED_TITLE);
-  const disabledDescParam = encodeURIComponent(DISABLED_DESC);
-  iframe.src =
-    IFRAME_URL +
-    "?pageUrl=" +
-    pageUrlParam +
-    "&disabled=" +
-    disabledParam +
-    "&disabledTitle=" +
-    disabledTitleParam +
-    "&disabledDesc=" +
-    disabledDescParam;
+  iframe.src = IFRAME_URL + "?pageUrl=" + pageUrlParam;
   iframe.title = "Chatbot";
   iframe.style.cssText = `width:100%; height:100%; border:0; background:transparent;`;
   iframe.allow = "clipboard-read; clipboard-write";
@@ -291,9 +267,6 @@
       pageUrl: location.href,
       theme: config.theme,
       position: config.position,
-      disabled: WIDGET_DISABLED,
-      disabledTitle: DISABLED_TITLE,
-      disabledDesc: DISABLED_DESC,
       colors: {
         primary: config.primaryColor,
         button: config.buttonColor,
