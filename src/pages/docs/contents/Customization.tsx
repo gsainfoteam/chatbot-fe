@@ -160,7 +160,8 @@ export default function Customization() {
                     data-border-color
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">
-                    테두리 색상
+                    테두리 색상 (챗봇 패널·카드 외곽선, 헤더 구분선, 메시지·출처
+                    영역 등)
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">e2e8f0</td>
                 </tr>
@@ -210,6 +211,7 @@ export default function Customization() {
   data-button-color="2563eb"
   data-user-message-bg="3b82f6"
   data-text-color="1e293b"
+  data-border-color="cbd5e1"
   data-width="380"
   data-height="560"
 ></script>`}

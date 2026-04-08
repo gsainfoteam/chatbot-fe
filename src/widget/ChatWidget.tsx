@@ -542,8 +542,11 @@ export default function ChatWidget({
   return (
     <div className={className || "h-screen w-screen bg-transparent p-0"}>
       <div
-        className="h-full w-full bg-white border border-slate-200 shadow-[0_16px_40px_rgba(0,0,0,0.22)] overflow-hidden flex flex-col"
-        style={{ borderRadius: "24px" }}
+        className="h-full w-full bg-white shadow-[0_16px_40px_rgba(0,0,0,0.22)] overflow-hidden flex flex-col"
+        style={{
+          borderRadius: "24px",
+          border: "1px solid var(--color-border, #e2e8f0)",
+        }}
       >
         {/* Header */}
         <div
@@ -746,7 +749,12 @@ export default function ChatWidget({
                   {m.role === "assistant" &&
                     m.sources &&
                     m.sources.length > 0 && (
-                      <div className="mt-2 pt-3 border-t border-slate-200 flex flex-col gap-1">
+                      <div
+                        className="mt-2 pt-3 border-t flex flex-col gap-1"
+                        style={{
+                          borderTopColor: "var(--color-border, #e2e8f0)",
+                        }}
+                      >
                         {/* 출처 배지 */}
                         <div className="flex flex-wrap gap-1.5">
                           {m.sources.map((source, idx) => (
