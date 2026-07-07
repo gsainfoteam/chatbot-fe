@@ -15,7 +15,7 @@ import { UploadIcon, XIcon } from "../../components/Icons";
 import { getResourceLink } from "./utils";
 
 const SUPER_ADMIN = "SUPER_ADMIN";
-const MAX_CONCURRENT_UPLOADS = 3;
+const MAX_CONCURRENT_UPLOADS = 10;
 
 type PendingStatus = "pending" | "uploading" | "success" | "error";
 
@@ -40,6 +40,10 @@ function nextId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function fileKey(f: File): string {
+  return `${f.name}:${f.size}:${f.lastModified}`;
+}
+
 export default function UploadPage() {
   const hasToken = !!getToken();
   const { data, isLoading, isError } = useVerifyToken(hasToken);
@@ -52,6 +56,7 @@ export default function UploadPage() {
   const [listError, setListError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [limitNotice, setLimitNotice] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const fetchList = () => {
@@ -104,22 +109,29 @@ export default function UploadPage() {
 
   const addFiles = (files: File[]) => {
     if (files.length === 0) return;
-    setPending((prev) => {
-      const existingNames = new Set(prev.map((p) => p.file.name));
-      const toAdd: PendingUpload[] = [];
-      for (const f of files) {
-        if (existingNames.has(f.name)) continue;
-        existingNames.add(f.name);
-        const error = validateFile(f);
-        toAdd.push({
-          id: nextId(),
-          file: f,
-          status: error ? "error" : "pending",
-          error: error ?? undefined,
-        });
-      }
-      return [...prev, ...toAdd];
-    });
+    const existingKeys = new Set(pending.map((p) => fileKey(p.file)));
+    const toAdd: PendingUpload[] = [];
+    for (const f of files) {
+      const key = fileKey(f);
+      if (existingKeys.has(key)) continue;
+      existingKeys.add(key);
+      const error = validateFile(f);
+      toAdd.push({
+        id: nextId(),
+        file: f,
+        status: error ? "error" : "pending",
+        error: error ?? undefined,
+      });
+    }
+    const available = Math.max(MAX_CONCURRENT_UPLOADS - pending.length, 0);
+    if (toAdd.length > available) {
+      setLimitNotice(
+        `한 번에 최대 ${MAX_CONCURRENT_UPLOADS}개까지만 업로드할 수 있습니다.`,
+      );
+    } else {
+      setLimitNotice(null);
+    }
+    setPending((prev) => [...prev, ...toAdd.slice(0, available)]);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -179,18 +191,7 @@ export default function UploadPage() {
     if (items.length === 0) return;
     setIsUploading(true);
     try {
-      let cursor = 0;
-      const worker = async () => {
-        while (cursor < items.length) {
-          const idx = cursor++;
-          await uploadSingle(items[idx]);
-        }
-      };
-      const workers = Array.from(
-        { length: Math.min(MAX_CONCURRENT_UPLOADS, items.length) },
-        () => worker(),
-      );
-      await Promise.all(workers);
+      await Promise.all(items.map((item) => uploadSingle(item)));
       setPending((prev) => prev.filter((p) => p.status !== "success"));
       fetchList();
     } finally {
@@ -274,8 +275,9 @@ export default function UploadPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">파일 업로드</h1>
           <p className="mt-2 text-sm text-gray-600">
-            PDF 파일을 선택하면 파일 이름이 제목으로 저장됩니다. 여러 개를 한
-            번에 선택할 수 있습니다. (각 파일 최대 {MAX_FILE_SIZE_MB}MB)
+            PDF 파일을 선택하면 파일 이름이 제목으로 저장됩니다. 한 번에 최대{" "}
+            {MAX_CONCURRENT_UPLOADS}개까지 업로드할 수 있습니다. (각 파일 최대{" "}
+            {MAX_FILE_SIZE_MB}MB)
           </p>
         </div>
 
@@ -323,12 +325,17 @@ export default function UploadPage() {
                   <UploadIcon className="w-12 h-12 text-gray-400" />
                 </div>
                 <p className="mt-3 text-sm font-medium text-gray-700">
-                  클릭하거나 PDF 파일을 여기에 드래그하세요 (여러 개 선택 가능)
+                  클릭하거나 PDF 파일을 여기에 드래그하세요 (최대{" "}
+                  {MAX_CONCURRENT_UPLOADS}개까지 업로드 가능)
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
                   PDF만 업로드 가능, 각 파일 최대 {MAX_FILE_SIZE_MB}MB
                 </p>
               </div>
+
+              {limitNotice && (
+                <p className="mt-2 text-sm text-red-600">{limitNotice}</p>
+              )}
 
               {pending.length > 0 && (
                 <div className="mt-3 space-y-2">
