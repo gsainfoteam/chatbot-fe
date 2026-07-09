@@ -57,7 +57,8 @@ async function streamWidgetChatResponse(
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      // 본문 없이 Content-Type: application/json을 보내면 Fastify가 400을 반환함
+      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
       ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
