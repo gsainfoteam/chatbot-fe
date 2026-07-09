@@ -370,6 +370,11 @@ export default function ChatWidget({
     return messages.every((m) => m.role === "assistant");
   }, [messages]);
 
+  const latestFeedbackMessageId = useMemo(() => {
+    const latestMessage = messages[messages.length - 1];
+    return latestMessage?.role === "assistant" ? latestMessage.id : null;
+  }, [messages]);
+
   // 스트림 완료 후 서버에 저장된 assistant 메시지 ID를 로컬 메시지에 연결 (피드백/재생성 API용)
   const attachServerId = async (
     localId: string,
@@ -479,7 +484,15 @@ export default function ChatWidget({
 
   // 답변 피드백 처리 (GOOD: 해결됨 / BAD: 해결 안 됨 + 1회 재생성)
   const handleFeedback = async (msg: ChatMessage, rating: FeedbackRating) => {
-    if (!msg.serverId || loading || feedbackBusyId || isPreviewMode) return;
+    if (
+      !msg.serverId ||
+      msg.id !== latestFeedbackMessageId ||
+      loading ||
+      feedbackBusyId ||
+      isPreviewMode
+    ) {
+      return;
+    }
 
     const canRegenerate = rating === "BAD" && !msg.regeneratedAnswer;
     // 같은 피드백 재클릭: 재생성이 남아있는 BAD가 아니면 무시 (재생성 실패 후 재시도 허용)
@@ -979,13 +992,23 @@ export default function ChatWidget({
                   <FeedbackButton
                     rating="GOOD"
                     selected={m.feedback === "GOOD"}
-                    disabled={loading || feedbackBusyId !== null}
+                    disabled={
+                      loading ||
+                      feedbackBusyId !== null ||
+                      m.id !== latestFeedbackMessageId ||
+                      isPreviewMode
+                    }
                     onClick={() => void handleFeedback(m, "GOOD")}
                   />
                   <FeedbackButton
                     rating="BAD"
                     selected={m.feedback === "BAD"}
-                    disabled={loading || feedbackBusyId !== null}
+                    disabled={
+                      loading ||
+                      feedbackBusyId !== null ||
+                      m.id !== latestFeedbackMessageId ||
+                      isPreviewMode
+                    }
                     onClick={() => void handleFeedback(m, "BAD")}
                   />
                   {m.regeneratedAnswer ? (
