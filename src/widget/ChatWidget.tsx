@@ -395,21 +395,20 @@ export default function ChatWidget({
   const regenerateAnswer = async (originalMsg: ChatMessage) => {
     if (!originalMsg.serverId || loading) return;
 
+    // 이전(원본) 답변을 제거하고 그 자리에서 재생성 답변을 스트리밍
     const regenMsgId = uid();
     setMessages((prev) =>
-      prev
-        .map((msg) =>
-          msg.id === originalMsg.id ? { ...msg, regenerationUsed: true } : msg,
-        )
-        .concat([
-          {
-            id: regenMsgId,
-            role: "assistant",
-            text: "",
-            sources: [],
-            regeneratedAnswer: true,
-          },
-        ]),
+      prev.map((msg): ChatMessage =>
+        msg.id === originalMsg.id
+          ? {
+              id: regenMsgId,
+              role: "assistant",
+              text: "",
+              sources: [],
+              regeneratedAnswer: true,
+            }
+          : msg,
+      ),
     );
     regeneratingRef.current = true;
     setLoading(true);
@@ -462,23 +461,15 @@ export default function ChatWidget({
       }
 
       console.error("Failed to regenerate answer:", error);
-      // 재시도할 수 있도록 재생성 사용 표시를 되돌리고,
-      // 이미 받은 텍스트가 있으면 유지, 없으면 에러 메시지로 교체
+      // 이미 받은 텍스트가 있으면 그대로 유지,
+      // 아무것도 못 받았으면 원본 답변을 복원 (다시 👎로 재시도 가능)
       setMessages((prev) => {
-        const reverted = prev.map((msg) =>
-          msg.id === originalMsg.id ? { ...msg, regenerationUsed: false } : msg,
-        );
-        const existingMsg = reverted.find((msg) => msg.id === regenMsgId);
-        if (existingMsg && existingMsg.text) {
-          return reverted;
+        const regenMsg = prev.find((msg) => msg.id === regenMsgId);
+        if (regenMsg && regenMsg.text) {
+          return prev;
         }
-        return reverted.map((msg) =>
-          msg.id === regenMsgId
-            ? {
-                ...msg,
-                text: "죄송합니다. 답변을 다시 생성하는 중 오류가 발생했습니다.",
-              }
-            : msg,
+        return prev.map((msg) =>
+          msg.id === regenMsgId ? { ...originalMsg } : msg,
         );
       });
     } finally {
@@ -490,8 +481,7 @@ export default function ChatWidget({
   const handleFeedback = async (msg: ChatMessage, rating: FeedbackRating) => {
     if (!msg.serverId || loading || feedbackBusyId || isPreviewMode) return;
 
-    const canRegenerate =
-      rating === "BAD" && !msg.regeneratedAnswer && !msg.regenerationUsed;
+    const canRegenerate = rating === "BAD" && !msg.regeneratedAnswer;
     // 같은 피드백 재클릭: 재생성이 남아있는 BAD가 아니면 무시 (재생성 실패 후 재시도 허용)
     if (msg.feedback === rating && !canRegenerate) return;
 
