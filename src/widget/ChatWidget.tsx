@@ -998,13 +998,24 @@ export default function ChatWidget({
                     disabled={loading || feedbackBusyId !== null}
                     onClick={() => void handleFeedback(m, "BAD")}
                   />
-                  {m.regeneratedAnswer && (
+                  {m.regeneratedAnswer ? (
                     <span
                       className="ml-1 text-[10px]"
                       style={{ color: "var(--color-text-secondary, #94a3b8)" }}
                     >
                       다시 생성된 답변
                     </span>
+                  ) : (
+                    !m.feedback && (
+                      <span
+                        className="ml-1 text-[10px]"
+                        style={{
+                          color: "var(--color-text-secondary, #94a3b8)",
+                        }}
+                      >
+                        답변이 도움이 되었나요?
+                      </span>
+                    )
                   )}
                 </div>
               )}
