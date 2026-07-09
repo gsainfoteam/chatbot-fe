@@ -108,6 +108,31 @@ export interface SendChatResponse {
   }>;
 }
 
+// 답변 피드백 관련 타입
+export type FeedbackRating = "GOOD" | "BAD";
+
+export interface MessageFeedbackResponse {
+  messageId: string;
+  rating: FeedbackRating;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// GET /api/v1/widget/messages 응답 메시지
+export interface WidgetMessageResponse {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  metadata?: Record<string, unknown>;
+  feedback: FeedbackRating | null;
+  createdAt: string;
+}
+
+export interface PaginatedWidgetMessagesResponse {
+  messages: WidgetMessageResponse[];
+  nextCursor: string | null;
+}
+
 // OAuth2/OIDC 타입 정의
 export interface OAuth2TokenResponse {
   access_token: string;

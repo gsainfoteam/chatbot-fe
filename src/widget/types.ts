@@ -10,11 +10,17 @@ export interface Source {
   title?: string; // 출처 제목
 }
 
+export type FeedbackRating = "GOOD" | "BAD";
+
 export interface ChatMessage {
   id: string;
   role: Role;
   text: string;
   sources?: Source[]; // 출처 정보
+  serverId?: string; // 백엔드에 저장된 메시지 ID (피드백/재생성 API 호출용)
+  feedback?: FeedbackRating | null; // 현재 저장된 피드백
+  regeneratedAnswer?: boolean; // 재생성으로 만들어진 답변 (다시 재생성 불가)
+  regenerationUsed?: boolean; // 이 답변에 대한 재생성이 이미 수행됨
 }
 
 export interface ColorTheme {

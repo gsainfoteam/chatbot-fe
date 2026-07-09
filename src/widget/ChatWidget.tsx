@@ -10,7 +10,13 @@ import {
 } from "react";
 import { Streamdown } from "streamdown";
 import { code } from "@streamdown/code";
-import type { ChatMessage, ColorTheme, WidgetContext, Source } from "./types";
+import type {
+  ChatMessage,
+  ColorTheme,
+  WidgetContext,
+  Source,
+  FeedbackRating,
+} from "./types";
 import { uid, applyColorTheme } from "./utils";
 import {
   LinkIcon,
@@ -19,10 +25,15 @@ import {
   StopIcon,
   InfoIcon,
   FlagIcon,
+  ThumbsUpIcon,
+  ThumbsDownIcon,
 } from "../components/Icons";
 import {
   createWidgetSession,
   sendWidgetChatMessage,
+  regenerateWidgetAnswer,
+  submitMessageFeedback,
+  fetchLatestAssistantMessage,
   saveSessionToken,
   getSessionToken,
   getSessionExpiresAt,
@@ -116,6 +127,53 @@ function SourceImage({ source }: { source: Source }) {
   );
 }
 
+// 답변 피드백 버튼 (도움이 됐어요/안 됐어요)
+function FeedbackButton({
+  rating,
+  selected,
+  disabled,
+  onClick,
+}: {
+  rating: FeedbackRating;
+  selected: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const label = rating === "GOOD" ? "도움이 됐어요" : "도움이 안 됐어요";
+  const Icon = rating === "GOOD" ? ThumbsUpIcon : ThumbsDownIcon;
+
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="w-6 h-6 flex items-center justify-center rounded-md transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+      style={{
+        color: selected
+          ? "var(--color-primary, #df3326)"
+          : "var(--color-text-secondary, #94a3b8)",
+        backgroundColor: selected
+          ? "color-mix(in srgb, var(--color-primary, #df3326) 10%, transparent)"
+          : "transparent",
+      }}
+      onMouseEnter={(e) => {
+        if (!selected) {
+          e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.05)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!selected) {
+          e.currentTarget.style.backgroundColor = "transparent";
+        }
+      }}
+      aria-label={label}
+      title={label}
+    >
+      <Icon className="w-3.5 h-3.5" />
+    </button>
+  );
+}
+
 interface ChatWidgetProps {
   onClose?: () => void;
   className?: string;
@@ -142,6 +200,10 @@ export default function ChatWidget({
   const isComposingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
+  // 피드백 전송 중인 메시지 ID (중복 클릭 방지)
+  const [feedbackBusyId, setFeedbackBusyId] = useState<string | null>(null);
+  // 재생성 스트리밍 중 여부 (로딩 문구 구분용)
+  const regeneratingRef = useRef(false);
 
   // iframe 환경인지 확인 (React 앱 내부에서는 false)
   const isInIframe = typeof window !== "undefined" && window.parent !== window;
@@ -279,8 +341,10 @@ export default function ChatWidget({
     if (!loading) {
       return;
     }
-    // 새 질문 시작 시 항상 첫 메시지로 초기화
-    setLoadingMessage("자료를 찾아보는 중");
+    // 새 질문 시작 시 항상 첫 메시지로 초기화 (재생성 시에는 재생성 문구)
+    setLoadingMessage(
+      regeneratingRef.current ? "답변을 다시 생성하는 중" : "자료를 찾아보는 중",
+    );
 
     const timeout1 = setTimeout(() => {
       setLoadingMessage("파일을 읽어보는 중");
@@ -305,6 +369,143 @@ export default function ChatWidget({
   const showFrequentQuestions = useMemo(() => {
     return messages.every((m) => m.role === "assistant");
   }, [messages]);
+
+  // 스트림 완료 후 서버에 저장된 assistant 메시지 ID를 로컬 메시지에 연결 (피드백/재생성 API용)
+  const attachServerId = async (
+    localId: string,
+    extra?: Partial<ChatMessage>,
+  ) => {
+    try {
+      const latest = await fetchLatestAssistantMessage();
+      if (!latest) return;
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === localId
+            ? { ...msg, serverId: latest.id, feedback: latest.feedback, ...extra }
+            : msg,
+        ),
+      );
+    } catch (error) {
+      // 실패 시 해당 답변의 피드백 버튼만 표시되지 않음 (채팅에는 영향 없음)
+      console.error("Failed to attach server message id:", error);
+    }
+  };
+
+  // BAD 피드백 답변 1회 재생성
+  const regenerateAnswer = async (originalMsg: ChatMessage) => {
+    if (!originalMsg.serverId || loading) return;
+
+    const regenMsgId = uid();
+    setMessages((prev) =>
+      prev
+        .map((msg) =>
+          msg.id === originalMsg.id ? { ...msg, regenerationUsed: true } : msg,
+        )
+        .concat([
+          {
+            id: regenMsgId,
+            role: "assistant",
+            text: "",
+            sources: [],
+            regeneratedAnswer: true,
+          },
+        ]),
+    );
+    regeneratingRef.current = true;
+    setLoading(true);
+    streamingMessageIdRef.current = regenMsgId;
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      await regenerateWidgetAnswer(
+        originalMsg.serverId,
+        (streamedText) => {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === regenMsgId ? { ...msg, text: streamedText } : msg,
+            ),
+          );
+        },
+        (finalResponse) => {
+          abortControllerRef.current = null;
+          streamingMessageIdRef.current = null;
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === regenMsgId
+                ? {
+                    ...msg,
+                    text: finalResponse.answer,
+                    sources: finalResponse.sources,
+                  }
+                : msg,
+            ),
+          );
+          setLoading(false);
+          void attachServerId(regenMsgId, { regeneratedAnswer: true });
+        },
+        { signal: controller.signal },
+      );
+    } catch (error) {
+      abortControllerRef.current = null;
+      streamingMessageIdRef.current = null;
+      setLoading(false);
+
+      const isAbortError =
+        (typeof DOMException !== "undefined" &&
+          error instanceof DOMException &&
+          error.name === "AbortError") ||
+        (error instanceof Error && error.name === "AbortError");
+      if (isAbortError) {
+        return;
+      }
+
+      console.error("Failed to regenerate answer:", error);
+      // 이미 받은 텍스트가 있으면 유지, 없으면 에러 메시지로 교체
+      setMessages((prev) => {
+        const existingMsg = prev.find((msg) => msg.id === regenMsgId);
+        if (existingMsg && existingMsg.text) {
+          return prev;
+        }
+        return prev.map((msg) =>
+          msg.id === regenMsgId
+            ? {
+                ...msg,
+                text: "죄송합니다. 답변을 다시 생성하는 중 오류가 발생했습니다.",
+              }
+            : msg,
+        );
+      });
+    } finally {
+      regeneratingRef.current = false;
+    }
+  };
+
+  // 답변 피드백 처리 (GOOD: 해결됨 / BAD: 해결 안 됨 + 1회 재생성)
+  const handleFeedback = async (msg: ChatMessage, rating: FeedbackRating) => {
+    if (!msg.serverId || loading || feedbackBusyId || isPreviewMode) return;
+    if (msg.feedback === rating) return;
+
+    setFeedbackBusyId(msg.id);
+    try {
+      await submitMessageFeedback(msg.serverId, rating);
+      setMessages((prev) =>
+        prev.map((m) => (m.id === msg.id ? { ...m, feedback: rating } : m)),
+      );
+      if (
+        rating === "BAD" &&
+        !msg.regeneratedAnswer &&
+        !msg.regenerationUsed
+      ) {
+        await regenerateAnswer(msg);
+      }
+    } catch (error) {
+      console.error("Failed to submit feedback:", error);
+    } finally {
+      setFeedbackBusyId(null);
+    }
+  };
 
   const send = async (overrideText?: string) => {
     const text = (overrideText ?? input).trim();
@@ -437,6 +638,9 @@ export default function ChatWidget({
             );
           });
           setLoading(false);
+
+          // 서버 메시지 ID 연결 (피드백 버튼 활성화)
+          void attachServerId(assistantMsgId);
 
           // 메시지 수신 이벤트 전달 (iframe 환경에서만)
           if (isInIframe) {
@@ -772,6 +976,32 @@ export default function ChatWidget({
                     )}
                 </div>
               </div>
+
+              {/* 답변 피드백 버튼 (서버에 저장된 assistant 답변에만 표시) */}
+              {m.role === "assistant" && m.serverId && (
+                <div className="flex items-center gap-0.5 -mt-1 mb-2 pl-1">
+                  <FeedbackButton
+                    rating="GOOD"
+                    selected={m.feedback === "GOOD"}
+                    disabled={loading || feedbackBusyId !== null}
+                    onClick={() => void handleFeedback(m, "GOOD")}
+                  />
+                  <FeedbackButton
+                    rating="BAD"
+                    selected={m.feedback === "BAD"}
+                    disabled={loading || feedbackBusyId !== null}
+                    onClick={() => void handleFeedback(m, "BAD")}
+                  />
+                  {m.regeneratedAnswer && (
+                    <span
+                      className="ml-1 text-[10px]"
+                      style={{ color: "var(--color-text-secondary, #94a3b8)" }}
+                    >
+                      다시 생성된 답변
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* 첫 번째 메시지 뒤에 자주 묻는 질문 표시 */}
               {msgIdx === 0 &&
