@@ -486,7 +486,6 @@ export default function ChatWidget({
   const handleFeedback = async (msg: ChatMessage, rating: FeedbackRating) => {
     if (
       !msg.serverId ||
-      msg.id !== latestFeedbackMessageId ||
       loading ||
       feedbackBusyId ||
       isPreviewMode
@@ -494,7 +493,10 @@ export default function ChatWidget({
       return;
     }
 
-    const canRegenerate = rating === "BAD" && !msg.regeneratedAnswer;
+    const canRegenerate =
+      msg.id === latestFeedbackMessageId &&
+      rating === "BAD" &&
+      !msg.regeneratedAnswer;
     // 같은 피드백 재클릭: 재생성이 남아있는 BAD가 아니면 무시 (재생성 실패 후 재시도 허용)
     if (msg.feedback === rating && !canRegenerate) return;
 
@@ -995,7 +997,6 @@ export default function ChatWidget({
                     disabled={
                       loading ||
                       feedbackBusyId !== null ||
-                      m.id !== latestFeedbackMessageId ||
                       isPreviewMode
                     }
                     onClick={() => void handleFeedback(m, "GOOD")}
@@ -1006,7 +1007,6 @@ export default function ChatWidget({
                     disabled={
                       loading ||
                       feedbackBusyId !== null ||
-                      m.id !== latestFeedbackMessageId ||
                       isPreviewMode
                     }
                     onClick={() => void handleFeedback(m, "BAD")}
