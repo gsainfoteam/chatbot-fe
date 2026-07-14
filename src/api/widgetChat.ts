@@ -4,8 +4,12 @@ import axios from "axios";
 import type {
   CreateSessionRequest,
   CreateSessionResponse,
+  FeedbackRating,
+  MessageFeedbackResponse,
+  PaginatedWidgetMessagesResponse,
   SendChatRequest,
   SendChatResponse,
+  WidgetMessageResponse,
 } from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
@@ -34,34 +38,32 @@ widgetApiClient.interceptors.request.use(
 );
 
 /**
- * 채팅 메시지 전송 (스트리밍)
- * POST /api/v1/widget/messages/chat/stream
- * @param request 요청 데이터
+ * 위젯 SSE 채팅 스트림 공통 처리
+ * @param path API 경로 (API_BASE_URL 기준 상대 경로)
+ * @param body 요청 본문 (undefined면 본문 없이 전송)
  * @param onChunk 스트림 청크를 받을 때마다 호출되는 콜백 (텍스트, 완료 여부)
  * @param onComplete 전체 응답이 완료되었을 때 호출되는 콜백 (최종 응답)
  * @param options.signal 중지 시 사용할 AbortSignal (중지 버튼 등)
  */
-export async function sendWidgetChatMessage(
-  request: SendChatRequest,
+async function streamWidgetChatResponse(
+  path: string,
+  body: unknown,
   onChunk?: (text: string, isComplete: boolean) => void,
   onComplete?: (response: SendChatResponse) => void,
   options?: { signal?: AbortSignal }
 ): Promise<void> {
   const sessionToken = getSessionToken();
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
-  const response = await fetch(
-    `${API_BASE_URL}/v1/widget/messages/chat/stream`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
-      },
-      body: JSON.stringify(request),
-      signal: options?.signal,
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: {
+      // 본문 없이 Content-Type: application/json을 보내면 Fastify가 400을 반환함
+      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+    },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    signal: options?.signal,
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -265,6 +267,74 @@ export async function sendWidgetChatMessage(
       // 리더 해제 실패는 무시
     }
   }
+}
+
+/**
+ * 채팅 메시지 전송 (스트리밍)
+ * POST /api/v1/widget/messages/chat/stream
+ */
+export async function sendWidgetChatMessage(
+  request: SendChatRequest,
+  onChunk?: (text: string, isComplete: boolean) => void,
+  onComplete?: (response: SendChatResponse) => void,
+  options?: { signal?: AbortSignal }
+): Promise<void> {
+  return streamWidgetChatResponse(
+    "/v1/widget/messages/chat/stream",
+    request,
+    onChunk,
+    onComplete,
+    options
+  );
+}
+
+/**
+ * BAD 피드백 답변 1회 재생성 (스트리밍)
+ * POST /api/v1/widget/messages/:messageId/regenerate/stream
+ */
+export async function regenerateWidgetAnswer(
+  messageId: string,
+  onChunk?: (text: string, isComplete: boolean) => void,
+  onComplete?: (response: SendChatResponse) => void,
+  options?: { signal?: AbortSignal }
+): Promise<void> {
+  return streamWidgetChatResponse(
+    `/v1/widget/messages/${encodeURIComponent(messageId)}/regenerate/stream`,
+    undefined,
+    onChunk,
+    onComplete,
+    options
+  );
+}
+
+/**
+ * assistant 답변 피드백 등록/변경 (문제 해결 여부)
+ * PUT /api/v1/widget/messages/:messageId/feedback
+ */
+export async function submitMessageFeedback(
+  messageId: string,
+  rating: FeedbackRating
+): Promise<MessageFeedbackResponse> {
+  const response = await widgetApiClient.put<MessageFeedbackResponse>(
+    `/v1/widget/messages/${encodeURIComponent(messageId)}/feedback`,
+    { rating }
+  );
+  return response.data;
+}
+
+/**
+ * 가장 최근에 저장된 assistant 메시지 조회
+ * GET /api/v1/widget/messages?limit=1
+ * 스트리밍 응답에는 메시지 ID가 포함되지 않으므로,
+ * 스트림 완료 직후 이 API로 서버 메시지 ID를 얻어 피드백/재생성에 사용한다.
+ */
+export async function fetchLatestAssistantMessage(): Promise<WidgetMessageResponse | null> {
+  const response = await widgetApiClient.get<PaginatedWidgetMessagesResponse>(
+    "/v1/widget/messages",
+    { params: { limit: 1 } }
+  );
+  const latest = response.data.messages?.[0];
+  return latest && latest.role === "assistant" ? latest : null;
 }
 
 /**
