@@ -299,12 +299,25 @@ export default function ChatWidget({
     }
   }, [isInIframe]);
 
+  // 메시지 본문/로딩 변화에만 하단 스크롤.
+  // feedback 등 메타 갱신 시 스크롤하면 이전 답변 피드백 클릭 때 화면이 튀는 버그가 난다.
+  const scrollSignal = useMemo(
+    () =>
+      messages
+        .map(
+          (m) =>
+            `${m.id}:${m.role}:${m.text}:${m.sources?.length ?? 0}:${m.serverId ?? ""}:${m.regeneratedAnswer ? 1 : 0}`,
+        )
+        .join("|"),
+    [messages],
+  );
+
   useEffect(() => {
     listRef.current?.scrollTo({
       top: listRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [messages, loading]);
+  }, [scrollSignal, loading]);
 
   // 429 경고 시 재시도 가능 시간 카운트다운
   useEffect(() => {
