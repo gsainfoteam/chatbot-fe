@@ -356,7 +356,9 @@ export default function ChatWidget({
     }
     // 새 질문 시작 시 항상 첫 메시지로 초기화 (재생성 시에는 재생성 문구)
     setLoadingMessage(
-      regeneratingRef.current ? "답변을 다시 생성하는 중" : "자료를 찾아보는 중",
+      regeneratingRef.current
+        ? "답변을 다시 생성하는 중"
+        : "자료를 찾아보는 중",
     );
 
     const timeout1 = setTimeout(() => {
@@ -399,7 +401,12 @@ export default function ChatWidget({
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === localId
-            ? { ...msg, serverId: latest.id, feedback: latest.feedback, ...extra }
+            ? {
+                ...msg,
+                serverId: latest.id,
+                feedback: latest.feedback,
+                ...extra,
+              }
             : msg,
         ),
       );
@@ -416,16 +423,17 @@ export default function ChatWidget({
     // 이전(원본) 답변을 제거하고 그 자리에서 재생성 답변을 스트리밍
     const regenMsgId = uid();
     setMessages((prev) =>
-      prev.map((msg): ChatMessage =>
-        msg.id === originalMsg.id
-          ? {
-              id: regenMsgId,
-              role: "assistant",
-              text: "",
-              sources: [],
-              regeneratedAnswer: true,
-            }
-          : msg,
+      prev.map(
+        (msg): ChatMessage =>
+          msg.id === originalMsg.id
+            ? {
+                id: regenMsgId,
+                role: "assistant",
+                text: "",
+                sources: [],
+                regeneratedAnswer: true,
+              }
+            : msg,
       ),
     );
     regeneratingRef.current = true;
@@ -497,12 +505,7 @@ export default function ChatWidget({
 
   // 답변 피드백 처리 (GOOD: 해결됨 / BAD: 해결 안 됨 + 1회 재생성)
   const handleFeedback = async (msg: ChatMessage, rating: FeedbackRating) => {
-    if (
-      !msg.serverId ||
-      loading ||
-      feedbackBusyId ||
-      isPreviewMode
-    ) {
+    if (!msg.serverId || loading || feedbackBusyId || isPreviewMode) {
       return;
     }
 
@@ -811,10 +814,26 @@ export default function ChatWidget({
                 </span>
               </div>
               <div
-                className="text-xs mt-0.5 tracking-tight"
+                className="flex items-center gap-1 mt-0.5"
                 style={{ color: "var(--color-text-secondary, #94a3b8)" }}
               >
-                궁금한 내용을 질문해보세요.
+                <span className="text-[10px] leading-none tracking-tight">
+                  Powered by
+                </span>
+                <a
+                  href="https://letsur.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex opacity-90 hover:opacity-100 transition-opacity"
+                  aria-label="Letsur 웹사이트로 이동"
+                  title="letsur.ai"
+                >
+                  <img
+                    src="/letsur-logo.svg"
+                    alt="Letsur"
+                    className="h-2 w-auto object-contain"
+                  />
+                </a>
               </div>
             </div>
           </div>
@@ -1008,9 +1027,7 @@ export default function ChatWidget({
                     rating="GOOD"
                     selected={m.feedback === "GOOD"}
                     disabled={
-                      loading ||
-                      feedbackBusyId !== null ||
-                      isPreviewMode
+                      loading || feedbackBusyId !== null || isPreviewMode
                     }
                     onClick={() => void handleFeedback(m, "GOOD")}
                   />
@@ -1018,9 +1035,7 @@ export default function ChatWidget({
                     rating="BAD"
                     selected={m.feedback === "BAD"}
                     disabled={
-                      loading ||
-                      feedbackBusyId !== null ||
-                      isPreviewMode
+                      loading || feedbackBusyId !== null || isPreviewMode
                     }
                     onClick={() => void handleFeedback(m, "BAD")}
                   />
