@@ -417,6 +417,60 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Letsur Technology Partner */}
+        <section className="bg-gray-50 border-t border-gray-200">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 text-center">
+            <p className="text-[11px] sm:text-xs font-medium tracking-[0.22em] uppercase text-gray-400 mb-3 sm:mb-4">
+              Technology Partner
+            </p>
+
+            <div className="flex flex-col items-center gap-3 sm:gap-3.5">
+              <img
+                src="/letsur-logo.svg"
+                alt="Letsur"
+                className="h-4 sm:h-5 w-auto object-contain"
+              />
+              <div className="space-y-1.5 px-2">
+                <a
+                  href="https://web-wheat-rho.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block text-sm sm:text-base text-gray-900 font-medium leading-snug tracking-tight hover:text-[#df3326] transition-colors"
+                  aria-label="Letsur AI Gateway 페이지로 이동"
+                >
+                  Powered by Letsur AI Gateway
+                </a>
+                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed max-w-lg mx-auto">
+                  GIST 챗봇은 Letsur AI Gateway를 통해 답변을 생성합니다
+                </p>
+              </div>
+              <a
+                href="https://letsur.ai"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#df3326] transition-colors"
+                aria-label="Letsur 웹사이트로 이동"
+              >
+                letsur.ai
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 8l4 4m0 0l-4 4m4-4H3"
+                  />
+                </svg>
+              </a>
+            </div>
+          </div>
+        </section>
+
         {/* Footer */}
         <footer className="border-t border-gray-200 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 md:py-12">
