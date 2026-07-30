@@ -121,10 +121,14 @@ export async function getUploadById(
 export async function uploadPdf(
   file: File,
   title: string,
+  expiresAt?: string,
 ): Promise<DocumentItem> {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("title", title.trim());
+  if (expiresAt) {
+    formData.append("expiresAt", expiresAt);
+  }
 
   try {
     const res = await apiClient.post<DocumentItem>(
@@ -152,6 +156,31 @@ export async function uploadPdf(
       throw new AdminUploadApiError(DUPLICATE_UPLOAD_MESSAGE, status);
     }
     throwAdminUploadError(err, message);
+  }
+}
+
+/** 문서 유효기간 변경 */
+export async function updateUploadExpiry(
+  id: string,
+  expiresAt: string | null,
+): Promise<DocumentItem> {
+  try {
+    const res = await apiClient.patch<DocumentItem>(`/v1/admin/upload/${id}`, {
+      expiresAt,
+    });
+    return res.data;
+  } catch (err) {
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+    const message = getErrorMessage(err, "유효기간 변경에 실패했습니다.");
+    if (status === 400) {
+      throw new AdminUploadApiError(
+        message || "유효기간은 미래 시각의 ISO-8601 형식이어야 합니다.",
+        status,
+      );
+    }
+    throwAdminUploadError(err, message, {
+      404: "존재하지 않는 문서입니다.",
+    });
   }
 }
 

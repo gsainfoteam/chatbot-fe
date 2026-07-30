@@ -70,6 +70,8 @@ export interface DocumentItem {
   processedAt: string | null;
   canReprocess: boolean;
   reprocessAvailableAt: string | null;
+  expiresAt: string | null;
+  isExpired: boolean;
 }
 
 export interface ChatMessage {

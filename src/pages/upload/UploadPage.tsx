@@ -7,6 +7,7 @@ import {
   getUploadList,
   getUploadById,
   reprocessUpload,
+  updateUploadExpiry,
   AdminUploadApiError,
   isPdfFile,
   isWithinSizeLimit,
@@ -15,7 +16,12 @@ import {
 import type { DocumentItem, DocumentStatus } from "../../api/types";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { RefreshIcon, UploadIcon, XIcon } from "../../components/Icons";
-import { getResourceLink } from "./utils";
+import {
+  formatExpiresAtLabel,
+  getResourceLink,
+  parseFutureExpiresAt,
+  toDatetimeLocalValue,
+} from "./utils";
 
 const SUPER_ADMIN = "SUPER_ADMIN";
 const MAX_CONCURRENT_UPLOADS = 10;
@@ -28,6 +34,15 @@ interface PendingUpload {
   file: File;
   status: PendingStatus;
   error?: string;
+  expiresAtInput: string;
+  expiryError?: string;
+}
+
+interface ExpiryEditState {
+  id: string;
+  mode: "date" | "indefinite";
+  value: string;
+  error: string | null;
 }
 
 function isPollingStatus(status: DocumentStatus): boolean {
@@ -126,6 +141,14 @@ function renderDocumentStatusBadge(status: DocumentStatus) {
   }
 }
 
+function renderExpiredBadge() {
+  return (
+    <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 text-xs shrink-0">
+      만료됨
+    </span>
+  );
+}
+
 export default function UploadPage() {
   const hasToken = !!getToken();
   const { data, isLoading, isError } = useVerifyToken(hasToken);
@@ -140,6 +163,9 @@ export default function UploadPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [reprocessingId, setReprocessingId] = useState<string | null>(null);
   const [reprocessError, setReprocessError] = useState<string | null>(null);
+  const [expiryEdit, setExpiryEdit] = useState<ExpiryEditState | null>(null);
+  const [updatingExpiryId, setUpdatingExpiryId] = useState<string | null>(null);
+  const [expiryError, setExpiryError] = useState<string | null>(null);
   const [pollingError, setPollingError] = useState<string | null>(null);
   const [limitNotice, setLimitNotice] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
@@ -306,9 +332,7 @@ export default function UploadPage() {
                     candidate.status === "fulfilled" &&
                     candidate.value.id === item.id,
                 );
-                return result?.status === "fulfilled"
-                  ? result.value
-                  : item;
+                return result?.status === "fulfilled" ? result.value : item;
               }),
             );
           },
@@ -354,6 +378,7 @@ export default function UploadPage() {
         file: f,
         status: error ? "error" : "pending",
         error: error ?? undefined,
+        expiresAtInput: "",
       });
     }
     const available = Math.max(MAX_CONCURRENT_UPLOADS - pending.length, 0);
@@ -395,7 +420,20 @@ export default function UploadPage() {
     setPending((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const uploadSingle = async (item: PendingUpload): Promise<void> => {
+  const updatePendingExpiry = (id: string, value: string) => {
+    setPending((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, expiresAtInput: value, expiryError: undefined }
+          : item,
+      ),
+    );
+  };
+
+  const uploadSingle = async (
+    item: PendingUpload,
+    expiresAt?: string,
+  ): Promise<void> => {
     setPending((prev) =>
       prev.map((p) =>
         p.id === item.id ? { ...p, status: "uploading", error: undefined } : p,
@@ -403,7 +441,7 @@ export default function UploadPage() {
     );
     try {
       const title = item.file.name.trim() || "제목 없음";
-      const doc = await uploadPdf(item.file, title);
+      const doc = await uploadPdf(item.file, title, expiresAt);
       setUploadedList((prev) => upsertDocument(prev, doc));
       setPending((prev) =>
         prev.map((p) =>
@@ -423,9 +461,33 @@ export default function UploadPage() {
 
   const runQueue = async (items: PendingUpload[]) => {
     if (items.length === 0) return;
+
+    const prepared = items.map((item) => ({
+      item,
+      parsed: parseFutureExpiresAt(item.expiresAtInput),
+    }));
+    const invalidById = new Map(
+      prepared
+        .filter(({ parsed }) => parsed.error)
+        .map(({ item, parsed }) => [item.id, parsed.error as string]),
+    );
+    if (invalidById.size > 0) {
+      setPending((prev) =>
+        prev.map((item) => ({
+          ...item,
+          expiryError: invalidById.get(item.id) ?? item.expiryError,
+        })),
+      );
+      return;
+    }
+
     setIsUploading(true);
     try {
-      await Promise.all(items.map((item) => uploadSingle(item)));
+      await Promise.all(
+        prepared.map(({ item, parsed }) =>
+          uploadSingle(item, parsed.expiresAt),
+        ),
+      );
       setPending((prev) => prev.filter((p) => p.status !== "success"));
     } finally {
       setIsUploading(false);
@@ -456,6 +518,7 @@ export default function UploadPage() {
       setDeletingId(id);
       await deleteUpload(id);
       setUploadedList((prev) => prev.filter((item) => item.id !== id));
+      if (expiryEdit?.id === id) setExpiryEdit(null);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "삭제에 실패했습니다.";
@@ -463,6 +526,7 @@ export default function UploadPage() {
       if (message === "이미 삭제되었거나 존재하지 않는 파일입니다.") {
         setUploadedList((prev) => prev.filter((item) => item.id !== id));
         setDeleteError(null);
+        if (expiryEdit?.id === id) setExpiryEdit(null);
       }
     } finally {
       setDeletingId(null);
@@ -515,6 +579,59 @@ export default function UploadPage() {
     if (confirmed) void handleReprocess(id);
   };
 
+  const openExpiryEdit = (item: DocumentItem) => {
+    setExpiryError(null);
+    setExpiryEdit({
+      id: item.id,
+      mode: item.expiresAt === null ? "indefinite" : "date",
+      value: toDatetimeLocalValue(item.expiresAt),
+      error: null,
+    });
+  };
+
+  const handleSaveExpiry = async () => {
+    if (!expiryEdit) return;
+    setExpiryError(null);
+
+    let nextExpiresAt: string | null = null;
+    if (expiryEdit.mode === "date") {
+      const parsed = parseFutureExpiresAt(expiryEdit.value);
+      if (parsed.error || !parsed.expiresAt) {
+        setExpiryEdit((prev) =>
+          prev
+            ? {
+                ...prev,
+                error: parsed.error ?? "유효기간을 입력해주세요.",
+              }
+            : prev,
+        );
+        return;
+      }
+      nextExpiresAt = parsed.expiresAt;
+    }
+
+    const confirmed = window.confirm(
+      nextExpiresAt === null
+        ? "이 문서의 유효기간을 무기한으로 변경하시겠습니까?"
+        : `이 문서의 유효기간을 ${new Date(nextExpiresAt).toLocaleString("ko-KR")}(으)로 변경하시겠습니까?`,
+    );
+    if (!confirmed) return;
+
+    try {
+      setUpdatingExpiryId(expiryEdit.id);
+      const doc = await updateUploadExpiry(expiryEdit.id, nextExpiresAt);
+      setUploadedList((prev) => upsertDocument(prev, doc));
+      setExpiryEdit(null);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "유효기간 변경에 실패했습니다.";
+      setExpiryError(message);
+      setExpiryEdit((prev) => (prev ? { ...prev, error: message } : prev));
+    } finally {
+      setUpdatingExpiryId(null);
+    }
+  };
+
   const pendingCount = pending.filter((p) => p.status === "pending").length;
   const hasUploadable = pendingCount > 0 && !isUploading;
 
@@ -551,10 +668,10 @@ export default function UploadPage() {
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">파일 업로드</h1>
+          <h1 className="text-3xl font-bold text-gray-900">문서 관리</h1>
           <p className="mt-2 text-sm text-gray-600">
-            PDF 파일을 선택하면 파일 이름이 제목으로 저장됩니다. 업로드 후 AI
-            처리가 완료될 때까지 상태가 갱신됩니다. 한 번에 최대{" "}
+            PDF를 업로드하면 AI 처리 상태가 자동으로 갱신됩니다. 유효기간을
+            지정하지 않으면 무기한으로 저장됩니다. 한 번에 최대{" "}
             {MAX_CONCURRENT_UPLOADS}개까지 업로드할 수 있습니다. (각 파일 최대{" "}
             {MAX_FILE_SIZE_MB}MB)
           </p>
@@ -563,6 +680,10 @@ export default function UploadPage() {
         <div className="bg-white rounded-lg border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">PDF 업로드</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              파일 이름이 제목으로 저장됩니다. 파일을 추가한 뒤 각 문서의
+              유효기간을 개별적으로 설정할 수 있습니다.
+            </p>
           </div>
 
           <div className="p-6 space-y-6">
@@ -617,50 +738,105 @@ export default function UploadPage() {
               )}
 
               {pending.length > 0 && (
-                <div className="mt-3 space-y-2">
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-gray-800">
+                      업로드 대기 문서
+                    </h3>
+                    <span className="text-xs text-gray-500">
+                      유효기간 미선택 시 무기한
+                    </span>
+                  </div>
                   {pending.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-4 py-3 text-sm"
+                      className="rounded-lg border border-gray-200 bg-gray-50/40 p-4 text-sm"
                     >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-700 truncate min-w-0">
-                            {item.file.name}
-                          </span>
-                          {renderPendingStatusBadge(item.status)}
+                      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(240px,320px)_auto] md:items-start">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-800 truncate min-w-0">
+                              {item.file.name}
+                            </span>
+                            {renderPendingStatusBadge(item.status)}
+                          </div>
+                          <p className="mt-1 text-xs text-gray-500">
+                            {(item.file.size / 1024).toFixed(1)} KB
+                          </p>
+                          {item.error && (
+                            <p className="mt-1 text-xs text-red-600">
+                              {item.error}
+                            </p>
+                          )}
                         </div>
-                        <p className="mt-0.5 text-xs text-gray-500 truncate">
-                          {(item.file.size / 1024).toFixed(1)} KB
-                          {item.error ? ` · ${item.error}` : ""}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        {item.status === "error" && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRetry(item.id);
-                            }}
-                            disabled={isUploading}
-                            className="text-[#df3326] hover:text-[#c72a1f] font-medium disabled:opacity-50"
-                          >
-                            재시도
-                          </button>
-                        )}
-                        {item.status !== "uploading" && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemove(item.id);
-                            }}
-                            className="text-red-600 hover:text-red-700 font-medium"
-                          >
-                            제거
-                          </button>
-                        )}
+
+                        <div className="min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <label
+                              htmlFor={`pending-expires-at-${item.id}`}
+                              className="text-xs font-medium text-gray-700"
+                            >
+                              유효기간
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => updatePendingExpiry(item.id, "")}
+                              disabled={
+                                !item.expiresAtInput ||
+                                item.status === "uploading"
+                              }
+                              className="text-xs font-medium text-gray-500 hover:text-gray-800 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              무기한
+                            </button>
+                          </div>
+                          <input
+                            id={`pending-expires-at-${item.id}`}
+                            type="datetime-local"
+                            value={item.expiresAtInput}
+                            min={toDatetimeLocalValue(
+                              new Date().toISOString(),
+                            )}
+                            onChange={(event) =>
+                              updatePendingExpiry(item.id, event.target.value)
+                            }
+                            disabled={item.status === "uploading"}
+                            className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#df3326] focus:outline-none focus:ring-1 focus:ring-[#df3326] disabled:opacity-50"
+                          />
+                          {item.expiryError && (
+                            <p className="mt-1 text-xs text-red-600">
+                              {item.expiryError}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-3 md:justify-end md:pt-6">
+                          {item.status === "error" && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRetry(item.id);
+                              }}
+                              disabled={isUploading}
+                              className="text-[#df3326] hover:text-[#c72a1f] font-medium disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                            >
+                              재시도
+                            </button>
+                          )}
+                          {item.status !== "uploading" && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemove(item.id);
+                              }}
+                              className="text-red-600 hover:text-red-700 font-medium cursor-pointer"
+                            >
+                              제거
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -672,7 +848,7 @@ export default function UploadPage() {
               type="button"
               onClick={handleUploadAll}
               disabled={!hasUploadable}
-              className="w-full px-6 py-2.5 bg-[#df3326] text-white font-medium rounded-md hover:bg-[#c72a1f] active:scale-[0.98] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-6 py-2.5 bg-[#df3326] text-white font-medium rounded-md hover:bg-[#c72a1f] active:scale-[0.98] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {isUploading
                 ? "업로드 중..."
@@ -685,9 +861,10 @@ export default function UploadPage() {
 
         <div className="mt-8 bg-white rounded-lg border border-gray-200">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">
-              내가 업로드한 파일
-            </h2>
+            <h2 className="text-xl font-semibold text-gray-900">문서 목록</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              만료된 문서는 목록에 남지만 Chat 검색에서는 제외됩니다.
+            </p>
           </div>
           {listLoading ? (
             <div className="p-8 text-center text-gray-500">
@@ -702,7 +879,7 @@ export default function UploadPage() {
                   setListLoading(true);
                   fetchList();
                 }}
-                className="text-sm font-medium text-[#df3326] hover:underline"
+                className="text-sm font-medium text-[#df3326] hover:underline cursor-pointer"
               >
                 다시 시도
               </button>
@@ -713,92 +890,212 @@ export default function UploadPage() {
             </div>
           ) : (
             <div className="divide-y divide-gray-200">
-              {uploadedList.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between gap-3 px-6 py-4 text-sm"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <p className="font-medium text-gray-900 truncate min-w-0">
-                        {item.title}
-                      </p>
-                      {renderDocumentStatusBadge(item.status)}
-                    </div>
-                    <p className="text-gray-500 text-xs mt-0.5">
-                      업로드:{" "}
-                      {new Date(item.uploadedAt).toLocaleString("ko-KR")}
-                      {item.processedAt
-                        ? ` · 처리 완료: ${new Date(
-                            item.processedAt,
-                          ).toLocaleString("ko-KR")}`
-                        : ""}
-                    </p>
-                    {item.status === "failed" && item.errorMessage && (
-                      <p className="text-red-600 text-xs mt-1">
-                        {item.errorMessage}
-                      </p>
-                    )}
-                    {(item.status === "failed" || item.status === "ready") &&
-                      !item.canReprocess && (
-                        <p className="text-amber-700 text-xs mt-1">
-                          {getCooldownLabel(
-                            item.reprocessAvailableAt,
-                            currentTime,
-                          ) ?? "현재 이 문서는 재처리할 수 없습니다."}
+              {uploadedList.map((item) => {
+                const isEditingExpiry = expiryEdit?.id === item.id;
+                return (
+                  <div key={item.id} className="px-6 py-4 text-sm">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2 min-w-0">
+                          <p className="font-medium text-gray-900 truncate min-w-0">
+                            {item.title}
+                          </p>
+                          {renderDocumentStatusBadge(item.status)}
+                          {item.isExpired && renderExpiredBadge()}
+                        </div>
+                        <p className="text-gray-500 text-xs">
+                          업로드:{" "}
+                          {new Date(item.uploadedAt).toLocaleString("ko-KR")}
+                          {item.processedAt
+                            ? ` · 처리 완료: ${new Date(
+                                item.processedAt,
+                              ).toLocaleString("ko-KR")}`
+                            : ""}
                         </p>
-                      )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {item.status === "ready" && item.gcsPdfPath && (
-                      <a
-                        href={getResourceLink(item.gcsPdfPath)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[#df3326] hover:text-[#c72a1f] hover:bg-red-50 rounded-md font-medium transition-colors"
-                      >
-                        문서 보기
-                      </a>
-                    )}
-                    {(item.status === "failed" || item.status === "ready") && (
-                      <button
-                        type="button"
-                        onClick={() => confirmReprocess(item.id)}
-                        disabled={
-                          !item.canReprocess || reprocessingId != null
-                        }
-                        title={
-                          item.canReprocess
-                            ? "문서 재처리"
-                            : (getCooldownLabel(
+                        <p className="text-gray-500 text-xs">
+                          유효기간: {formatExpiresAtLabel(item.expiresAt)}
+                          {item.isExpired ? " · Chat에서 제외됨" : ""}
+                        </p>
+                        {item.status === "failed" && item.errorMessage && (
+                          <p className="text-red-600 text-xs">
+                            {item.errorMessage}
+                          </p>
+                        )}
+                        {(item.status === "failed" ||
+                          item.status === "ready") &&
+                          !item.canReprocess && (
+                            <p className="text-amber-700 text-xs">
+                              {getCooldownLabel(
                                 item.reprocessAvailableAt,
                                 currentTime,
-                              ) ?? "현재 재처리할 수 없습니다.")
-                        }
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[#df3326] hover:text-[#c72a1f] hover:bg-red-50 rounded-md font-medium cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <RefreshIcon
-                          className={`w-4 h-4 ${
-                            reprocessingId === item.id ? "animate-spin" : ""
-                          }`}
-                        />
-                        {reprocessingId === item.id
-                          ? "재처리 중..."
-                          : "재처리"}
-                      </button>
+                              ) ?? "현재 이 문서는 재처리할 수 없습니다."}
+                            </p>
+                          )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        {item.status === "ready" && item.gcsPdfPath && (
+                          <a
+                            href={getResourceLink(item.gcsPdfPath)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[#df3326] hover:text-[#c72a1f] hover:bg-red-50 rounded-md font-medium transition-colors cursor-pointer"
+                          >
+                            문서 보기
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            isEditingExpiry
+                              ? setExpiryEdit(null)
+                              : openExpiryEdit(item)
+                          }
+                          disabled={updatingExpiryId != null}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md font-medium cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isEditingExpiry ? "취소" : "유효기간 변경"}
+                        </button>
+                        {(item.status === "failed" ||
+                          item.status === "ready") && (
+                          <button
+                            type="button"
+                            onClick={() => confirmReprocess(item.id)}
+                            disabled={
+                              !item.canReprocess || reprocessingId != null
+                            }
+                            title={
+                              item.canReprocess
+                                ? "문서 재처리"
+                                : (getCooldownLabel(
+                                    item.reprocessAvailableAt,
+                                    currentTime,
+                                  ) ?? "현재 재처리할 수 없습니다.")
+                            }
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[#df3326] hover:text-[#c72a1f] hover:bg-red-50 rounded-md font-medium cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <RefreshIcon
+                              className={`w-4 h-4 ${
+                                reprocessingId === item.id
+                                  ? "animate-spin"
+                                  : ""
+                              }`}
+                            />
+                            {reprocessingId === item.id
+                              ? "재처리 중..."
+                              : "재처리"}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => confirmDelete(item)}
+                          disabled={deletingId === item.id}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md font-medium shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <XIcon className="w-4 h-4" />
+                          {deletingId === item.id ? "삭제 중..." : "삭제"}
+                        </button>
+                      </div>
+                    </div>
+
+                    {isEditingExpiry && expiryEdit && (
+                      <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50/70 p-4 space-y-3">
+                        <p className="text-sm font-medium text-gray-800">
+                          유효기간 변경
+                        </p>
+                        <div className="flex flex-wrap gap-4 text-sm">
+                          <label className="inline-flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name={`expiry-mode-${item.id}`}
+                              checked={expiryEdit.mode === "date"}
+                              onChange={() =>
+                                setExpiryEdit((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        mode: "date",
+                                        error: null,
+                                        value:
+                                          prev.value ||
+                                          toDatetimeLocalValue(item.expiresAt),
+                                      }
+                                    : prev,
+                                )
+                              }
+                            />
+                            만료 시각 지정
+                          </label>
+                          <label className="inline-flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name={`expiry-mode-${item.id}`}
+                              checked={expiryEdit.mode === "indefinite"}
+                              onChange={() =>
+                                setExpiryEdit((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        mode: "indefinite",
+                                        error: null,
+                                      }
+                                    : prev,
+                                )
+                              }
+                            />
+                            무기한으로 변경
+                          </label>
+                        </div>
+                        {expiryEdit.mode === "date" && (
+                          <input
+                            type="datetime-local"
+                            value={expiryEdit.value}
+                            min={toDatetimeLocalValue(
+                              new Date().toISOString(),
+                            )}
+                            onChange={(e) =>
+                              setExpiryEdit((prev) =>
+                                prev
+                                  ? {
+                                      ...prev,
+                                      value: e.target.value,
+                                      error: null,
+                                    }
+                                  : prev,
+                              )
+                            }
+                            className="w-full max-w-md rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#df3326] focus:outline-none focus:ring-1 focus:ring-[#df3326]"
+                          />
+                        )}
+                        {expiryEdit.error && (
+                          <p className="text-sm text-red-600">
+                            {expiryEdit.error}
+                          </p>
+                        )}
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void handleSaveExpiry()}
+                            disabled={updatingExpiryId === item.id}
+                            className="inline-flex items-center rounded-md bg-[#df3326] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#c72a1f] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {updatingExpiryId === item.id
+                              ? "저장 중..."
+                              : "저장"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setExpiryEdit(null)}
+                            disabled={updatingExpiryId === item.id}
+                            className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            닫기
+                          </button>
+                        </div>
+                      </div>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => confirmDelete(item)}
-                      disabled={deletingId === item.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md font-medium shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <XIcon className="w-4 h-4" />
-                      {deletingId === item.id ? "삭제 중..." : "삭제"}
-                    </button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
           {deleteError && (
@@ -809,6 +1106,11 @@ export default function UploadPage() {
           {reprocessError && (
             <div className="px-6 py-3 border-t border-gray-200 bg-red-50 text-sm text-red-700">
               {reprocessError}
+            </div>
+          )}
+          {expiryError && (
+            <div className="px-6 py-3 border-t border-gray-200 bg-red-50 text-sm text-red-700">
+              {expiryError}
             </div>
           )}
           {pollingError && (
