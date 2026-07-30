@@ -1,21 +1,25 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { Navigate } from "react-router-dom";
 import { getToken, useVerifyToken } from "../../api/auth";
 import {
   uploadPdf,
   deleteUpload,
   getUploadList,
+  getUploadById,
+  reprocessUpload,
+  AdminUploadApiError,
   isPdfFile,
   isWithinSizeLimit,
   MAX_FILE_SIZE_MB,
 } from "../../api/upload";
-import type { UploadResponse } from "../../api/types";
+import type { DocumentItem, DocumentStatus } from "../../api/types";
 import LoadingSpinner from "../../components/LoadingSpinner";
-import { UploadIcon, XIcon } from "../../components/Icons";
+import { RefreshIcon, UploadIcon, XIcon } from "../../components/Icons";
 import { getResourceLink } from "./utils";
 
 const SUPER_ADMIN = "SUPER_ADMIN";
 const MAX_CONCURRENT_UPLOADS = 10;
+const POLL_INTERVAL_MS = 3000;
 
 type PendingStatus = "pending" | "uploading" | "success" | "error";
 
@@ -24,6 +28,21 @@ interface PendingUpload {
   file: File;
   status: PendingStatus;
   error?: string;
+}
+
+function isPollingStatus(status: DocumentStatus): boolean {
+  return status === "queued" || status === "processing";
+}
+
+function upsertDocument(
+  list: DocumentItem[],
+  doc: DocumentItem,
+): DocumentItem[] {
+  const idx = list.findIndex((d) => d.id === doc.id);
+  if (idx >= 0) {
+    return list.map((d, i) => (i === idx ? doc : d));
+  }
+  return [doc, ...list];
 }
 
 function validateFile(file: File): string | null {
@@ -44,6 +63,69 @@ function fileKey(f: File): string {
   return `${f.name}:${f.size}:${f.lastModified}`;
 }
 
+function getCooldownLabel(
+  reprocessAvailableAt: string | null,
+  now: number,
+): string | null {
+  if (!reprocessAvailableAt) return null;
+  const availableAt = new Date(reprocessAvailableAt).getTime();
+  if (Number.isNaN(availableAt)) return null;
+
+  const remainingSeconds = Math.max(
+    0,
+    Math.ceil((availableAt - now) / 1000),
+  );
+  if (remainingSeconds === 0) {
+    return "재처리 가능 여부를 확인하는 중입니다.";
+  }
+
+  const hours = Math.floor(remainingSeconds / 3600);
+  const minutes = Math.floor((remainingSeconds % 3600) / 60);
+  const seconds = remainingSeconds % 60;
+  const parts = [
+    hours > 0 ? `${hours}시간` : null,
+    minutes > 0 ? `${minutes}분` : null,
+    `${seconds}초`,
+  ].filter(Boolean);
+
+  return `재처리 가능까지 ${parts.join(" ")} 남았습니다.`;
+}
+
+function renderDocumentStatusBadge(status: DocumentStatus) {
+  switch (status) {
+    case "uploading":
+      return (
+        <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs shrink-0">
+          업로드 중
+        </span>
+      );
+    case "queued":
+      return (
+        <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs shrink-0">
+          처리 대기
+        </span>
+      );
+    case "processing":
+      return (
+        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs shrink-0">
+          처리 중
+        </span>
+      );
+    case "ready":
+      return (
+        <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs shrink-0">
+          사용 가능
+        </span>
+      );
+    case "failed":
+      return (
+        <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs shrink-0">
+          처리 실패
+        </span>
+      );
+  }
+}
+
 export default function UploadPage() {
   const hasToken = !!getToken();
   const { data, isLoading, isError } = useVerifyToken(hasToken);
@@ -51,17 +133,44 @@ export default function UploadPage() {
   const [pending, setPending] = useState<PendingUpload[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadedList, setUploadedList] = useState<UploadResponse[]>([]);
+  const [uploadedList, setUploadedList] = useState<DocumentItem[]>([]);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [reprocessingId, setReprocessingId] = useState<string | null>(null);
+  const [reprocessError, setReprocessError] = useState<string | null>(null);
+  const [pollingError, setPollingError] = useState<string | null>(null);
   const [limitNotice, setLimitNotice] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
   const inputRef = useRef<HTMLInputElement>(null);
+  const uploadedListRef = useRef(uploadedList);
 
-  const fetchList = () => {
+  uploadedListRef.current = uploadedList;
+
+  const pollingIdsKey = useMemo(
+    () =>
+      uploadedList
+        .filter((item) => isPollingStatus(item.status))
+        .map((item) => item.id)
+        .join(","),
+    [uploadedList],
+  );
+
+  const cooldownKey = useMemo(
+    () =>
+      uploadedList
+        .filter(
+          (item) => !item.canReprocess && item.reprocessAvailableAt != null,
+        )
+        .map((item) => `${item.id}:${item.reprocessAvailableAt}`)
+        .join(","),
+    [uploadedList],
+  );
+
+  const fetchList = useCallback(() => {
     setListError(null);
-    getUploadList({ limit: 50 })
+    return getUploadList({ limit: 50, offset: 0 })
       .then((list) => {
         setUploadedList(list);
       })
@@ -73,7 +182,7 @@ export default function UploadPage() {
         );
       })
       .finally(() => setListLoading(false));
-  };
+  }, []);
 
   useEffect(() => {
     if (
@@ -85,7 +194,131 @@ export default function UploadPage() {
     )
       return;
     fetchList();
-  }, [hasToken, isLoading, isError, data?.uuid, data?.role]);
+  }, [hasToken, isLoading, isError, data?.uuid, data?.role, fetchList]);
+
+  useEffect(() => {
+    if (!pollingIdsKey) return;
+
+    let cancelled = false;
+    let timeoutId: number | undefined;
+    let controller: AbortController | undefined;
+
+    const poll = async (): Promise<void> => {
+      const ids = uploadedListRef.current
+        .filter((item) => isPollingStatus(item.status))
+        .map((item) => item.id);
+      if (ids.length === 0) return;
+
+      controller = new AbortController();
+      const results = await Promise.allSettled(
+        ids.map((id) => getUploadById(id, controller?.signal)),
+      );
+      if (cancelled) return;
+
+      const updates = new Map<string, DocumentItem>();
+      const missingIds = new Set<string>();
+      let hasPollingError = false;
+
+      results.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          updates.set(result.value.id, result.value);
+          return;
+        }
+        if (
+          result.reason instanceof AdminUploadApiError &&
+          result.reason.status === 404
+        ) {
+          missingIds.add(ids[index]);
+          return;
+        }
+        hasPollingError = true;
+      });
+
+      setPollingError(
+        hasPollingError
+          ? "일부 문서의 처리 상태를 불러오지 못했습니다. 자동으로 다시 시도합니다."
+          : null,
+      );
+      setUploadedList((prev) =>
+        prev
+          .filter((item) => !missingIds.has(item.id))
+          .map((item) => {
+            const update = updates.get(item.id);
+            return update && isPollingStatus(item.status) ? update : item;
+          }),
+      );
+
+      if (!cancelled) {
+        timeoutId = window.setTimeout(() => {
+          void poll();
+        }, POLL_INTERVAL_MS);
+      }
+    };
+
+    void poll();
+
+    return () => {
+      cancelled = true;
+      controller?.abort();
+      if (timeoutId != null) window.clearTimeout(timeoutId);
+    };
+  }, [pollingIdsKey]);
+
+  useEffect(() => {
+    if (!cooldownKey) return;
+    const intervalId = window.setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+    return () => window.clearInterval(intervalId);
+  }, [cooldownKey]);
+
+  useEffect(() => {
+    if (!cooldownKey) return;
+
+    const cooldownItems = uploadedListRef.current.filter(
+      (item) => !item.canReprocess && item.reprocessAvailableAt != null,
+    );
+    const earliestAvailableAt = Math.min(
+      ...cooldownItems.map((item) =>
+        new Date(item.reprocessAvailableAt as string).getTime(),
+      ),
+    );
+    if (!Number.isFinite(earliestAvailableAt)) return;
+
+    const timeoutId = window.setTimeout(
+      () => {
+        const expiredIds = uploadedListRef.current
+          .filter((item) => {
+            if (item.canReprocess || !item.reprocessAvailableAt) return false;
+            return (
+              new Date(item.reprocessAvailableAt).getTime() <= Date.now() + 500
+            );
+          })
+          .map((item) => item.id);
+        if (expiredIds.length === 0) return;
+
+        void Promise.allSettled(expiredIds.map((id) => getUploadById(id))).then(
+          (results) => {
+            setUploadedList((prev) =>
+              prev.map((item) => {
+                const result = results.find(
+                  (candidate) =>
+                    candidate.status === "fulfilled" &&
+                    candidate.value.id === item.id,
+                );
+                return result?.status === "fulfilled"
+                  ? result.value
+                  : item;
+              }),
+            );
+          },
+        );
+      },
+      Math.max(0, earliestAvailableAt - Date.now() + 500),
+    );
+
+    return () => window.clearTimeout(timeoutId);
+  }, [cooldownKey]);
 
   if (!hasToken) {
     return <Navigate to="/" replace />;
@@ -170,7 +403,8 @@ export default function UploadPage() {
     );
     try {
       const title = item.file.name.trim() || "제목 없음";
-      await uploadPdf(item.file, title);
+      const doc = await uploadPdf(item.file, title);
+      setUploadedList((prev) => upsertDocument(prev, doc));
       setPending((prev) =>
         prev.map((p) =>
           p.id === item.id ? { ...p, status: "success", error: undefined } : p,
@@ -193,7 +427,6 @@ export default function UploadPage() {
     try {
       await Promise.all(items.map((item) => uploadSingle(item)));
       setPending((prev) => prev.filter((p) => p.status !== "success"));
-      fetchList();
     } finally {
       setIsUploading(false);
     }
@@ -222,12 +455,11 @@ export default function UploadPage() {
     try {
       setDeletingId(id);
       await deleteUpload(id);
-      fetchList();
+      setUploadedList((prev) => prev.filter((item) => item.id !== id));
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "삭제에 실패했습니다.";
       setDeleteError(message);
-      // 404(이미 삭제됨)인 경우에도 목록에서 제거해 화면이 바로 갱신되도록 함
       if (message === "이미 삭제되었거나 존재하지 않는 파일입니다.") {
         setUploadedList((prev) => prev.filter((item) => item.id !== id));
         setDeleteError(null);
@@ -237,10 +469,56 @@ export default function UploadPage() {
     }
   };
 
+  const confirmDelete = (item: DocumentItem) => {
+    const confirmed = window.confirm(
+      `"${item.title}" 문서를 삭제하시겠습니까?\n삭제한 문서는 복구할 수 없습니다.`,
+    );
+    if (confirmed) void handleDelete(item.id);
+  };
+
+  const handleReprocess = async (id: string) => {
+    setReprocessError(null);
+    try {
+      setReprocessingId(id);
+      const doc = await reprocessUpload(id);
+      setUploadedList((prev) => upsertDocument(prev, doc));
+    } catch (err) {
+      if (
+        err instanceof AdminUploadApiError &&
+        err.status === 429 &&
+        err.retryAt
+      ) {
+        setUploadedList((prev) =>
+          prev.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  canReprocess: false,
+                  reprocessAvailableAt: err.retryAt ?? null,
+                }
+              : item,
+          ),
+        );
+      }
+      setReprocessError(
+        err instanceof Error ? err.message : "재처리 요청에 실패했습니다.",
+      );
+    } finally {
+      setReprocessingId(null);
+    }
+  };
+
+  const confirmReprocess = (id: string) => {
+    const confirmed = window.confirm(
+      "이 작업은 PDF 전체를 다시 처리하며 API 비용이 발생합니다.\n정말 재처리하시겠습니까?",
+    );
+    if (confirmed) void handleReprocess(id);
+  };
+
   const pendingCount = pending.filter((p) => p.status === "pending").length;
   const hasUploadable = pendingCount > 0 && !isUploading;
 
-  const renderStatusBadge = (status: PendingStatus) => {
+  const renderPendingStatusBadge = (status: PendingStatus) => {
     switch (status) {
       case "pending":
         return (
@@ -257,7 +535,7 @@ export default function UploadPage() {
       case "success":
         return (
           <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs shrink-0">
-            완료
+            전송 완료
           </span>
         );
       case "error":
@@ -275,7 +553,8 @@ export default function UploadPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">파일 업로드</h1>
           <p className="mt-2 text-sm text-gray-600">
-            PDF 파일을 선택하면 파일 이름이 제목으로 저장됩니다. 한 번에 최대{" "}
+            PDF 파일을 선택하면 파일 이름이 제목으로 저장됩니다. 업로드 후 AI
+            처리가 완료될 때까지 상태가 갱신됩니다. 한 번에 최대{" "}
             {MAX_CONCURRENT_UPLOADS}개까지 업로드할 수 있습니다. (각 파일 최대{" "}
             {MAX_FILE_SIZE_MB}MB)
           </p>
@@ -349,7 +628,7 @@ export default function UploadPage() {
                           <span className="text-gray-700 truncate min-w-0">
                             {item.file.name}
                           </span>
-                          {renderStatusBadge(item.status)}
+                          {renderPendingStatusBadge(item.status)}
                         </div>
                         <p className="mt-0.5 text-xs text-gray-500 truncate">
                           {(item.file.size / 1024).toFixed(1)} KB
@@ -404,7 +683,6 @@ export default function UploadPage() {
           </div>
         </div>
 
-        {/* 내가 업로드한 파일 목록 */}
         <div className="mt-8 bg-white rounded-lg border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">
@@ -441,30 +719,79 @@ export default function UploadPage() {
                   className="flex items-center justify-between gap-3 px-6 py-4 text-sm"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-gray-900 truncate">
-                      {item.title}
-                    </p>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="font-medium text-gray-900 truncate min-w-0">
+                        {item.title}
+                      </p>
+                      {renderDocumentStatusBadge(item.status)}
+                    </div>
                     <p className="text-gray-500 text-xs mt-0.5">
+                      업로드:{" "}
                       {new Date(item.uploadedAt).toLocaleString("ko-KR")}
+                      {item.processedAt
+                        ? ` · 처리 완료: ${new Date(
+                            item.processedAt,
+                          ).toLocaleString("ko-KR")}`
+                        : ""}
                     </p>
+                    {item.status === "failed" && item.errorMessage && (
+                      <p className="text-red-600 text-xs mt-1">
+                        {item.errorMessage}
+                      </p>
+                    )}
+                    {(item.status === "failed" || item.status === "ready") &&
+                      !item.canReprocess && (
+                        <p className="text-amber-700 text-xs mt-1">
+                          {getCooldownLabel(
+                            item.reprocessAvailableAt,
+                            currentTime,
+                          ) ?? "현재 이 문서는 재처리할 수 없습니다."}
+                        </p>
+                      )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {item.metadata?.status === "uploaded" &&
-                      item.metadata?.gcs_path && (
-                        <a
-                          href={getResourceLink(item.metadata.gcs_path)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[#df3326] hover:text-[#c72a1f] hover:bg-red-50 rounded-md font-medium transition-colors"
-                        >
-                          문서 보기
-                        </a>
-                      )}
+                    {item.status === "ready" && item.gcsPdfPath && (
+                      <a
+                        href={getResourceLink(item.gcsPdfPath)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[#df3326] hover:text-[#c72a1f] hover:bg-red-50 rounded-md font-medium transition-colors"
+                      >
+                        문서 보기
+                      </a>
+                    )}
+                    {(item.status === "failed" || item.status === "ready") && (
+                      <button
+                        type="button"
+                        onClick={() => confirmReprocess(item.id)}
+                        disabled={
+                          !item.canReprocess || reprocessingId != null
+                        }
+                        title={
+                          item.canReprocess
+                            ? "문서 재처리"
+                            : (getCooldownLabel(
+                                item.reprocessAvailableAt,
+                                currentTime,
+                              ) ?? "현재 재처리할 수 없습니다.")
+                        }
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[#df3326] hover:text-[#c72a1f] hover:bg-red-50 rounded-md font-medium cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <RefreshIcon
+                          className={`w-4 h-4 ${
+                            reprocessingId === item.id ? "animate-spin" : ""
+                          }`}
+                        />
+                        {reprocessingId === item.id
+                          ? "재처리 중..."
+                          : "재처리"}
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => handleDelete(item.id)}
+                      onClick={() => confirmDelete(item)}
                       disabled={deletingId === item.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md font-medium shrink-0 disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md font-medium shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <XIcon className="w-4 h-4" />
                       {deletingId === item.id ? "삭제 중..." : "삭제"}
@@ -477,6 +804,16 @@ export default function UploadPage() {
           {deleteError && (
             <div className="px-6 py-3 border-t border-gray-200 bg-red-50 text-sm text-red-700">
               {deleteError}
+            </div>
+          )}
+          {reprocessError && (
+            <div className="px-6 py-3 border-t border-gray-200 bg-red-50 text-sm text-red-700">
+              {reprocessError}
+            </div>
+          )}
+          {pollingError && (
+            <div className="px-6 py-3 border-t border-gray-200 bg-amber-50 text-sm text-amber-800">
+              {pollingError}
             </div>
           )}
         </div>
