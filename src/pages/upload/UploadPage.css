@@ -1,0 +1,31 @@
+.upload-document-panel {
+  height: clamp(560px, 70dvh, 760px);
+}
+
+.upload-page-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.document-list-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* 화면 폭 수치가 아닌 가로·세로 비율에 따라 레이아웃을 전환합니다. */
+@media (min-aspect-ratio: 4 / 3) {
+  .upload-page-layout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .upload-document-panel {
+    height: clamp(660px, calc(100dvh - 285px), 880px);
+  }
+}
+
+@media (max-aspect-ratio: 3 / 4) {
+  .upload-document-panel {
+    height: min(640px, 72dvh);
+    min-height: 500px;
+  }
+}
