@@ -51,19 +51,27 @@ export interface VerifyTokenResponse {
   role?: string;
 }
 
-export interface UploadResponseMetadata {
-  resource_name?: string;
-  status?: string;
-  queued_for_processing?: boolean;
-  message_id?: string;
-  gcs_path?: string;
-}
+export type DocumentStatus =
+  | "uploading"
+  | "queued"
+  | "processing"
+  | "ready"
+  | "failed";
 
-export interface UploadResponse {
+export interface DocumentItem {
   id: string;
   title: string;
-  metadata?: UploadResponseMetadata;
+  resourceName: string;
+  status: DocumentStatus;
+  summary: string | null;
+  gcsPdfPath: string;
+  errorMessage: string | null;
   uploadedAt: string;
+  processedAt: string | null;
+  canReprocess: boolean;
+  reprocessAvailableAt: string | null;
+  expiresAt: string | null;
+  isExpired: boolean;
 }
 
 export interface ChatMessage {

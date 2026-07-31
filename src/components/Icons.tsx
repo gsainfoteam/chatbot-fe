@@ -188,6 +188,56 @@ export const MenuIcon = createIcon(
   "w-6 h-6",
 );
 
+export const EllipsisVerticalIcon = ({
+  className = "w-5 h-5",
+}: IconProps) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="6" r="1.4" />
+    <circle cx="12" cy="12" r="1.4" />
+    <circle cx="12" cy="18" r="1.4" />
+  </svg>
+);
+
+export const EyeIcon = createIcon(
+  "0 0 24 24",
+  [
+    "M2.25 12s3.75-7.5 9.75-7.5 9.75 7.5 9.75 7.5-3.75 7.5-9.75 7.5S2.25 12 2.25 12z",
+    "M15 12a3 3 0 11-6 0 3 3 0 016 0z",
+  ],
+  "w-5 h-5",
+);
+
+export const CalendarIcon = createIcon(
+  "0 0 24 24",
+  [
+    "M6.75 3v2.25M17.25 3v2.25M3.75 9h16.5",
+    "M5.25 5.25h13.5a1.5 1.5 0 011.5 1.5v12a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-12a1.5 1.5 0 011.5-1.5z",
+  ],
+  "w-5 h-5",
+);
+
+export const ClockIcon = createIcon(
+  "0 0 24 24",
+  ["M12 6v6l4 2", "M21 12a9 9 0 11-18 0 9 9 0 0118 0z"],
+  "w-4 h-4",
+);
+
+export const TrashIcon = createIcon(
+  "0 0 24 24",
+  [
+    "M3 6h18",
+    "M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6",
+    "M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2",
+    "M10 11v6M14 11v6",
+  ],
+  "w-5 h-5",
+);
+
 export const XIcon = createIcon(
   "0 0 24 24",
   ["M6 18L18 6M6 6l12 12"],
@@ -205,6 +255,14 @@ export const UploadIcon = createIcon(
   "0 0 24 24",
   [
     "M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5",
+  ],
+  "w-4 h-4",
+);
+
+export const RefreshIcon = createIcon(
+  "0 0 24 24",
+  [
+    "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15",
   ],
   "w-4 h-4",
 );

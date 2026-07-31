@@ -2,9 +2,24 @@
 
 import axios from "axios";
 import { apiClient } from "./client";
-import type { UploadResponse } from "./types";
+import type { DocumentItem } from "./types";
 
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20MB
+
+const DUPLICATE_UPLOAD_MESSAGE =
+  "같은 파일명의 문서가 이미 있습니다. 기존 문서를 삭제하거나 다른 파일명으로 업로드해주세요.";
+
+export class AdminUploadApiError extends Error {
+  readonly status?: number;
+  readonly retryAt?: string;
+
+  constructor(message: string, status?: number, retryAt?: string) {
+    super(message);
+    this.name = "AdminUploadApiError";
+    this.status = status;
+    this.retryAt = retryAt;
+  }
+}
 
 /** PDF 파일 검증: 확장자 .pdf 또는 type application/pdf */
 export function isPdfFile(file: File): boolean {
@@ -35,10 +50,38 @@ function getErrorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
+function throwAdminUploadError(
+  err: unknown,
+  fallback: string,
+  extraByStatus?: Record<number, string>,
+): never {
+  const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+  const retryAt = axios.isAxiosError(err)
+    ? (err.response?.data as { retryAt?: string } | undefined)?.retryAt
+    : undefined;
+  const message = getErrorMessage(err, fallback);
+  if (status === 401) {
+    throw new AdminUploadApiError(
+      "인증에 실패했습니다. 다시 로그인해주세요.",
+      status,
+    );
+  }
+  if (status === 403) {
+    throw new AdminUploadApiError(
+      "Super Admin만 사용할 수 있습니다.",
+      status,
+    );
+  }
+  if (status != null && extraByStatus?.[status]) {
+    throw new AdminUploadApiError(extraByStatus[status], status, retryAt);
+  }
+  throw new AdminUploadApiError(message, status, retryAt);
+}
+
 /** 내가 업로드한 문서 목록 조회 (Super Admin) */
 export async function getUploadList(
   params?: GetUploadListParams,
-): Promise<UploadResponse[]> {
+): Promise<DocumentItem[]> {
   const requestParams: { limit?: number; offset?: number } = {};
   if (params?.limit != null) {
     requestParams.limit = Math.min(100, Math.max(1, params.limit));
@@ -48,20 +91,29 @@ export async function getUploadList(
   }
 
   try {
-    const res = await apiClient.get<UploadResponse[]>("/v1/admin/upload", {
+    const res = await apiClient.get<DocumentItem[]>("/v1/admin/upload", {
       params: requestParams,
     });
     return res.data;
   } catch (err) {
-    const status = axios.isAxiosError(err) ? err.response?.status : undefined;
-    const message = getErrorMessage(err, "목록을 불러오는데 실패했습니다.");
-    if (status === 401) {
-      throw new Error("인증에 실패했습니다. 다시 로그인해주세요.");
-    }
-    if (status === 403) {
-      throw new Error("Super Admin만 사용할 수 있습니다.");
-    }
-    throw new Error(message);
+    throwAdminUploadError(err, "목록을 불러오는데 실패했습니다.");
+  }
+}
+
+/** 단건 문서 조회 */
+export async function getUploadById(
+  id: string,
+  signal?: AbortSignal,
+): Promise<DocumentItem> {
+  try {
+    const res = await apiClient.get<DocumentItem>(`/v1/admin/upload/${id}`, {
+      signal,
+    });
+    return res.data;
+  } catch (err) {
+    throwAdminUploadError(err, "문서 정보를 불러오는데 실패했습니다.", {
+      404: "존재하지 않는 문서입니다.",
+    });
   }
 }
 
@@ -69,55 +121,92 @@ export async function getUploadList(
 export async function uploadPdf(
   file: File,
   title: string,
-): Promise<UploadResponse> {
+  expiresAt?: string,
+): Promise<DocumentItem> {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("title", title.trim());
+  if (expiresAt) {
+    formData.append("expiresAt", expiresAt);
+  }
 
   try {
-    const res = await apiClient.post<UploadResponse>(
+    const res = await apiClient.post<DocumentItem>(
       "/v1/admin/upload",
       formData,
       {
         // FormData 전송 시 Content-Type 미설정 → axios가 boundary 포함 multipart/form-data로 설정
-        headers: { "Content-Type": undefined } as Record<string, string | undefined>,
+        headers: { "Content-Type": undefined } as Record<
+          string,
+          string | undefined
+        >,
       },
     );
-    return res.data as UploadResponse;
+    return res.data;
   } catch (err) {
     const status = axios.isAxiosError(err) ? err.response?.status : undefined;
     const message = getErrorMessage(err, "업로드에 실패했습니다.");
     if (status === 400) {
-      throw new Error(
+      throw new AdminUploadApiError(
         message || "잘못된 요청입니다. (PDF 파일과 제목을 확인해주세요.)",
+        status,
       );
     }
-    if (status === 401) {
-      throw new Error("인증에 실패했습니다. 다시 로그인해주세요.");
+    if (status === 409) {
+      throw new AdminUploadApiError(DUPLICATE_UPLOAD_MESSAGE, status);
     }
-    if (status === 403) {
-      throw new Error("Super Admin만 사용할 수 있습니다.");
-    }
-    throw new Error(message);
+    throwAdminUploadError(err, message);
   }
 }
 
-/** 업로드된 파일 삭제 */
+/** 문서 유효기간 변경 */
+export async function updateUploadExpiry(
+  id: string,
+  expiresAt: string | null,
+): Promise<DocumentItem> {
+  try {
+    const res = await apiClient.patch<DocumentItem>(`/v1/admin/upload/${id}`, {
+      expiresAt,
+    });
+    return res.data;
+  } catch (err) {
+    const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+    const message = getErrorMessage(err, "유효기간 변경에 실패했습니다.");
+    if (status === 400) {
+      throw new AdminUploadApiError(
+        message || "유효기간은 미래 시각의 ISO-8601 형식이어야 합니다.",
+        status,
+      );
+    }
+    throwAdminUploadError(err, message, {
+      404: "존재하지 않는 문서입니다.",
+    });
+  }
+}
+
+/** 처리 실패 문서 재처리 */
+export async function reprocessUpload(id: string): Promise<DocumentItem> {
+  try {
+    const res = await apiClient.post<DocumentItem>(
+      `/v1/admin/upload/${id}/reprocess`,
+    );
+    return res.data;
+  } catch (err) {
+    throwAdminUploadError(err, "재처리 요청에 실패했습니다.", {
+      404: "존재하지 않는 문서입니다.",
+      409: "현재 처리 중인 문서는 재처리할 수 없습니다. 처리가 끝난 후 다시 시도해주세요.",
+      429: "재처리 대기 시간이 지나지 않았습니다.",
+    });
+  }
+}
+
+/** 업로드된 파일 삭제 (204 No Content) */
 export async function deleteUpload(id: string): Promise<void> {
   try {
     await apiClient.delete(`/v1/admin/upload/${id}`);
   } catch (err) {
-    const status = axios.isAxiosError(err) ? err.response?.status : undefined;
-    const message = getErrorMessage(err, "삭제에 실패했습니다.");
-    if (status === 401) {
-      throw new Error("인증에 실패했습니다. 다시 로그인해주세요.");
-    }
-    if (status === 403) {
-      throw new Error("Super Admin만 사용할 수 있습니다.");
-    }
-    if (status === 404) {
-      throw new Error("이미 삭제되었거나 존재하지 않는 파일입니다.");
-    }
-    throw new Error(message);
+    throwAdminUploadError(err, "삭제에 실패했습니다.", {
+      404: "이미 삭제되었거나 존재하지 않는 파일입니다.",
+    });
   }
 }
