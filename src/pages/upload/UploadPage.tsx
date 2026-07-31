@@ -104,10 +104,7 @@ function getCooldownLabel(
   const availableAt = new Date(reprocessAvailableAt).getTime();
   if (Number.isNaN(availableAt)) return null;
 
-  const remainingSeconds = Math.max(
-    0,
-    Math.ceil((availableAt - now) / 1000),
-  );
+  const remainingSeconds = Math.max(0, Math.ceil((availableAt - now) / 1000));
   if (remainingSeconds === 0) {
     return "재처리 가능 여부를 확인하는 중입니다.";
   }
@@ -667,9 +664,7 @@ export default function UploadPage() {
     setExpiryEdit({
       id: item.id,
       mode: item.expiresAt === null ? "indefinite" : "date",
-      value: item.expiresAt
-        ? toDateInputValue(new Date(item.expiresAt))
-        : "",
+      value: item.expiresAt ? toDateInputValue(new Date(item.expiresAt)) : "",
       error: null,
     });
   };
@@ -788,10 +783,8 @@ export default function UploadPage() {
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">문서 관리</h1>
           <p className="mt-2 text-sm text-gray-600">
-            PDF를 업로드하면 AI 처리 상태가 자동으로 갱신됩니다. 유효기간을
-            지정하지 않으면 무기한으로 저장됩니다. 한 번에 최대{" "}
-            {MAX_CONCURRENT_UPLOADS}개, 파일당 최대 {MAX_FILE_SIZE_MB}MB까지
-            업로드할 수 있습니다.
+            PDF 파일을 업로드하면 자동으로 챗봇 답변에 적용됩니다. 파일 크기에
+            따라 1분~30분이 소요됩니다.
           </p>
         </header>
 
@@ -808,184 +801,183 @@ export default function UploadPage() {
                 PDF 업로드
               </h2>
               <p className="mt-1 text-sm text-gray-500">
-                파일 이름이 제목으로 저장됩니다.
+                최대 {MAX_CONCURRENT_UPLOADS}개, 파일당 최대 {MAX_FILE_SIZE_MB}
+                MB까지 업로드할 수 있습니다.
               </p>
             </div>
 
             <div className="p-6">
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label="PDF 파일 선택"
+                onClick={() => inputRef.current?.click()}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    inputRef.current?.click();
+                  }
+                }}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                className={`flex min-h-[210px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-5 py-8 text-center transition-colors ${
+                  isDragging
+                    ? "border-[#df3326] bg-red-50"
+                    : "border-gray-300 bg-gray-50/40 hover:border-gray-400 hover:bg-gray-50"
+                }`}
+              >
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-50 text-[#df3326]">
+                  <UploadIcon className="h-6 w-6" />
+                </span>
+                <p className="mt-4 text-sm font-medium text-gray-700 sm:text-base">
+                  클릭하거나 PDF를 드래그하세요
+                </p>
+                <p className="mt-1 text-xs text-gray-500 sm:text-sm">
+                  PDF만, 파일당 최대 {MAX_FILE_SIZE_MB}MB · 최대{" "}
+                  {MAX_CONCURRENT_UPLOADS}개
+                </p>
+              </div>
 
-            <div
-              role="button"
-              tabIndex={0}
-              aria-label="PDF 파일 선택"
-              onClick={() => inputRef.current?.click()}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  inputRef.current?.click();
-                }
-              }}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              className={`flex min-h-[210px] cursor-pointer flex-col items-center justify-center rounded-lg border px-5 py-8 text-center transition-colors ${
-                isDragging
-                  ? "border-[#df3326] bg-red-50"
-                  : "border-gray-300 bg-gray-50/40 hover:border-gray-400 hover:bg-gray-50"
-              }`}
-            >
-              <input
-                ref={inputRef}
-                type="file"
-                accept=".pdf,application/pdf"
-                multiple
-                className="hidden"
-                onChange={handleFileChange}
-              />
-              <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-50 text-[#df3326]">
-                <UploadIcon className="h-6 w-6" />
-              </span>
-              <p className="mt-4 text-sm font-medium text-gray-700 sm:text-base">
-                클릭하거나 PDF를 드래그하세요
-              </p>
-              <p className="mt-1 text-xs text-gray-500 sm:text-sm">
-                PDF만, 파일당 최대 {MAX_FILE_SIZE_MB}MB · 최대{" "}
-                {MAX_CONCURRENT_UPLOADS}개
-              </p>
-            </div>
+              <div className="mt-6">
+                <h3 className="text-sm font-medium text-gray-700 sm:text-base">
+                  업로드 대기 ({pending.length})
+                </h3>
 
-            <div className="mt-6">
-              <h3 className="text-sm font-medium text-gray-700 sm:text-base">
-                업로드 대기 ({pending.length})
-              </h3>
-
-              <div className="mt-3 space-y-3">
-                {pending.length === 0 ? (
-                  <div className="rounded-lg border border-gray-200 px-5 py-8 text-center text-sm text-gray-500">
-                    업로드할 PDF를 선택해주세요.
-                  </div>
-                ) : (
-                  pending.map((item) => (
-                    <article
-                      key={item.id}
-                      className="rounded-lg border border-gray-200 bg-gray-50/40 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <div className="flex min-w-0 flex-wrap items-center gap-2">
-                            <p className="max-w-full truncate font-medium text-gray-900">
-                              {item.file.name}
+                <div className="mt-3 space-y-3">
+                  {pending.length === 0 ? (
+                    <div className="rounded-lg border border-gray-200 px-5 py-8 text-center text-sm text-gray-500">
+                      업로드할 PDF를 선택해주세요.
+                    </div>
+                  ) : (
+                    pending.map((item) => (
+                      <article
+                        key={item.id}
+                        className="rounded-lg border border-gray-200 bg-gray-50/40 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <div className="flex min-w-0 flex-wrap items-center gap-2">
+                              <p className="max-w-full truncate font-medium text-gray-900">
+                                {item.file.name}
+                              </p>
+                              {renderPendingStatusBadge(item.status)}
+                            </div>
+                            <p className="mt-1 text-sm text-gray-500">
+                              {(item.file.size / 1024).toFixed(1)} KB
                             </p>
-                            {renderPendingStatusBadge(item.status)}
                           </div>
-                          <p className="mt-1 text-sm text-gray-500">
-                            {(item.file.size / 1024).toFixed(1)} KB
-                          </p>
-                        </div>
-                        {item.status !== "uploading" && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemove(item.id)}
-                            className="shrink-0 cursor-pointer text-sm font-medium text-red-500 hover:text-red-700"
-                          >
-                            제거
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {expiryOptions.map((option) => {
-                          const isSelected =
-                            item.expiryPreset === option.key;
-                          return (
+                          {item.status !== "uploading" && (
                             <button
-                              key={option.key}
                               type="button"
-                              aria-pressed={isSelected}
-                              onClick={() =>
-                                applyPendingExpiryPreset(item.id, option.key)
+                              onClick={() => handleRemove(item.id)}
+                              className="shrink-0 cursor-pointer text-sm font-medium text-red-500 hover:text-red-700"
+                            >
+                              제거
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {expiryOptions.map((option) => {
+                            const isSelected = item.expiryPreset === option.key;
+                            return (
+                              <button
+                                key={option.key}
+                                type="button"
+                                aria-pressed={isSelected}
+                                onClick={() =>
+                                  applyPendingExpiryPreset(item.id, option.key)
+                                }
+                                disabled={item.status === "uploading"}
+                                className={`cursor-pointer rounded-md border px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                                  isSelected
+                                    ? "border-[#df3326] bg-red-50 text-[#df3326]"
+                                    : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {item.expiryPreset === "custom" && (
+                          <label
+                            htmlFor={`pending-expires-at-${item.id}`}
+                            className="mt-4 block"
+                          >
+                            <span className="sr-only">유효기간 직접 지정</span>
+                            <input
+                              id={`pending-expires-at-${item.id}`}
+                              type="date"
+                              value={item.expiresAtInput}
+                              min={todayDateValue}
+                              onChange={(event) =>
+                                updatePendingExpiry(item.id, event.target.value)
                               }
                               disabled={item.status === "uploading"}
-                              className={`cursor-pointer rounded-md border px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                                isSelected
-                                  ? "border-[#df3326] bg-red-50 text-[#df3326]"
-                                  : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                              }`}
-                            >
-                              {option.label}
-                            </button>
-                          );
-                        })}
-                      </div>
+                              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 transition-all duration-150 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#df3326] disabled:opacity-50"
+                            />
+                          </label>
+                        )}
 
-                      {item.expiryPreset === "custom" && (
-                        <label
-                          htmlFor={`pending-expires-at-${item.id}`}
-                          className="mt-4 block"
-                        >
-                          <span className="sr-only">유효기간 직접 지정</span>
-                          <input
-                            id={`pending-expires-at-${item.id}`}
-                            type="date"
-                            value={item.expiresAtInput}
-                            min={todayDateValue}
-                            onChange={(event) =>
-                              updatePendingExpiry(item.id, event.target.value)
-                            }
-                            disabled={item.status === "uploading"}
-                            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 transition-all duration-150 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#df3326] disabled:opacity-50"
-                          />
-                        </label>
-                      )}
-
-                      <p className="mt-3 text-sm text-gray-500">
-                        {renderExpiryDescription(item)}
-                      </p>
-                      {item.expiryError && (
-                        <p className="mt-2 text-sm text-red-600">
-                          {item.expiryError}
+                        <p className="mt-3 text-sm text-gray-500">
+                          {renderExpiryDescription(item)}
                         </p>
-                      )}
-                      {item.error && (
-                        <div className="mt-3 flex flex-wrap items-center gap-3">
-                          <p className="text-sm text-red-600">{item.error}</p>
-                          <button
-                            type="button"
-                            onClick={() => handleRetry(item.id)}
-                            disabled={isUploading}
-                            className="cursor-pointer text-sm font-medium text-[#df3326] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            재시도
-                          </button>
-                        </div>
-                      )}
-                    </article>
-                  ))
-                )}
+                        {item.expiryError && (
+                          <p className="mt-2 text-sm text-red-600">
+                            {item.expiryError}
+                          </p>
+                        )}
+                        {item.error && (
+                          <div className="mt-3 flex flex-wrap items-center gap-3">
+                            <p className="text-sm text-red-600">{item.error}</p>
+                            <button
+                              type="button"
+                              onClick={() => handleRetry(item.id)}
+                              disabled={isUploading}
+                              className="cursor-pointer text-sm font-medium text-[#df3326] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              재시도
+                            </button>
+                          </div>
+                        )}
+                      </article>
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={handleUploadAll}
-              disabled={!hasUploadable}
-              className="mt-6 w-full cursor-pointer rounded-md bg-[#df3326] px-6 py-2.5 font-medium text-white transition-all duration-150 hover:bg-[#c72a1f] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isUploading
-                ? "업로드 중..."
-                : pendingCount > 0
-                  ? `업로드 (${pendingCount}개)`
-                  : "업로드"}
-            </button>
-
-            {limitNotice && (
-              <div
-                aria-live="polite"
-                className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-center text-sm text-red-600"
+              <button
+                type="button"
+                onClick={handleUploadAll}
+                disabled={!hasUploadable}
+                className="mt-6 w-full cursor-pointer rounded-md bg-[#df3326] px-6 py-2.5 font-medium text-white transition-all duration-150 hover:bg-[#c72a1f] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {limitNotice}
-              </div>
-            )}
+                {isUploading
+                  ? "업로드 중..."
+                  : pendingCount > 0
+                    ? `업로드 (${pendingCount}개)`
+                    : "업로드"}
+              </button>
+
+              {limitNotice && (
+                <div
+                  aria-live="polite"
+                  className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-center text-sm text-red-600"
+                >
+                  {limitNotice}
+                </div>
+              )}
             </div>
           </section>
 
@@ -1002,7 +994,7 @@ export default function UploadPage() {
                   문서 목록
                 </h2>
                 <p className="mt-1 text-sm text-gray-500">
-                  만료된 문서는 목록에 남지만 Chat 검색에서는 제외됩니다.
+                  만료된 문서는 자동으로 챗봇 답변에서 제외됩니다.
                 </p>
               </div>
               <span className="shrink-0 pt-1 text-sm font-medium text-gray-500">
@@ -1136,7 +1128,7 @@ export default function UploadPage() {
                                 id={`document-menu-${item.id}`}
                                 role="menu"
                                 aria-label={`${item.title} 문서 작업`}
-                                className="absolute right-0 top-full z-30 mt-1.5 w-48 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+                                className="absolute right-0 top-full z-30 mt-1.5 flex w-48 flex-col gap-0.5 rounded-lg border border-gray-200 bg-white p-1.5 shadow-lg"
                               >
                                 {canView ? (
                                   <a
@@ -1147,7 +1139,7 @@ export default function UploadPage() {
                                     rel="noopener noreferrer"
                                     role="menuitem"
                                     onClick={() => setOpenDocumentMenuId(null)}
-                                    className="flex cursor-pointer items-center gap-2.5 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900"
+                                    className="flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
                                   >
                                     <EyeIcon className="h-[18px] w-[18px] shrink-0" />
                                     보기
@@ -1158,7 +1150,7 @@ export default function UploadPage() {
                                     role="menuitem"
                                     disabled
                                     title="처리 완료 후 문서를 볼 수 있습니다."
-                                    className="flex w-full cursor-not-allowed items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-gray-400"
+                                    className="flex w-full cursor-not-allowed items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-gray-400"
                                   >
                                     <EyeIcon className="h-[18px] w-[18px] shrink-0" />
                                     보기
@@ -1172,7 +1164,7 @@ export default function UploadPage() {
                                     openExpiryEdit(item);
                                   }}
                                   disabled={updatingExpiryId != null}
-                                  className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
+                                  className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                   <CalendarIcon className="h-[18px] w-[18px] shrink-0" />
                                   유효기간 변경
@@ -1197,10 +1189,9 @@ export default function UploadPage() {
                                         : (getCooldownLabel(
                                             item.reprocessAvailableAt,
                                             currentTime,
-                                          ) ??
-                                          "현재 재처리할 수 없습니다.")
+                                          ) ?? "현재 재처리할 수 없습니다.")
                                   }
-                                  className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
+                                  className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                   <RefreshIcon
                                     className={`h-[18px] w-[18px] shrink-0 ${
@@ -1213,7 +1204,7 @@ export default function UploadPage() {
                                     ? "재처리 중..."
                                     : "재처리"}
                                 </button>
-                                <div className="mx-3 my-1 border-t border-gray-200" />
+                                <div className="mx-1.5 my-0.5 border-t border-gray-200" />
                                 <button
                                   type="button"
                                   role="menuitem"
@@ -1222,7 +1213,7 @@ export default function UploadPage() {
                                     confirmDelete(item);
                                   }}
                                   disabled={deletingId === item.id}
-                                  className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                  className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   <TrashIcon className="h-[18px] w-[18px] shrink-0" />
                                   {deletingId === item.id
