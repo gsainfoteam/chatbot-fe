@@ -194,7 +194,9 @@ export default function UploadPage() {
   const todayDateValue = useMemo(() => toDateInputValue(new Date()), []);
   const oneYearLaterValue = useMemo(() => getOneYearLaterValue(), []);
 
-  uploadedListRef.current = uploadedList;
+  useEffect(() => {
+    uploadedListRef.current = uploadedList;
+  }, [uploadedList]);
 
   const pollingIdsKey = useMemo(
     () =>
