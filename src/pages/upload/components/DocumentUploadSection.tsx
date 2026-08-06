@@ -1,0 +1,543 @@
+import { useMemo, useRef, useState } from "react";
+import {
+  isPdfFile,
+  isWithinSizeLimit,
+  MAX_FILE_SIZE_MB,
+  uploadPdf,
+} from "../../../api/upload";
+import type { DocumentItem, Organization } from "../../../api/types";
+import { UploadIcon } from "../../../components/Icons";
+import {
+  formatKoreanDate,
+  getOneYearLaterValue,
+  getSemesterExpiryPresets,
+  parseFutureExpiresAt,
+  toDateInputValue,
+} from "../utils";
+
+const MAX_CONCURRENT_UPLOADS = 10;
+
+type PendingStatus = "pending" | "uploading" | "success" | "error";
+type PendingExpiryPreset =
+  | "current-semester"
+  | "next-semester"
+  | "one-year"
+  | "indefinite"
+  | "custom";
+
+interface PendingUpload {
+  id: string;
+  file: File;
+  status: PendingStatus;
+  error?: string;
+  expiresAtInput: string;
+  expiryPreset: PendingExpiryPreset;
+  expiryError?: string;
+}
+
+interface DocumentUploadSectionProps {
+  organizations: Organization[];
+  selectedOrganizationId: string;
+  onOrganizationChange: (organizationId: string) => void;
+  onUploaded: (doc: DocumentItem) => void;
+}
+
+function validateFile(file: File): string | null {
+  if (!isPdfFile(file)) {
+    return "PDF 파일만 업로드할 수 있습니다.";
+  }
+  if (!isWithinSizeLimit(file)) {
+    return `파일 크기는 ${MAX_FILE_SIZE_MB}MB 이하여야 합니다.`;
+  }
+  return null;
+}
+
+function nextId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function fileKey(f: File): string {
+  return `${f.name}:${f.size}:${f.lastModified}`;
+}
+
+export default function DocumentUploadSection({
+  organizations,
+  selectedOrganizationId,
+  onOrganizationChange,
+  onUploaded,
+}: DocumentUploadSectionProps) {
+  const [pending, setPending] = useState<PendingUpload[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [limitNotice, setLimitNotice] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const expiryPresets = useMemo(() => getSemesterExpiryPresets(), []);
+  const todayDateValue = useMemo(() => toDateInputValue(new Date()), []);
+  const oneYearLaterValue = useMemo(() => getOneYearLaterValue(), []);
+
+  const canUpload = organizations.length > 0 && !!selectedOrganizationId;
+  const pendingCount = pending.filter((p) => p.status === "pending").length;
+  const hasUploadable = canUpload && pendingCount > 0 && !isUploading;
+
+  const addFiles = (files: File[]) => {
+    if (files.length === 0) return;
+    const existingKeys = new Set(pending.map((p) => fileKey(p.file)));
+    const toAdd: PendingUpload[] = [];
+    for (const f of files) {
+      const key = fileKey(f);
+      if (existingKeys.has(key)) continue;
+      existingKeys.add(key);
+      const error = validateFile(f);
+      toAdd.push({
+        id: nextId(),
+        file: f,
+        status: error ? "error" : "pending",
+        error: error ?? undefined,
+        expiresAtInput: "",
+        expiryPreset: "indefinite",
+      });
+    }
+    const available = Math.max(MAX_CONCURRENT_UPLOADS - pending.length, 0);
+    if (toAdd.length > available) {
+      setLimitNotice(
+        `한 번에 최대 ${MAX_CONCURRENT_UPLOADS}개까지만 업로드할 수 있습니다.`,
+      );
+    } else {
+      setLimitNotice(null);
+    }
+    setPending((prev) => [...prev, ...toAdd.slice(0, available)]);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const chosen = e.target.files;
+    if (!chosen || chosen.length === 0) return;
+    addFiles(Array.from(chosen));
+    e.target.value = "";
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (!canUpload) return;
+    const dropped = e.dataTransfer.files;
+    if (!dropped || dropped.length === 0) return;
+    addFiles(Array.from(dropped));
+  };
+
+  const updatePendingExpiry = (id: string, value: string) => {
+    setPending((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              expiresAtInput: value,
+              expiryPreset: "custom",
+              expiryError: undefined,
+            }
+          : item,
+      ),
+    );
+  };
+
+  const applyPendingExpiryPreset = (
+    id: string,
+    preset: PendingExpiryPreset,
+  ) => {
+    const presetValues: Record<PendingExpiryPreset, string> = {
+      "current-semester": expiryPresets.currentSemester.value,
+      "next-semester": expiryPresets.nextSemester.value,
+      "one-year": oneYearLaterValue,
+      indefinite: "",
+      custom: todayDateValue,
+    };
+
+    setPending((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              expiryPreset: preset,
+              expiresAtInput:
+                preset === "custom" && item.expiresAtInput
+                  ? item.expiresAtInput
+                  : presetValues[preset],
+              expiryError: undefined,
+            }
+          : item,
+      ),
+    );
+  };
+
+  const uploadSingle = async (
+    item: PendingUpload,
+    expiresAt?: string,
+  ): Promise<void> => {
+    setPending((prev) =>
+      prev.map((p) =>
+        p.id === item.id ? { ...p, status: "uploading", error: undefined } : p,
+      ),
+    );
+    try {
+      const title = item.file.name.trim() || "제목 없음";
+      const doc = await uploadPdf(item.file, title, {
+        expiresAt,
+        organizationId: selectedOrganizationId,
+      });
+      onUploaded(doc);
+      setPending((prev) =>
+        prev.map((p) =>
+          p.id === item.id ? { ...p, status: "success", error: undefined } : p,
+        ),
+      );
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "업로드에 실패했습니다.";
+      setPending((prev) =>
+        prev.map((p) =>
+          p.id === item.id ? { ...p, status: "error", error: message } : p,
+        ),
+      );
+    }
+  };
+
+  const runQueue = async (items: PendingUpload[]) => {
+    if (items.length === 0 || !selectedOrganizationId) return;
+
+    const prepared = items.map((item) => ({
+      item,
+      parsed: parseFutureExpiresAt(item.expiresAtInput),
+    }));
+    const invalidById = new Map(
+      prepared
+        .filter(({ parsed }) => parsed.error)
+        .map(({ item, parsed }) => [item.id, parsed.error as string]),
+    );
+    if (invalidById.size > 0) {
+      setPending((prev) =>
+        prev.map((item) => ({
+          ...item,
+          expiryError: invalidById.get(item.id) ?? item.expiryError,
+        })),
+      );
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      await Promise.all(
+        prepared.map(({ item, parsed }) =>
+          uploadSingle(item, parsed.expiresAt),
+        ),
+      );
+      setPending((prev) => prev.filter((p) => p.status !== "success"));
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRetry = (id: string) => {
+    const target = pending.find((p) => p.id === id);
+    if (!target) return;
+    const error = validateFile(target.file);
+    if (error) {
+      setPending((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, status: "error", error } : p)),
+      );
+      return;
+    }
+    void runQueue([{ ...target, status: "pending", error: undefined }]);
+  };
+
+  const expiryOptions: Array<{ key: PendingExpiryPreset; label: string }> = [
+    { key: "current-semester", label: expiryPresets.currentSemester.label },
+    { key: "next-semester", label: expiryPresets.nextSemester.label },
+    { key: "one-year", label: "1년" },
+    { key: "indefinite", label: "무기한" },
+    { key: "custom", label: "직접 지정" },
+  ];
+
+  const renderPendingStatusBadge = (status: PendingStatus) => {
+    switch (status) {
+      case "pending":
+        return (
+          <span className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-700">
+            대기
+          </span>
+        );
+      case "uploading":
+        return (
+          <span className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-800">
+            업로드 중...
+          </span>
+        );
+      case "success":
+        return (
+          <span className="shrink-0 rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700">
+            전송 완료
+          </span>
+        );
+      case "error":
+        return (
+          <span className="shrink-0 rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-800">
+            실패
+          </span>
+        );
+    }
+  };
+
+  const renderExpiryDescription = (item: PendingUpload) => {
+    if (item.expiryPreset === "indefinite") {
+      return (
+        <>
+          <strong className="font-bold">무기한</strong>으로 저장됩니다.
+        </>
+      );
+    }
+    if (!item.expiresAtInput) return "유효기간을 선택해주세요.";
+    return (
+      <>
+        <strong className="font-bold">
+          {formatKoreanDate(item.expiresAtInput)}
+        </strong>
+        까지 유효
+      </>
+    );
+  };
+
+  return (
+    <section
+      aria-labelledby="pdf-upload-heading"
+      className="overflow-hidden rounded-lg border border-gray-200 bg-white"
+    >
+      <div className="border-b border-gray-200 p-6">
+        <h2
+          id="pdf-upload-heading"
+          className="text-xl font-semibold text-gray-900"
+        >
+          PDF 업로드
+        </h2>
+        <p className="mt-1 text-sm text-gray-500">
+          최대 {MAX_CONCURRENT_UPLOADS}개, 파일당 최대 {MAX_FILE_SIZE_MB}
+          MB까지 업로드할 수 있습니다.
+        </p>
+      </div>
+
+      <div className="p-6">
+        <label className="mb-4 block text-sm">
+          <span className="mb-1.5 block font-medium text-gray-700">
+            업로드 조직
+          </span>
+          {organizations.length === 0 ? (
+            <p className="rounded-md bg-gray-50 px-3 py-2.5 text-sm text-gray-500">
+              소속 조직이 없어 업로드할 수 없습니다.
+            </p>
+          ) : (
+            <select
+              value={selectedOrganizationId}
+              onChange={(e) => onOrganizationChange(e.target.value)}
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#df3326]"
+            >
+              {organizations.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.name}
+                  {org.isDefault ? " (기본)" : ""}
+                </option>
+              ))}
+            </select>
+          )}
+        </label>
+
+        <div
+          role="button"
+          tabIndex={canUpload ? 0 : -1}
+          aria-label="PDF 파일 선택"
+          aria-disabled={!canUpload}
+          onClick={() => {
+            if (canUpload) inputRef.current?.click();
+          }}
+          onKeyDown={(event) => {
+            if (!canUpload) return;
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              inputRef.current?.click();
+            }
+          }}
+          onDrop={handleDrop}
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (canUpload) setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          className={`flex min-h-[210px] flex-col items-center justify-center rounded-lg border-2 border-dashed px-5 py-8 text-center transition-colors ${
+            !canUpload
+              ? "cursor-not-allowed border-gray-200 bg-gray-50 opacity-60"
+              : isDragging
+                ? "cursor-pointer border-[#df3326] bg-red-50"
+                : "cursor-pointer border-gray-300 bg-gray-50/40 hover:border-gray-400 hover:bg-gray-50"
+          }`}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".pdf,application/pdf"
+            multiple
+            disabled={!canUpload}
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-50 text-[#df3326]">
+            <UploadIcon className="h-6 w-6" />
+          </span>
+          <p className="mt-4 text-sm font-medium text-gray-700 sm:text-base">
+            {canUpload
+              ? "클릭하거나 PDF를 드래그하세요"
+              : "조직에 소속된 후 업로드할 수 있습니다"}
+          </p>
+          <p className="mt-1 text-xs text-gray-500 sm:text-sm">
+            PDF만, 파일당 최대 {MAX_FILE_SIZE_MB}MB · 최대{" "}
+            {MAX_CONCURRENT_UPLOADS}개
+          </p>
+        </div>
+
+        <div className="mt-6">
+          <h3 className="text-sm font-medium text-gray-700 sm:text-base">
+            업로드 대기 ({pending.length})
+          </h3>
+
+          <div className="mt-3 space-y-3">
+            {pending.length === 0 ? (
+              <div className="rounded-lg border border-gray-200 px-5 py-8 text-center text-sm text-gray-500">
+                업로드할 PDF를 선택해주세요.
+              </div>
+            ) : (
+              pending.map((item) => (
+                <article
+                  key={item.id}
+                  className="rounded-lg border border-gray-200 bg-gray-50/40 p-4"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        <p className="max-w-full truncate font-medium text-gray-900">
+                          {item.file.name}
+                        </p>
+                        {renderPendingStatusBadge(item.status)}
+                      </div>
+                      <p className="mt-1 text-sm text-gray-500">
+                        {(item.file.size / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+                    {item.status !== "uploading" && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPending((prev) =>
+                            prev.filter((p) => p.id !== item.id),
+                          )
+                        }
+                        className="shrink-0 cursor-pointer text-sm font-medium text-red-500 hover:text-red-700"
+                      >
+                        제거
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {expiryOptions.map((option) => {
+                      const isSelected = item.expiryPreset === option.key;
+                      return (
+                        <button
+                          key={option.key}
+                          type="button"
+                          aria-pressed={isSelected}
+                          onClick={() =>
+                            applyPendingExpiryPreset(item.id, option.key)
+                          }
+                          disabled={item.status === "uploading"}
+                          className={`cursor-pointer rounded-md border px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                            isSelected
+                              ? "border-[#df3326] bg-red-50 text-[#df3326]"
+                              : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {item.expiryPreset === "custom" && (
+                    <label
+                      htmlFor={`pending-expires-at-${item.id}`}
+                      className="mt-4 block"
+                    >
+                      <span className="sr-only">유효기간 직접 지정</span>
+                      <input
+                        id={`pending-expires-at-${item.id}`}
+                        type="date"
+                        value={item.expiresAtInput}
+                        min={todayDateValue}
+                        onChange={(event) =>
+                          updatePendingExpiry(item.id, event.target.value)
+                        }
+                        disabled={item.status === "uploading"}
+                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 transition-all duration-150 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#df3326] disabled:opacity-50"
+                      />
+                    </label>
+                  )}
+
+                  <p className="mt-3 text-sm text-gray-500">
+                    {renderExpiryDescription(item)}
+                  </p>
+                  {item.expiryError && (
+                    <p className="mt-2 text-sm text-red-600">
+                      {item.expiryError}
+                    </p>
+                  )}
+                  {item.error && (
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <p className="text-sm text-red-600">{item.error}</p>
+                      <button
+                        type="button"
+                        onClick={() => handleRetry(item.id)}
+                        disabled={isUploading}
+                        className="cursor-pointer text-sm font-medium text-[#df3326] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        재시도
+                      </button>
+                    </div>
+                  )}
+                </article>
+              ))
+            )}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            const targets = pending.filter((p) => p.status === "pending");
+            void runQueue(targets);
+          }}
+          disabled={!hasUploadable}
+          className="mt-6 w-full cursor-pointer rounded-md bg-[#df3326] px-6 py-2.5 font-medium text-white transition-all duration-150 hover:bg-[#c72a1f] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isUploading
+            ? "업로드 중..."
+            : pendingCount > 0
+              ? `업로드 (${pendingCount}개)`
+              : "업로드"}
+        </button>
+
+        {limitNotice && (
+          <div
+            aria-live="polite"
+            className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-center text-sm text-red-600"
+          >
+            {limitNotice}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}

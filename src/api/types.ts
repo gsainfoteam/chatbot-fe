@@ -58,6 +58,60 @@ export type DocumentStatus =
   | "ready"
   | "failed";
 
+export type OrgEffectiveRole = "SUPER_ADMIN" | "MANAGER" | "MEMBER";
+export type OrgMemberRole = "MANAGER" | "MEMBER";
+export type OrgMembershipStatus = "PENDING" | "ACTIVE";
+export type DocumentAccessRelation = "OWNER" | "SHARED";
+
+export interface OrganizationSummary {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface Organization extends OrganizationSummary {
+  isDefault: boolean;
+  effectiveRole: OrgEffectiveRole;
+  createdAt: string;
+}
+
+export interface CreateOrganizationRequest {
+  name: string;
+  slug: string;
+}
+
+export interface InviteOrgMemberRequest {
+  inviteeEmail: string;
+  role: OrgMemberRole;
+}
+
+export interface UpdateOrgMemberRoleRequest {
+  role: OrgMemberRole;
+}
+
+export interface OrgMembership {
+  id: string;
+  inviteeEmail: string;
+  role: OrgMemberRole;
+  status: OrgMembershipStatus;
+  createdAt: string;
+  /** ACTIVE 멤버에만 존재할 수 있음 */
+  userId?: string | null;
+  userName?: string | null;
+}
+
+export interface OrgInvitation extends OrgMembership {
+  organizationId: string;
+  organizationName: string;
+  organizationSlug: string;
+}
+
+export interface DocumentUploader {
+  idpUuid: string;
+  email: string;
+  name: string;
+}
+
 export interface DocumentItem {
   id: string;
   title: string;
@@ -72,6 +126,13 @@ export interface DocumentItem {
   reprocessAvailableAt: string | null;
   expiresAt: string | null;
   isExpired: boolean;
+  ownerOrganization?: OrganizationSummary;
+  uploader?: DocumentUploader | null;
+  sharedOrganizations?: OrganizationSummary[];
+  accessRelation?: DocumentAccessRelation;
+  canManage?: boolean;
+  canShare?: boolean;
+  canTransfer?: boolean;
 }
 
 export interface ChatMessage {

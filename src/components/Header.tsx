@@ -1,11 +1,6 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import {
-  getToken,
-  useVerifyToken,
-  logoutFromOAuth2,
-  revokeToken,
-} from "../api/auth";
+import { getToken, logoutFromOAuth2, revokeToken } from "../api/auth";
 import {
   BookIcon,
   KeyIcon,
@@ -15,12 +10,8 @@ import {
   UploadIcon,
 } from "./Icons";
 
-const SUPER_ADMIN = "SUPER_ADMIN";
-
 export default function Header() {
   const hasToken = !!getToken();
-  const { data: verifyData } = useVerifyToken(hasToken);
-  const isSuperAdmin = verifyData?.role === SUPER_ADMIN;
   const isAuthenticated = hasToken;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -86,13 +77,13 @@ export default function Header() {
               <ChartBarIcon className="w-4 h-4" />
               대시보드
             </Link>
-            {isSuperAdmin && (
+            {isAuthenticated && (
               <Link
                 to="/upload"
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200 inline-flex items-center gap-1.5"
               >
                 <UploadIcon className="w-4 h-4" />
-                파일추가
+                문서 관리
               </Link>
             )}
             {isAuthenticated && (
@@ -154,13 +145,14 @@ export default function Header() {
             >
               <KeyIcon className="w-4 h-4" />키 발급
             </Link>
-            {isSuperAdmin && (
+            {isAuthenticated && (
               <Link
                 to="/upload"
+                onClick={closeMobileMenu}
                 className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200 w-full justify-start"
               >
                 <UploadIcon className="w-4 h-4" />
-                파일추가
+                문서 관리
               </Link>
             )}
             {isAuthenticated && (

@@ -68,7 +68,7 @@ function throwAdminUploadError(
   }
   if (status === 403) {
     throw new AdminUploadApiError(
-      "Super Admin만 사용할 수 있습니다.",
+      message || "이 작업을 수행할 권한이 없습니다.",
       status,
     );
   }
@@ -78,7 +78,7 @@ function throwAdminUploadError(
   throw new AdminUploadApiError(message, status, retryAt);
 }
 
-/** 내가 업로드한 문서 목록 조회 (Super Admin) */
+/** 내가 업로드한 문서 목록 조회 */
 export async function getUploadList(
   params?: GetUploadListParams,
 ): Promise<DocumentItem[]> {
@@ -100,6 +100,29 @@ export async function getUploadList(
   }
 }
 
+/** 내가 관리할 수 있는 문서 전체 (여러 조직 합침) */
+export async function getManageableUploads(
+  params?: GetUploadListParams,
+): Promise<DocumentItem[]> {
+  const requestParams: { limit?: number; offset?: number } = {};
+  if (params?.limit != null) {
+    requestParams.limit = Math.min(100, Math.max(1, params.limit));
+  }
+  if (params?.offset != null && params.offset >= 0) {
+    requestParams.offset = params.offset;
+  }
+
+  try {
+    const res = await apiClient.get<DocumentItem[]>(
+      "/v1/admin/upload/manageable",
+      { params: requestParams },
+    );
+    return res.data;
+  } catch (err) {
+    throwAdminUploadError(err, "관리 문서 목록을 불러오는데 실패했습니다.");
+  }
+}
+
 /** 단건 문서 조회 */
 export async function getUploadById(
   id: string,
@@ -117,17 +140,30 @@ export async function getUploadById(
   }
 }
 
-/** PDF 업로드 (multipart/form-data). */
+export interface UploadPdfOptions {
+  expiresAt?: string;
+  organizationId?: string;
+}
+
+/** PDF 업로드 (multipart/form-data). organizationId 생략 시 백엔드 기본 조직 사용. */
 export async function uploadPdf(
   file: File,
   title: string,
-  expiresAt?: string,
+  expiresAtOrOptions?: string | UploadPdfOptions,
 ): Promise<DocumentItem> {
+  const options: UploadPdfOptions =
+    typeof expiresAtOrOptions === "string"
+      ? { expiresAt: expiresAtOrOptions }
+      : (expiresAtOrOptions ?? {});
+
   const formData = new FormData();
   formData.append("file", file);
   formData.append("title", title.trim());
-  if (expiresAt) {
-    formData.append("expiresAt", expiresAt);
+  if (options.expiresAt) {
+    formData.append("expiresAt", options.expiresAt);
+  }
+  if (options.organizationId) {
+    formData.append("organizationId", options.organizationId);
   }
 
   try {
@@ -156,6 +192,58 @@ export async function uploadPdf(
       throw new AdminUploadApiError(DUPLICATE_UPLOAD_MESSAGE, status);
     }
     throwAdminUploadError(err, message);
+  }
+}
+
+/** 다른 조직에 문서 공유 (조회권) */
+export async function shareUpload(
+  documentId: string,
+  organizationId: string,
+): Promise<DocumentItem> {
+  try {
+    const res = await apiClient.put<DocumentItem>(
+      `/v1/admin/upload/${documentId}/shares/${organizationId}`,
+    );
+    return res.data;
+  } catch (err) {
+    throwAdminUploadError(err, "문서 공유에 실패했습니다.", {
+      404: "문서 또는 조직을 찾을 수 없습니다.",
+    });
+  }
+}
+
+/** 문서 공유 해제 */
+export async function unshareUpload(
+  documentId: string,
+  organizationId: string,
+): Promise<DocumentItem> {
+  try {
+    const res = await apiClient.delete<DocumentItem>(
+      `/v1/admin/upload/${documentId}/shares/${organizationId}`,
+    );
+    return res.data;
+  } catch (err) {
+    throwAdminUploadError(err, "공유 해제에 실패했습니다.", {
+      404: "문서 또는 공유 정보를 찾을 수 없습니다.",
+    });
+  }
+}
+
+/** 문서 소유권 이양 */
+export async function transferUpload(
+  documentId: string,
+  targetOrganizationId: string,
+): Promise<DocumentItem> {
+  try {
+    const res = await apiClient.post<DocumentItem>(
+      `/v1/admin/upload/${documentId}/transfer`,
+      { targetOrganizationId },
+    );
+    return res.data;
+  } catch (err) {
+    throwAdminUploadError(err, "소유권 이양에 실패했습니다.", {
+      404: "문서 또는 조직을 찾을 수 없습니다.",
+    });
   }
 }
 
