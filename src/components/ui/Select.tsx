@@ -137,7 +137,7 @@ export default function Select({
           aria-invalid={error ? true : undefined}
           className={joinClasses(
             "flex w-full cursor-pointer items-center justify-between gap-2 border text-left text-sm text-gray-900 transition-colors",
-            "hover:border-gray-300 focus:border-[var(--color-primary)] focus:outline-none focus:ring-0 data-[state=open]:border-[var(--color-primary)]",
+            "hover:border-gray-300 focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/25 data-[state=open]:border-[var(--color-primary)] data-[state=open]:ring-2 data-[state=open]:ring-[var(--color-primary)]/25",
             "data-[placeholder]:text-gray-400 disabled:cursor-not-allowed disabled:opacity-50",
             triggerVariantClasses[variant],
             triggerSizeClasses[size],
