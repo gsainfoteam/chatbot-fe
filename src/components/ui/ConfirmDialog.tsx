@@ -59,7 +59,7 @@ export default function ConfirmDialog({
       description={description}
       size="sm"
       closeDisabled={loading}
-      bodyClassName="space-y-4 empty:hidden"
+      bodyClassName="space-y-4"
       footer={
         <>
           <Button

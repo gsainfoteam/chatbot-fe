@@ -137,7 +137,7 @@ export default function Select({
           aria-invalid={error ? true : undefined}
           className={joinClasses(
             "flex w-full cursor-pointer items-center justify-between gap-2 border text-left text-sm text-gray-900 transition-colors",
-            "hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/25",
+            "hover:border-gray-300 focus:border-[var(--color-primary)] focus:outline-none focus:ring-0 data-[state=open]:border-[var(--color-primary)]",
             "data-[placeholder]:text-gray-400 disabled:cursor-not-allowed disabled:opacity-50",
             triggerVariantClasses[variant],
             triggerSizeClasses[size],
@@ -161,7 +161,7 @@ export default function Select({
           <SelectPrimitive.Content
             position="popper"
             sideOffset={4}
-            className="z-[70] max-h-[var(--radix-select-content-available-height)] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+            className="z-[70] max-h-[var(--radix-select-content-available-height)] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
           >
             <SelectPrimitive.Viewport className="max-h-60 overflow-y-auto p-1">
               {options.map((option) => (

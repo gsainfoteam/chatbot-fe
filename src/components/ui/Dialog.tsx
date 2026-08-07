@@ -86,7 +86,7 @@ export default function Dialog({
 
           <div
             className={joinClasses(
-              "min-h-0 overflow-y-auto p-5",
+              "peer min-h-0 overflow-y-auto p-5 empty:hidden",
               bodyClassName,
             )}
           >
@@ -94,7 +94,7 @@ export default function Dialog({
           </div>
 
           {footer && (
-            <footer className="flex shrink-0 justify-end gap-2 border-t border-gray-200 px-5 py-4">
+            <footer className="flex shrink-0 justify-end gap-2 border-t border-gray-200 px-5 py-4 peer-empty:border-t-0">
               {footer}
             </footer>
           )}
