@@ -23,6 +23,7 @@ ChatbotWidget.close();
 
 // 패널 크기 변경 (허용 범위: 320~640 x 420~720px)
 ChatbotWidget.resize(420, 640);
+// 모바일에서는 설정값만 변경되며, 데스크톱 레이아웃으로 전환할 때 적용됩니다.
 
 // 자체 버튼을 사용하는 경우 기본 런처 제어
 ChatbotWidget.hideLauncher();
