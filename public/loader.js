@@ -214,7 +214,6 @@
     }
   }
   applyResponsive();
-  mq.addEventListener?.("change", applyResponsive);
 
   const iframe = document.createElement("iframe");
   // pageUrl을 URL에 포함시켜 postMessage 타이밍에 의존하지 않고 즉시 사용 가능하게 함
@@ -241,9 +240,15 @@
     cursor:${config.position === "right" ? "nwse-resize" : "nesw-resize"};
     touch-action:none;
     z-index:1;
-    display:${config.resizable ? "block" : "none"};
+    display:${!mq.matches && config.resizable ? "block" : "none"};
   `;
   wrap.appendChild(resizeHandle);
+
+  mq.addEventListener?.("change", () => {
+    applyResponsive();
+    resizeHandle.style.display =
+      !mq.matches && config.resizable ? "block" : "none";
+  });
 
   // ---- 상태 ----
   let isOpen = false;

@@ -64,7 +64,7 @@ class ElementStub extends EventTargetStub {
   }
 }
 
-function loadWidget(dataset = {}) {
+function loadWidget(dataset = {}, { mobile = false } = {}) {
   const window = new EventTargetStub();
   const body = new ElementStub("body");
   const script = new ElementStub("script");
@@ -76,6 +76,18 @@ function loadWidget(dataset = {}) {
     body,
     createElement: (tagName) => new ElementStub(tagName),
   };
+  const mediaQuery = {
+    matches: mobile,
+    listeners: [],
+    addEventListener(type, handler) {
+      if (type === "change") this.listeners.push(handler);
+    },
+    setMatches(matches) {
+      this.matches = matches;
+      for (const handler of this.listeners) handler({ matches });
+    },
+  };
+
   Object.assign(window, {
     self: window,
     top: window,
@@ -85,7 +97,7 @@ function loadWidget(dataset = {}) {
       pathname: "/",
       href: "https://example.com/page",
     },
-    matchMedia: () => ({ matches: false, addEventListener() {} }),
+    matchMedia: () => mediaQuery,
   });
 
   class CustomEventStub {
@@ -106,7 +118,7 @@ function loadWidget(dataset = {}) {
   });
 
   const [overlay, launcher, panel] = body.children;
-  return { window, overlay, launcher, panel };
+  return { window, overlay, launcher, panel, mediaQuery };
 }
 
 test("keeps the existing launcher and panel layout by default", () => {
@@ -153,4 +165,20 @@ test("resizes within the documented desktop bounds", () => {
   const maximum = window.ChatbotWidget.resize(2000, 2000);
   assert.equal(maximum.width, 640);
   assert.equal(maximum.height, 720);
+});
+
+test("shows the resize handle only for resizable desktop layouts", () => {
+  const { panel, mediaQuery } = loadWidget({}, { mobile: true });
+  const resizeHandle = panel.children[1];
+
+  assert.equal(resizeHandle.style.display, "none");
+
+  mediaQuery.setMatches(false);
+  assert.equal(resizeHandle.style.display, "block");
+
+  mediaQuery.setMatches(true);
+  assert.equal(resizeHandle.style.display, "none");
+
+  const disabled = loadWidget({ resizable: "false" });
+  assert.equal(disabled.panel.children[1].style.display, "none");
 });
