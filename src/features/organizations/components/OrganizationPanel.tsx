@@ -6,12 +6,6 @@ import { Button, Dialog } from "../../../components/ui";
 import { organizationRoleLabel } from "../utils";
 import MemberManageModal from "./MemberManageModal";
 import OrganizationAvatar from "./OrganizationAvatar";
-import {
-  loadOrganizationAvatarPresets,
-  ORGANIZATION_AVATAR_PRESETS,
-  saveOrganizationAvatarPresets,
-  type OrganizationAvatarPresetId,
-} from "./organizationAvatarPresets";
 
 interface OrganizationPanelProps {
   organizations: Organization[];
@@ -55,11 +49,6 @@ export default function OrganizationPanel({
   const [formError, setFormError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [managingOrg, setManagingOrg] = useState<Organization | null>(null);
-  const [selectedAvatarPresetId, setSelectedAvatarPresetId] =
-    useState<OrganizationAvatarPresetId>("campus-red");
-  const [avatarPresets, setAvatarPresets] = useState(
-    loadOrganizationAvatarPresets,
-  );
 
   useEffect(() => {
     if (!managingOrg) return;
@@ -102,19 +91,12 @@ export default function OrganizationPanel({
     setCreating(true);
     setFormError(null);
     try {
-      const createdOrganization = await createOrganization({
+      await createOrganization({
         name: trimmedName,
         slug: trimmedSlug,
       });
-      const nextAvatarPresets = {
-        ...avatarPresets,
-        [createdOrganization.id]: selectedAvatarPresetId,
-      };
-      setAvatarPresets(nextAvatarPresets);
-      saveOrganizationAvatarPresets(nextAvatarPresets);
       setName("");
       setSlug("");
-      setSelectedAvatarPresetId("campus-red");
       setShowCreate(false);
       onRefresh();
     } catch (err) {
@@ -212,7 +194,6 @@ export default function OrganizationPanel({
                     <OrganizationAvatar
                       organizationKey={org.id}
                       organizationName={org.name}
-                      presetId={avatarPresets[org.id]}
                     />
                     <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-900">
                       {org.name}
@@ -288,40 +269,6 @@ export default function OrganizationPanel({
           </>
         }
       >
-        <fieldset>
-          <legend className="mb-2 block text-sm font-medium text-gray-700">
-            조직 이미지
-          </legend>
-          <div className="grid grid-cols-3 gap-2">
-            {ORGANIZATION_AVATAR_PRESETS.map((preset) => {
-              const isSelected = selectedAvatarPresetId === preset.id;
-              return (
-                <button
-                  key={preset.id}
-                  type="button"
-                  aria-pressed={isSelected}
-                  onClick={() => setSelectedAvatarPresetId(preset.id)}
-                  className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border bg-white px-2 py-3 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/25 ${
-                    isSelected
-                      ? "border-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/20"
-                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  <OrganizationAvatar
-                    organizationKey={preset.id}
-                    organizationName="미리보기"
-                    presetId={preset.id}
-                    className="h-11 w-11"
-                    iconClassName="h-5 w-5"
-                  />
-                  <span className="text-xs font-medium text-gray-600">
-                    {preset.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </fieldset>
         <label className="block text-sm">
           <span className="mb-1.5 block font-medium text-gray-700">
             조직 이름
