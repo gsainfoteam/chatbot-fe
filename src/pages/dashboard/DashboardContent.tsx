@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { getWidgetKeysUsage } from "../../api/usage";
 import { getWidgetKeys } from "../../api/widgetKeys";
-import FilterSelect from "../../components/FilterSelect";
+import { Select } from "../../components/ui";
 import type { UsageData, DomainStat } from "../../api/types";
 import ChartTooltip from "./components/ChartTooltip";
 import {
@@ -250,10 +250,10 @@ export default function DashboardContent() {
         {/* Filters */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
           <div className="flex flex-wrap gap-4 items-end">
-            <FilterSelect
+            <Select
               label="위젯 키"
               value={selectedWidgetKey}
-              onChange={handleWidgetKeyChange}
+              onValueChange={handleWidgetKeyChange}
               options={[
                 { value: "all", label: "모든 위젯 키" },
                 ...widgetKeys.map((key) => ({
@@ -270,20 +270,20 @@ export default function DashboardContent() {
               width="lg"
               disabled={keysLoading}
             />
-            <FilterSelect
+            <Select
               label="출처(도메인 또는 앱 ID)"
               value={selectedDomain}
-              onChange={setSelectedDomain}
+              onValueChange={setSelectedDomain}
               options={[
                 { value: "all", label: "모든 출처" },
                 ...sources.map((source) => ({ value: source, label: source })),
               ]}
               width="lg"
             />
-            <FilterSelect
+            <Select
               label="기간"
               value={dateRange}
-              onChange={(v) => setDateRange(v as "7d" | "30d" | "90d")}
+              onValueChange={(v) => setDateRange(v as "7d" | "30d" | "90d")}
               options={[
                 { value: "7d", label: "최근 7일" },
                 { value: "30d", label: "최근 30일" },
@@ -291,10 +291,10 @@ export default function DashboardContent() {
               ]}
               width="sm"
             />
-            <FilterSelect
+            <Select
               label="그룹화"
               value={groupBy}
-              onChange={(v) => setGroupBy(v as "1d" | "7d" | "30d")}
+              onValueChange={(v) => setGroupBy(v as "1d" | "7d" | "30d")}
               options={[
                 { value: "1d", label: "일별" },
                 { value: "7d", label: "주별" },

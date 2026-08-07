@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   getOrganizationMembers,
   inviteOrganizationMember,
@@ -45,7 +45,7 @@ export default function MemberManageModal({
   const [inviteLoading, setInviteLoading] = useState(false);
   const [actingId, setActingId] = useState<string | null>(null);
 
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     setError(null);
     try {
       setLoading(true);
@@ -58,11 +58,11 @@ export default function MemberManageModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [organization.id]);
 
   useEffect(() => {
     void fetchMembers();
-  }, [organization.id]);
+  }, [fetchMembers]);
 
   const handleInvite = async () => {
     const validation = validateEmail(inviteEmail);
