@@ -15,7 +15,7 @@ import {
   RefreshIcon,
   TrashIcon,
 } from "../../../components/Icons";
-import { Select } from "../../../components/ui";
+import { Button, ConfirmDialog, Select } from "../../../components/ui";
 import ShareTransferModal from "./ShareTransferModal";
 import {
   formatKoreanDate,
@@ -44,6 +44,15 @@ interface ExpiryEditState {
 }
 
 type ShareMode = "share" | "unshare" | "transfer";
+
+type PendingDocumentAction =
+  | { type: "delete"; document: DocumentItem }
+  | { type: "reprocess"; document: DocumentItem }
+  | {
+      type: "expiry";
+      document: DocumentItem;
+      nextExpiresAt: string | null;
+    };
 
 function getCooldownLabel(
   reprocessAvailableAt: string | null,
@@ -136,12 +145,11 @@ export default function DocumentListSection({
   onDocumentsChange,
 }: DocumentListSectionProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [reprocessingId, setReprocessingId] = useState<string | null>(null);
-  const [reprocessError, setReprocessError] = useState<string | null>(null);
   const [expiryEdit, setExpiryEdit] = useState<ExpiryEditState | null>(null);
   const [updatingExpiryId, setUpdatingExpiryId] = useState<string | null>(null);
-  const [expiryError, setExpiryError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] =
+    useState<PendingDocumentAction | null>(null);
   const [openDocumentMenuId, setOpenDocumentMenuId] = useState<string | null>(
     null,
   );
@@ -242,7 +250,6 @@ export default function DocumentListSection({
   }, [cooldownKey, documents, onDocumentsChange]);
 
   const handleDelete = async (id: string) => {
-    setDeleteError(null);
     try {
       setDeletingId(id);
       await deleteUpload(id);
@@ -251,26 +258,18 @@ export default function DocumentListSection({
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "삭제에 실패했습니다.";
-      setDeleteError(message);
       if (message === "이미 삭제되었거나 존재하지 않는 파일입니다.") {
         onDocumentsChange((prev) => prev.filter((item) => item.id !== id));
-        setDeleteError(null);
         if (expiryEdit?.id === id) setExpiryEdit(null);
+        return;
       }
+      throw new Error(message);
     } finally {
       setDeletingId(null);
     }
   };
 
-  const confirmDelete = (item: DocumentItem) => {
-    const confirmed = window.confirm(
-      `"${item.title}" 문서를 삭제하시겠습니까?\n삭제한 문서는 복구할 수 없습니다.`,
-    );
-    if (confirmed) void handleDelete(item.id);
-  };
-
   const handleReprocess = async (id: string) => {
-    setReprocessError(null);
     try {
       setReprocessingId(id);
       const doc = await reprocessUpload(id);
@@ -293,7 +292,7 @@ export default function DocumentListSection({
           ),
         );
       }
-      setReprocessError(
+      throw new Error(
         err instanceof Error ? err.message : "재처리 요청에 실패했습니다.",
       );
     } finally {
@@ -301,15 +300,7 @@ export default function DocumentListSection({
     }
   };
 
-  const confirmReprocess = (id: string) => {
-    const confirmed = window.confirm(
-      "이 작업은 PDF 전체를 다시 처리하며 API 비용이 발생합니다.\n정말 재처리하시겠습니까?",
-    );
-    if (confirmed) void handleReprocess(id);
-  };
-
   const openExpiryEdit = (item: DocumentItem) => {
-    setExpiryError(null);
     setExpiryEdit({
       id: item.id,
       mode: item.expiresAt === null ? "indefinite" : "date",
@@ -318,9 +309,8 @@ export default function DocumentListSection({
     });
   };
 
-  const handleSaveExpiry = async () => {
+  const requestExpiryUpdate = () => {
     if (!expiryEdit) return;
-    setExpiryError(null);
 
     let nextExpiresAt: string | null = null;
     if (expiryEdit.mode === "date") {
@@ -339,23 +329,31 @@ export default function DocumentListSection({
       nextExpiresAt = parsed.expiresAt;
     }
 
-    const confirmed = window.confirm(
-      nextExpiresAt === null
-        ? "이 문서의 유효기간을 무기한으로 변경하시겠습니까?"
-        : `이 문서의 유효기간을 ${formatKoreanDate(nextExpiresAt)}까지로 변경하시겠습니까?`,
-    );
-    if (!confirmed) return;
+    const document = documents.find((item) => item.id === expiryEdit.id);
+    if (!document) {
+      setExpiryEdit((prev) =>
+        prev ? { ...prev, error: "문서를 찾을 수 없습니다." } : prev,
+      );
+      return;
+    }
 
+    setPendingAction({ type: "expiry", document, nextExpiresAt });
+  };
+
+  const handleUpdateExpiry = async (
+    id: string,
+    nextExpiresAt: string | null,
+  ) => {
     try {
-      setUpdatingExpiryId(expiryEdit.id);
-      const doc = await updateUploadExpiry(expiryEdit.id, nextExpiresAt);
+      setUpdatingExpiryId(id);
+      const doc = await updateUploadExpiry(id, nextExpiresAt);
       onDocumentsChange((prev) => upsertDocument(prev, doc));
       setExpiryEdit(null);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "유효기간 변경에 실패했습니다.";
-      setExpiryError(message);
       setExpiryEdit((prev) => (prev ? { ...prev, error: message } : prev));
+      throw new Error(message);
     } finally {
       setUpdatingExpiryId(null);
     }
@@ -408,11 +406,6 @@ export default function DocumentListSection({
       </div>
 
       <div className="document-list-scroll flex-1 p-4 sm:p-6">
-        {(deleteError || reprocessError || expiryError) && (
-          <div className="mb-3 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-            {deleteError || reprocessError || expiryError}
-          </div>
-        )}
         {pollingError && (
           <div className="mb-3 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
             {pollingError}
@@ -601,7 +594,10 @@ export default function DocumentListSection({
                               role="menuitem"
                               onClick={() => {
                                 setOpenDocumentMenuId(null);
-                                confirmReprocess(item.id);
+                                setPendingAction({
+                                  type: "reprocess",
+                                  document: item,
+                                });
                               }}
                               disabled={
                                 !canRequestReprocess ||
@@ -685,7 +681,10 @@ export default function DocumentListSection({
                                 role="menuitem"
                                 onClick={() => {
                                   setOpenDocumentMenuId(null);
-                                  confirmDelete(item);
+                                  setPendingAction({
+                                    type: "delete",
+                                    document: item,
+                                  });
                                 }}
                                 disabled={deletingId === item.id}
                                 className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -781,24 +780,19 @@ export default function DocumentListSection({
                         </p>
                       )}
                       <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => void handleSaveExpiry()}
+                        <Button
+                          onClick={requestExpiryUpdate}
                           disabled={updatingExpiryId === item.id}
-                          className="cursor-pointer rounded-md bg-[#df3326] px-4 py-2 text-sm font-medium text-white hover:bg-[#c72a1f] disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          {updatingExpiryId === item.id
-                            ? "저장 중..."
-                            : "저장"}
-                        </button>
-                        <button
-                          type="button"
+                          저장
+                        </Button>
+                        <Button
+                          variant="secondary"
                           onClick={() => setExpiryEdit(null)}
                           disabled={updatingExpiryId === item.id}
-                          className="cursor-pointer rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           닫기
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -833,6 +827,61 @@ export default function DocumentListSection({
               return upsertDocument(prev, doc);
             });
           }}
+        />
+      )}
+
+      {pendingAction?.type === "delete" && (
+        <ConfirmDialog
+          open
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) setPendingAction(null);
+          }}
+          title="문서를 삭제할까요?"
+          description={`"${pendingAction.document.title}" 문서를 삭제합니다.\n삭제한 문서는 복구할 수 없습니다.`}
+          confirmLabel="문서 삭제"
+          loadingLabel="삭제 중..."
+          variant="danger"
+          fallbackErrorMessage="문서 삭제에 실패했습니다."
+          onConfirm={() => handleDelete(pendingAction.document.id)}
+        />
+      )}
+
+      {pendingAction?.type === "reprocess" && (
+        <ConfirmDialog
+          open
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) setPendingAction(null);
+          }}
+          title="문서를 재처리할까요?"
+          description={`"${pendingAction.document.title}" 문서의 PDF 전체를 다시 처리합니다.\n재처리 과정에서 API 비용이 발생합니다.`}
+          confirmLabel="재처리"
+          loadingLabel="재처리 중..."
+          fallbackErrorMessage="문서 재처리 요청에 실패했습니다."
+          onConfirm={() => handleReprocess(pendingAction.document.id)}
+        />
+      )}
+
+      {pendingAction?.type === "expiry" && (
+        <ConfirmDialog
+          open
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) setPendingAction(null);
+          }}
+          title="유효기간을 변경할까요?"
+          description={`"${pendingAction.document.title}" 문서의 유효기간을 ${
+            pendingAction.nextExpiresAt === null
+              ? "무기한"
+              : `${formatKoreanDate(pendingAction.nextExpiresAt)}까지`
+          }로 변경합니다.`}
+          confirmLabel="유효기간 변경"
+          loadingLabel="변경 중..."
+          fallbackErrorMessage="유효기간 변경에 실패했습니다."
+          onConfirm={() =>
+            handleUpdateExpiry(
+              pendingAction.document.id,
+              pendingAction.nextExpiresAt,
+            )
+          }
         />
       )}
     </section>
