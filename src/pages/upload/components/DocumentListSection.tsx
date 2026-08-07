@@ -6,6 +6,11 @@ import {
   reprocessUpload,
   updateUploadExpiry,
 } from "../../../api/upload";
+import type {
+  AccessibleUploadPage,
+  AccessibleUploadSort,
+  AccessibleUploadStatus,
+} from "../../../api/upload";
 import type { DocumentItem, DocumentStatus, Organization } from "../../../api/types";
 import {
   CalendarIcon,
@@ -30,7 +35,6 @@ import ShareTransferModal from "./ShareTransferModal";
 import {
   formatKoreanDate,
   getResourceLink,
-  normalizeSearchText,
   parseFutureExpiresAt,
   toDateInputValue,
 } from "../utils";
@@ -42,6 +46,14 @@ interface DocumentListSectionProps {
   listLoading: boolean;
   listError: string | null;
   pollingError: string | null;
+  searchQuery: string;
+  statusFilter: AccessibleUploadStatus;
+  sortOrder: AccessibleUploadSort;
+  pageInfo: AccessibleUploadPage;
+  onSearchQueryChange: (query: string) => void;
+  onStatusFilterChange: (status: AccessibleUploadStatus) => void;
+  onSortOrderChange: (sort: AccessibleUploadSort) => void;
+  onPageChange: (page: number) => void;
   onRetryFetch: () => void;
   onDocumentsChange: (updater: (prev: DocumentItem[]) => DocumentItem[]) => void;
   onDocumentMutation: (
@@ -59,13 +71,6 @@ interface ExpiryEditState {
 }
 
 type ShareMode = "share" | "unshare" | "transfer";
-type DocumentStatusFilter =
-  | "all"
-  | "active"
-  | "processing"
-  | "failed"
-  | "expired";
-type DocumentSortOrder = "recent" | "name" | "expiry";
 
 const STATUS_FILTER_OPTIONS = [
   { value: "all", label: "상태 전체" },
@@ -168,7 +173,7 @@ function isDocumentVisibleForFilter(
   document: DocumentItem,
   organizationId: string | "all",
 ): boolean {
-  if (organizationId === "all") return document.canManage !== false;
+  if (organizationId === "all") return true;
   return (
     document.ownerOrganization?.id === organizationId ||
     (document.sharedOrganizations ?? []).some(
@@ -184,6 +189,14 @@ export default function DocumentListSection({
   listLoading,
   listError,
   pollingError,
+  searchQuery,
+  statusFilter,
+  sortOrder,
+  pageInfo,
+  onSearchQueryChange,
+  onStatusFilterChange,
+  onSortOrderChange,
+  onPageChange,
   onRetryFetch,
   onDocumentsChange,
   onDocumentMutation,
@@ -199,72 +212,12 @@ export default function DocumentListSection({
     null,
   );
   const [currentTime, setCurrentTime] = useState(() => Date.now());
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] =
-    useState<DocumentStatusFilter>("all");
-  const [sortOrder, setSortOrder] =
-    useState<DocumentSortOrder>("recent");
   const [shareModal, setShareModal] = useState<{
     document: DocumentItem;
     mode: ShareMode;
   } | null>(null);
   const documentMenuRef = useRef<HTMLDivElement>(null);
   const todayDateValue = useMemo(() => toDateInputValue(new Date()), []);
-  const filteredDocuments = useMemo(() => {
-    const query = normalizeSearchText(searchQuery);
-    const nextDocuments = documents.filter((item) => {
-      const matchesStatus = (() => {
-        switch (statusFilter) {
-          case "all":
-            return true;
-          case "active":
-            return item.status === "ready" && !item.isExpired;
-          case "processing":
-            return (
-              item.status === "uploading" ||
-              item.status === "queued" ||
-              item.status === "processing"
-            );
-          case "failed":
-            return item.status === "failed";
-          case "expired":
-            return item.isExpired;
-        }
-      })();
-      if (!matchesStatus) return false;
-      if (!query) return true;
-      return [
-        item.title,
-        item.resourceName,
-        item.ownerOrganization?.name,
-        item.uploader?.name,
-        item.uploader?.email,
-      ].some(
-        (value) => value != null && normalizeSearchText(value).includes(query),
-      );
-    });
-
-    return nextDocuments.sort((a, b) => {
-      switch (sortOrder) {
-        case "recent":
-          return (
-            new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
-          );
-        case "name":
-          return a.title.localeCompare(b.title, "ko");
-        case "expiry": {
-          if (a.isExpired !== b.isExpired) return a.isExpired ? 1 : -1;
-          const aExpiry = a.expiresAt
-            ? new Date(a.expiresAt).getTime()
-            : Number.POSITIVE_INFINITY;
-          const bExpiry = b.expiresAt
-            ? new Date(b.expiresAt).getTime()
-            : Number.POSITIVE_INFINITY;
-          return aExpiry - bExpiry;
-        }
-      }
-    });
-  }, [documents, searchQuery, sortOrder, statusFilter]);
 
   const expiryDocument = expiryEdit
     ? (documents.find((item) => item.id === expiryEdit.id) ?? null)
@@ -475,7 +428,7 @@ export default function DocumentListSection({
           <input
             type="search"
             value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
+            onChange={(event) => onSearchQueryChange(event.target.value)}
             placeholder="문서 검색"
             className="h-10 w-full rounded-lg border border-gray-200 bg-white pr-4 pl-10 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/25"
           />
@@ -485,7 +438,7 @@ export default function DocumentListSection({
             ariaLabel="문서 상태 필터"
             value={statusFilter}
             onValueChange={(value) =>
-              setStatusFilter(value as DocumentStatusFilter)
+              onStatusFilterChange(value as AccessibleUploadStatus)
             }
             options={STATUS_FILTER_OPTIONS}
             variant="form"
@@ -497,7 +450,7 @@ export default function DocumentListSection({
             ariaLabel="문서 정렬"
             value={sortOrder}
             onValueChange={(value) =>
-              setSortOrder(value as DocumentSortOrder)
+              onSortOrderChange(value as AccessibleUploadSort)
             }
             options={SORT_OPTIONS}
             variant="form"
@@ -536,15 +489,13 @@ export default function DocumentListSection({
           </div>
         ) : documents.length === 0 ? (
           <div className="flex min-h-[240px] items-center justify-center rounded-lg border border-gray-200 bg-white text-sm text-gray-500">
-            표시할 문서가 없습니다.
-          </div>
-        ) : filteredDocuments.length === 0 ? (
-          <div className="flex min-h-[240px] items-center justify-center rounded-lg border border-gray-200 bg-white text-sm text-gray-500">
-            조건에 맞는 문서가 없습니다.
+            {searchQuery.trim() || statusFilter !== "all"
+              ? "조건에 맞는 문서가 없습니다."
+              : "표시할 문서가 없습니다."}
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredDocuments.map((item) => {
+            {documents.map((item) => {
               const isMenuOpen = openDocumentMenuId === item.id;
               const canView =
                 item.status === "ready" && item.gcsPdfPath != null;
@@ -819,6 +770,38 @@ export default function DocumentListSection({
           </div>
         )}
       </div>
+
+      {!listLoading &&
+        !listError &&
+        !organizationEmptyMessage &&
+        pageInfo.filteredTotal > 0 && (
+          <nav
+            aria-label="문서 목록 페이지"
+            className="mt-5 flex items-center justify-center border-t border-gray-100 pt-4"
+          >
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => onPageChange(pageInfo.number - 1)}
+                disabled={!pageInfo.hasPrevious || listLoading}
+              >
+                이전
+              </Button>
+              <span className="min-w-16 text-center text-sm font-medium text-gray-700">
+                {pageInfo.number} / {Math.max(1, pageInfo.totalPages)}
+              </span>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => onPageChange(pageInfo.number + 1)}
+                disabled={!pageInfo.hasNext || listLoading}
+              >
+                다음
+              </Button>
+            </div>
+          </nav>
+        )}
 
       {shareModal && (
         <ShareTransferModal
