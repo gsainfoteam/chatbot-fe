@@ -203,6 +203,42 @@ export const EllipsisVerticalIcon = ({
   </svg>
 );
 
+export const SettingsIcon = createIcon(
+  "0 0 24 24",
+  [
+    "M4 7h7m4 0h5M4 17h3m4 0h9",
+    "M15 7a2 2 0 11-4 0 2 2 0 014 0z",
+    "M11 17a2 2 0 11-4 0 2 2 0 014 0z",
+  ],
+  "w-4 h-4",
+);
+
+export const UsersIcon = createIcon(
+  "0 0 24 24",
+  [
+    "M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2",
+    "M9 11a4 4 0 100-8 4 4 0 000 8z",
+    "M22 21v-2a4 4 0 00-3-3.87",
+    "M16 3.13a4 4 0 010 7.75",
+  ],
+  "w-4 h-4",
+);
+
+export const MailIcon = createIcon(
+  "0 0 24 24",
+  [
+    "M4.5 5.25h15A2.25 2.25 0 0121.75 7.5v9a2.25 2.25 0 01-2.25 2.25h-15A2.25 2.25 0 012.25 16.5v-9A2.25 2.25 0 014.5 5.25z",
+    "M3 7l9 6 9-6",
+  ],
+  "w-4 h-4",
+);
+
+export const PlusIcon = createIcon(
+  "0 0 24 24",
+  ["M12 5v14", "M5 12h14"],
+  "w-4 h-4",
+);
+
 export const EyeIcon = createIcon(
   "0 0 24 24",
   [
@@ -210,6 +246,15 @@ export const EyeIcon = createIcon(
     "M15 12a3 3 0 11-6 0 3 3 0 016 0z",
   ],
   "w-5 h-5",
+);
+
+export const SearchIcon = createIcon(
+  "0 0 24 24",
+  [
+    "M19 11a8 8 0 11-16 0 8 8 0 0116 0z",
+    "M21 21l-4.35-4.35",
+  ],
+  "w-4 h-4",
 );
 
 export const CalendarIcon = createIcon(
@@ -265,6 +310,34 @@ export const RefreshIcon = createIcon(
     "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15",
   ],
   "w-4 h-4",
+);
+
+export const ShareIcon = createIcon(
+  "0 0 24 24",
+  [
+    "M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z",
+  ],
+  "w-5 h-5",
+);
+
+export const UnlinkIcon = createIcon(
+  "0 0 24 24",
+  [
+    "M9 17H7A5 5 0 117 7h2",
+    "M15 7h2a5 5 0 014.1 7.85",
+    "M8 12h4",
+    "M2 2l20 20",
+  ],
+  "w-5 h-5",
+);
+
+export const TransferIcon = createIcon(
+  "0 0 24 24",
+  [
+    "M7.5 3.75 3.75 7.5m0 0 3.75 3.75M3.75 7.5h13.5a3 3 0 013 3v.75",
+    "M16.5 20.25l3.75-3.75m0 0-3.75-3.75m3.75 3.75H6.75a3 3 0 01-3-3v-.75",
+  ],
+  "w-5 h-5",
 );
 
 // 위쪽 화살표 (전송 등, 굵은 선)

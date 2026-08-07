@@ -12,6 +12,7 @@ import {
   removeCollaborator,
 } from "../../api/widgetKeys";
 import type { CollaboratorResponse } from "../../api/types";
+import { ConfirmDialog } from "../../components/ui";
 
 type WidgetKey = {
   id: string;
@@ -139,6 +140,9 @@ export default function KeysContent() {
   );
   const [collaboratorsLoading, setCollaboratorsLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [keyToRevoke, setKeyToRevoke] = useState<WidgetKey | null>(null);
+  const [collaboratorToRemove, setCollaboratorToRemove] =
+    useState<CollaboratorResponse | null>(null);
 
   const [colorSettings, setColorSettings] = useState<ColorSettings>({
     primary: "#df3326",
@@ -333,24 +337,15 @@ export default function KeysContent() {
   };
 
   const handleDeleteKey = async (keyId: string) => {
-    if (!confirm("위젯 키를 폐기하시겠습니까?")) return;
+    await revokeWidgetKey(keyId);
 
-    try {
-      await revokeWidgetKey(keyId);
+    // 목록에서 삭제하여 화면에서 제거
+    const nextKeys = widgetKeys.filter((key) => key.id !== keyId);
+    setWidgetKeys(nextKeys);
 
-      // 목록에서 삭제하여 화면에서 제거
-      const nextKeys = widgetKeys.filter((key) => key.id !== keyId);
-      setWidgetKeys(nextKeys);
-
-      // 선택된 키가 폐기된 키였다면 선택 해제 또는 다른 키 선택
-      if (selectedKey?.id === keyId) {
-        setSelectedKey(nextKeys.length > 0 ? nextKeys[0] : null);
-      }
-    } catch (err) {
-      alert(
-        err instanceof Error ? err.message : "위젯 키 폐기에 실패했습니다.",
-      );
-      console.error("Failed to revoke widget key:", err);
+    // 선택된 키가 폐기된 키였다면 선택 해제 또는 다른 키 선택
+    if (selectedKey?.id === keyId) {
+      setSelectedKey(nextKeys.length > 0 ? nextKeys[0] : null);
     }
   };
 
@@ -492,15 +487,10 @@ export default function KeysContent() {
   };
 
   const handleRemoveCollaborator = async (inviteeId: string) => {
-    if (!selectedKey || !confirm("이 협업자를 제거하시겠습니까?")) return;
-
-    try {
-      await removeCollaborator(selectedKey.id, inviteeId);
-      const list = await getCollaborators(selectedKey.id);
-      setCollaborators(list);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "협업자 제거에 실패했습니다.");
-    }
+    if (!selectedKey) return;
+    await removeCollaborator(selectedKey.id, inviteeId);
+    const list = await getCollaborators(selectedKey.id);
+    setCollaborators(list);
   };
 
   useEffect(() => {
@@ -692,7 +682,7 @@ export default function KeysContent() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDeleteKey(key.id);
+                            setKeyToRevoke(key);
                           }}
                           className="ml-4 text-red-500 hover:text-red-700 text-sm"
                         >
@@ -1034,7 +1024,7 @@ export default function KeysContent() {
                                 </span>
                               </div>
                               <button
-                                onClick={() => handleRemoveCollaborator(c.id)}
+                                onClick={() => setCollaboratorToRemove(c)}
                                 className="text-red-500 hover:text-red-700 text-sm font-medium"
                               >
                                 제거
@@ -1731,6 +1721,48 @@ export default function KeysContent() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={keyToRevoke !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setKeyToRevoke(null);
+        }}
+        title="위젯 키를 폐기할까요?"
+        description={
+          keyToRevoke
+            ? `“${keyToRevoke.name}” 키를 폐기합니다. 이 키를 사용하는 위젯은 더 이상 연결할 수 없습니다.`
+            : ""
+        }
+        confirmLabel="키 폐기"
+        loadingLabel="폐기 중..."
+        variant="danger"
+        fallbackErrorMessage="위젯 키 폐기에 실패했습니다."
+        onConfirm={() =>
+          keyToRevoke ? handleDeleteKey(keyToRevoke.id) : Promise.resolve()
+        }
+      />
+
+      <ConfirmDialog
+        open={collaboratorToRemove !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setCollaboratorToRemove(null);
+        }}
+        title="협업자를 제거할까요?"
+        description={
+          collaboratorToRemove
+            ? `${collaboratorToRemove.inviteeEmail}의 위젯 키 접근 권한을 제거합니다.`
+            : ""
+        }
+        confirmLabel="협업자 제거"
+        loadingLabel="제거 중..."
+        variant="danger"
+        fallbackErrorMessage="협업자 제거에 실패했습니다."
+        onConfirm={() =>
+          collaboratorToRemove
+            ? handleRemoveCollaborator(collaboratorToRemove.id)
+            : Promise.resolve()
+        }
+      />
     </div>
   );
 }

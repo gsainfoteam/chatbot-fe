@@ -58,6 +58,60 @@ export type DocumentStatus =
   | "ready"
   | "failed";
 
+export type OrgEffectiveRole = "SUPER_ADMIN" | "MANAGER" | "MEMBER";
+export type OrgMemberRole = "MANAGER" | "MEMBER";
+export type OrgMembershipStatus = "PENDING" | "ACCEPTED";
+export type DocumentAccessRelation = "OWNER" | "SHARED";
+
+export interface OrganizationSummary {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface Organization extends OrganizationSummary {
+  isDefault: boolean;
+  effectiveRole: OrgEffectiveRole;
+  createdAt: string;
+}
+
+export interface CreateOrganizationRequest {
+  name: string;
+  slug: string;
+}
+
+export interface InviteOrgMemberRequest {
+  inviteeEmail: string;
+  role: OrgMemberRole;
+}
+
+export interface UpdateOrgMemberRoleRequest {
+  role: OrgMemberRole;
+}
+
+export interface OrgMembership {
+  id: string;
+  organizationId: string;
+  inviteeEmail: string;
+  memberIdpUuid: string | null;
+  role: OrgMemberRole;
+  status: OrgMembershipStatus;
+  memberName: string | null;
+  acceptedAt: string | null;
+  createdAt: string;
+}
+
+export interface OrgInvitation extends OrgMembership {
+  organizationName: string;
+  organizationSlug: string;
+}
+
+export interface DocumentUploader {
+  idpUuid: string;
+  email: string;
+  name: string;
+}
+
 export interface DocumentItem {
   id: string;
   title: string;
@@ -72,6 +126,13 @@ export interface DocumentItem {
   reprocessAvailableAt: string | null;
   expiresAt: string | null;
   isExpired: boolean;
+  ownerOrganization?: OrganizationSummary;
+  uploader?: DocumentUploader | null;
+  sharedOrganizations?: OrganizationSummary[];
+  accessRelation?: DocumentAccessRelation;
+  canManage?: boolean;
+  canShare?: boolean;
+  canTransfer?: boolean;
 }
 
 export interface ChatMessage {
