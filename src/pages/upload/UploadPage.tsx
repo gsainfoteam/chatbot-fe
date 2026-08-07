@@ -12,7 +12,9 @@ import {
   getUploadById,
 } from "../../api/upload";
 import type { DocumentItem, DocumentStatus, Organization } from "../../api/types";
+import { UploadIcon } from "../../components/Icons";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import { Button } from "../../components/ui";
 import {
   InvitationBanner,
   OrganizationPanel,
@@ -263,6 +265,24 @@ export default function UploadPage() {
   return (
     <main className="min-h-[calc(100dvh-4rem)] bg-white">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <header className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-3xl font-bold text-gray-900">문서 관리</h1>
+            <p className="mt-2 text-sm text-gray-600">
+              PDF 파일은 자동으로 챗봇 답변에 적용되며, 만료된 문서는 답변에서
+              제외됩니다.
+            </p>
+          </div>
+          <Button
+            size="lg"
+            leftIcon={<UploadIcon className="h-4 w-4" />}
+            onClick={() => setUploadModalOpen(true)}
+            className="shrink-0 self-start"
+          >
+            PDF 업로드
+          </Button>
+        </header>
+
         <InvitationBanner
           onAccepted={() => {
             void fetchOrganizations();
@@ -270,7 +290,7 @@ export default function UploadPage() {
           }}
         />
 
-        <div className="upload-page-layout grid items-start gap-8 lg:gap-12">
+        <div className="upload-page-layout grid items-start gap-8 lg:gap-10">
           <OrganizationPanel
             organizations={organizations}
             loading={orgsLoading}
@@ -297,7 +317,6 @@ export default function UploadPage() {
             listLoading={listLoading}
             listError={listError}
             pollingError={pollingError}
-            onUploadClick={() => setUploadModalOpen(true)}
             onRetryFetch={() => {
               void fetchDocuments(filterOrganizationId);
             }}

@@ -13,12 +13,13 @@ import {
   EllipsisVerticalIcon,
   EyeIcon,
   RefreshIcon,
+  SearchIcon,
   ShareIcon,
   TrashIcon,
   TransferIcon,
-  UploadIcon,
+  UnlinkIcon,
 } from "../../../components/Icons";
-import { Button, ConfirmDialog } from "../../../components/ui";
+import { Button, ConfirmDialog, Select } from "../../../components/ui";
 import ShareTransferModal from "./ShareTransferModal";
 import {
   formatKoreanDate,
@@ -35,7 +36,6 @@ interface DocumentListSectionProps {
   listLoading: boolean;
   listError: string | null;
   pollingError: string | null;
-  onUploadClick: () => void;
   onRetryFetch: () => void;
   onDocumentsChange: (updater: (prev: DocumentItem[]) => DocumentItem[]) => void;
 }
@@ -48,6 +48,27 @@ interface ExpiryEditState {
 }
 
 type ShareMode = "share" | "unshare" | "transfer";
+type DocumentStatusFilter =
+  | "all"
+  | "active"
+  | "processing"
+  | "failed"
+  | "expired";
+type DocumentSortOrder = "recent" | "name" | "expiry";
+
+const STATUS_FILTER_OPTIONS = [
+  { value: "all", label: "상태 전체" },
+  { value: "active", label: "활성화" },
+  { value: "processing", label: "처리 중" },
+  { value: "failed", label: "처리 실패" },
+  { value: "expired", label: "만료" },
+];
+
+const SORT_OPTIONS = [
+  { value: "recent", label: "최근 업로드순" },
+  { value: "name", label: "이름순" },
+  { value: "expiry", label: "만료 임박순" },
+];
 
 type PendingDocumentAction =
   | { type: "delete"; document: DocumentItem }
@@ -144,7 +165,6 @@ export default function DocumentListSection({
   listLoading,
   listError,
   pollingError,
-  onUploadClick,
   onRetryFetch,
   onDocumentsChange,
 }: DocumentListSectionProps) {
@@ -159,25 +179,40 @@ export default function DocumentListSection({
   );
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] =
+    useState<DocumentStatusFilter>("all");
+  const [sortOrder, setSortOrder] =
+    useState<DocumentSortOrder>("recent");
   const [shareModal, setShareModal] = useState<{
     document: DocumentItem;
     mode: ShareMode;
   } | null>(null);
   const documentMenuRef = useRef<HTMLDivElement>(null);
   const todayDateValue = useMemo(() => toDateInputValue(new Date()), []);
-  const selectedOrganizationName = useMemo(
-    () =>
-      filterOrganizationId === "all"
-        ? "전체"
-        : (organizations.find((org) => org.id === filterOrganizationId)?.name ??
-          "조직"),
-    [filterOrganizationId, organizations],
-  );
   const filteredDocuments = useMemo(() => {
     const query = normalizeSearchText(searchQuery);
-    if (!query) return documents;
-    return documents.filter((item) =>
-      [
+    const nextDocuments = documents.filter((item) => {
+      const matchesStatus = (() => {
+        switch (statusFilter) {
+          case "all":
+            return true;
+          case "active":
+            return item.status === "ready" && !item.isExpired;
+          case "processing":
+            return (
+              item.status === "uploading" ||
+              item.status === "queued" ||
+              item.status === "processing"
+            );
+          case "failed":
+            return item.status === "failed";
+          case "expired":
+            return item.isExpired;
+        }
+      })();
+      if (!matchesStatus) return false;
+      if (!query) return true;
+      return [
         item.title,
         item.resourceName,
         item.ownerOrganization?.name,
@@ -185,9 +220,30 @@ export default function DocumentListSection({
         item.uploader?.email,
       ].some(
         (value) => value != null && normalizeSearchText(value).includes(query),
-      ),
-    );
-  }, [documents, searchQuery]);
+      );
+    });
+
+    return nextDocuments.sort((a, b) => {
+      switch (sortOrder) {
+        case "recent":
+          return (
+            new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+          );
+        case "name":
+          return a.title.localeCompare(b.title, "ko");
+        case "expiry": {
+          if (a.isExpired !== b.isExpired) return a.isExpired ? 1 : -1;
+          const aExpiry = a.expiresAt
+            ? new Date(a.expiresAt).getTime()
+            : Number.POSITIVE_INFINITY;
+          const bExpiry = b.expiresAt
+            ? new Date(b.expiresAt).getTime()
+            : Number.POSITIVE_INFINITY;
+          return aExpiry - bExpiry;
+        }
+      }
+    });
+  }, [documents, searchQuery, sortOrder, statusFilter]);
 
   const cooldownKey = useMemo(
     () =>
@@ -389,51 +445,50 @@ export default function DocumentListSection({
 
   return (
     <section
-      aria-labelledby="document-list-heading"
+      aria-label="문서"
       className="upload-document-panel flex min-w-0 flex-col"
     >
-      <div className="flex shrink-0 flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h2
-            id="document-list-heading"
-            className="text-3xl font-bold text-gray-900"
-          >
-            문서 관리
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            PDF 파일은 자동으로 챗봇 답변에 적용되며, 만료된 문서는 답변에서
-            제외됩니다.
-          </p>
-        </div>
-        <Button
-          size="lg"
-          leftIcon={<UploadIcon className="h-4 w-4" />}
-          onClick={onUploadClick}
-          className="shrink-0"
-        >
-          PDF 업로드
-        </Button>
-      </div>
-
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <label className="block w-full sm:max-w-md">
+      <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center">
+        <label className="relative block min-w-0 flex-1">
           <span className="sr-only">문서 검색</span>
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="search"
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder="문서 검색"
-            className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/25"
+            className="h-10 w-full rounded-lg border border-gray-200 bg-white pr-4 pl-10 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/25"
           />
         </label>
-        <p className="shrink-0 text-sm text-gray-500">
-          {searchQuery.trim()
-            ? `검색 ${filteredDocuments.length}개 · ${selectedOrganizationName} 총 ${documents.length}개`
-            : `${selectedOrganizationName} · 총 ${documents.length}개`}
-        </p>
+        <div className="grid grid-cols-2 gap-2.5 sm:flex">
+          <Select
+            ariaLabel="문서 상태 필터"
+            value={statusFilter}
+            onValueChange={(value) =>
+              setStatusFilter(value as DocumentStatusFilter)
+            }
+            options={STATUS_FILTER_OPTIONS}
+            variant="form"
+            width="full"
+            className="sm:w-[140px]"
+            triggerClassName="border-gray-200"
+          />
+          <Select
+            ariaLabel="문서 정렬"
+            value={sortOrder}
+            onValueChange={(value) =>
+              setSortOrder(value as DocumentSortOrder)
+            }
+            options={SORT_OPTIONS}
+            variant="form"
+            width="full"
+            className="sm:w-[160px]"
+            triggerClassName="border-gray-200"
+          />
+        </div>
       </div>
 
-      <div className="document-list-scroll mt-6 flex-1">
+      <div className="document-list-scroll mt-5 flex-1">
         {pollingError && (
           <div className="mb-3 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
             {pollingError}
@@ -461,7 +516,7 @@ export default function DocumentListSection({
           </div>
         ) : filteredDocuments.length === 0 ? (
           <div className="flex min-h-[240px] items-center justify-center rounded-lg border border-gray-200 bg-white text-sm text-gray-500">
-            검색 결과가 없습니다.
+            조건에 맞는 문서가 없습니다.
           </div>
         ) : (
           <div className="space-y-4">
@@ -687,6 +742,7 @@ export default function DocumentListSection({
                               }}
                               className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
                             >
+                              <UnlinkIcon className="h-[18px] w-[18px] shrink-0" />
                               공유 해제
                             </button>
                           )}
