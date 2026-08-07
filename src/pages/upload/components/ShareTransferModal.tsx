@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  getUploadById,
   shareUpload,
   transferUpload,
   unshareUpload,
@@ -87,12 +88,8 @@ export default function ShareTransferModal({
         onUpdated(doc);
       } else if (mode === "unshare") {
         await unshareUpload(document.id, targetId);
-        onUpdated({
-          ...document,
-          sharedOrganizations: (document.sharedOrganizations ?? []).filter(
-            (organization) => organization.id !== targetId,
-          ),
-        });
+        const refreshed = await getUploadById(document.id);
+        onUpdated(refreshed);
       } else {
         const doc = await transferUpload(document.id, targetId);
         onTransferred(doc);
