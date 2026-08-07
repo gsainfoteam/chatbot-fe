@@ -22,6 +22,7 @@ import { membershipStatusLabel } from "../utils";
 interface MemberManageModalProps {
   organization: Organization;
   onClose: () => void;
+  onMembershipChanged: () => void;
 }
 
 function validateEmail(email: string): { isValid: boolean; error?: string } {
@@ -44,6 +45,7 @@ const MEMBER_ROLE_OPTIONS: SelectOption[] = [
 export default function MemberManageModal({
   organization,
   onClose,
+  onMembershipChanged,
 }: MemberManageModalProps) {
   const [members, setMembers] = useState<OrgMembership[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,6 +112,7 @@ export default function MemberManageModal({
       await updateOrganizationMemberRole(organization.id, membership.id, {
         role,
       });
+      onMembershipChanged();
       await fetchMembers();
     } catch (err) {
       setError(
@@ -125,6 +128,7 @@ export default function MemberManageModal({
     setError(null);
     try {
       await removeOrganizationMember(organization.id, membership.id);
+      onMembershipChanged();
       await fetchMembers();
     } catch (err) {
       throw err instanceof Error ? err : new Error("제거에 실패했습니다.");
@@ -214,7 +218,7 @@ export default function MemberManageModal({
                   </p>
                   <p className="mt-0.5 text-xs text-gray-500">
                     {membershipStatusLabel(member.status)}
-                    {member.userName ? ` · ${member.userName}` : ""}
+                    {member.memberName ? ` · ${member.memberName}` : ""}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">

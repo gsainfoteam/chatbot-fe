@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createOrganization } from "../../../api/organizations";
 import { canManageOrg } from "../../../api/roles";
 import type { Organization } from "../../../api/types";
@@ -40,6 +40,25 @@ export default function OrganizationPanel({
   const [formError, setFormError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [managingOrg, setManagingOrg] = useState<Organization | null>(null);
+
+  useEffect(() => {
+    if (!managingOrg) return;
+
+    const currentOrganization = organizations.find(
+      (organization) => organization.id === managingOrg.id,
+    );
+    if (
+      !currentOrganization ||
+      !canManageOrg(currentOrganization.effectiveRole)
+    ) {
+      setManagingOrg(null);
+      return;
+    }
+
+    if (currentOrganization !== managingOrg) {
+      setManagingOrg(currentOrganization);
+    }
+  }, [managingOrg, organizations]);
 
   const handleCreate = async () => {
     const trimmedName = name.trim();
@@ -211,6 +230,7 @@ export default function OrganizationPanel({
         <MemberManageModal
           organization={managingOrg}
           onClose={() => setManagingOrg(null)}
+          onMembershipChanged={onRefresh}
         />
       )}
     </section>

@@ -4,6 +4,7 @@ import {
   transferUpload,
   unshareUpload,
 } from "../../../api/upload";
+import { canManageOrg } from "../../../api/roles";
 import type { DocumentItem, Organization } from "../../../api/types";
 import {
   Button,
@@ -64,6 +65,9 @@ export default function ShareTransferModal({
       : organizations.filter((org) => {
           if (org.id === ownerId) return false;
           if (mode === "share" && sharedIds.has(org.id)) return false;
+          if (mode === "transfer" && !canManageOrg(org.effectiveRole)) {
+            return false;
+          }
           return true;
         });
 
@@ -82,8 +86,13 @@ export default function ShareTransferModal({
         const doc = await shareUpload(document.id, targetId);
         onUpdated(doc);
       } else if (mode === "unshare") {
-        const doc = await unshareUpload(document.id, targetId);
-        onUpdated(doc);
+        await unshareUpload(document.id, targetId);
+        onUpdated({
+          ...document,
+          sharedOrganizations: (document.sharedOrganizations ?? []).filter(
+            (organization) => organization.id !== targetId,
+          ),
+        });
       } else {
         const doc = await transferUpload(document.id, targetId);
         onTransferred(doc);
@@ -155,7 +164,9 @@ export default function ShareTransferModal({
           <p className="rounded-md bg-gray-50 px-3 py-2.5 text-sm text-gray-500">
             {mode === "unshare"
               ? "공유된 조직이 없습니다."
-              : "선택할 수 있는 조직이 없습니다."}
+              : mode === "transfer"
+                ? "관리 권한이 있는 대상 조직이 없습니다."
+                : "선택할 수 있는 조직이 없습니다."}
           </p>
         ) : (
           <Select

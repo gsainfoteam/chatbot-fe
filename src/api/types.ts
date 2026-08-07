@@ -60,7 +60,7 @@ export type DocumentStatus =
 
 export type OrgEffectiveRole = "SUPER_ADMIN" | "MANAGER" | "MEMBER";
 export type OrgMemberRole = "MANAGER" | "MEMBER";
-export type OrgMembershipStatus = "PENDING" | "ACTIVE";
+export type OrgMembershipStatus = "PENDING" | "ACCEPTED";
 export type DocumentAccessRelation = "OWNER" | "SHARED";
 
 export interface OrganizationSummary {
@@ -91,17 +91,17 @@ export interface UpdateOrgMemberRoleRequest {
 
 export interface OrgMembership {
   id: string;
+  organizationId: string;
   inviteeEmail: string;
+  memberIdpUuid: string | null;
   role: OrgMemberRole;
   status: OrgMembershipStatus;
+  memberName: string | null;
+  acceptedAt: string | null;
   createdAt: string;
-  /** ACTIVE 멤버에만 존재할 수 있음 */
-  userId?: string | null;
-  userName?: string | null;
 }
 
 export interface OrgInvitation extends OrgMembership {
-  organizationId: string;
   organizationName: string;
   organizationSlug: string;
 }

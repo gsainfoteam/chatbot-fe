@@ -216,12 +216,11 @@ export async function shareUpload(
 export async function unshareUpload(
   documentId: string,
   organizationId: string,
-): Promise<DocumentItem> {
+): Promise<void> {
   try {
-    const res = await apiClient.delete<DocumentItem>(
+    await apiClient.delete(
       `/v1/admin/upload/${documentId}/shares/${organizationId}`,
     );
-    return res.data;
   } catch (err) {
     throwAdminUploadError(err, "공유 해제에 실패했습니다.", {
       404: "문서 또는 공유 정보를 찾을 수 없습니다.",

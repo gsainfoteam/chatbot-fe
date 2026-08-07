@@ -79,6 +79,10 @@ export default function UploadPage() {
         if (prev && list.some((org) => org.id === prev)) return prev;
         return pickDefaultOrganizationId(list);
       });
+      setFilterOrganizationId((prev) => {
+        if (prev === "all" || list.some((org) => org.id === prev)) return prev;
+        return "all";
+      });
     } catch (err) {
       setOrgsError(
         err instanceof Error ? err.message : "조직 목록을 불러오지 못했습니다.",
