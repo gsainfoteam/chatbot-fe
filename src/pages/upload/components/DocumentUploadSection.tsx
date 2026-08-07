@@ -323,15 +323,10 @@ export default function DocumentUploadSection({
       onOpenChange={onOpenChange}
       title="PDF 업로드"
       description={`최대 ${MAX_CONCURRENT_UPLOADS}개, 파일당 최대 ${MAX_FILE_SIZE_MB}MB까지 업로드할 수 있습니다.`}
-      size="lg"
+      size="md"
       closeDisabled={isUploading}
-      contentClassName="!max-w-[600px] !rounded-[28px] !border-0 shadow-2xl"
-      headerClassName="!items-center !border-b-0 !px-6 !pt-6 !pb-3 sm:!px-10 sm:!pt-9 sm:!pb-5"
-      titleClassName="!text-xl !font-bold sm:!text-2xl"
-      descriptionClassName="sr-only"
-      closeButtonClassName="!flex !h-11 !w-11 !items-center !justify-center !rounded-full !bg-gray-50 !p-0 hover:!bg-gray-100"
-      bodyClassName="space-y-6 !px-6 !py-3 sm:!px-10 sm:!pb-6"
-      footerClassName="!flex-wrap !border-t-0 !px-6 !pt-2 !pb-6 sm:!flex-nowrap sm:!px-10 sm:!pb-10"
+      bodyClassName="space-y-5"
+      footerClassName="sm:flex-nowrap"
       footer={
         <>
           <span className="mr-auto w-full self-center pb-2 text-sm text-gray-500 sm:w-auto sm:pb-0">
@@ -363,55 +358,55 @@ export default function DocumentUploadSection({
       }
     >
       <div
-          role="button"
-          tabIndex={canUpload ? 0 : -1}
-          aria-label="PDF 파일 선택"
-          aria-disabled={!canUpload}
-          onClick={() => {
-            if (canUpload) inputRef.current?.click();
-          }}
-          onKeyDown={(event) => {
-            if (!canUpload) return;
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              inputRef.current?.click();
-            }
-          }}
-          onDrop={handleDrop}
-          onDragOver={(e) => {
-            e.preventDefault();
-            if (canUpload) setIsDragging(true);
-          }}
-          onDragLeave={() => setIsDragging(false)}
-          className={`flex min-h-[190px] flex-col items-center justify-center rounded-2xl border-2 border-dashed px-5 py-7 text-center transition-colors sm:min-h-[210px] ${
-            !canUpload
-              ? "cursor-not-allowed border-gray-200 bg-gray-50 opacity-60"
-              : isDragging
-                ? "cursor-pointer border-[#df3326] bg-red-50"
-                : "cursor-pointer border-gray-300 bg-gray-50/40 hover:border-gray-400 hover:bg-gray-50"
-          }`}
-        >
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".pdf,application/pdf"
-            multiple
-            disabled={!canUpload}
-            className="hidden"
-            onChange={handleFileChange}
-          />
-          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-red-50 text-[#df3326]">
-            <UploadIcon className="h-8 w-8" />
-          </span>
-          <p className="mt-5 text-base font-semibold text-gray-900 sm:text-lg">
-            {canUpload
-              ? "클릭하거나 PDF를 드래그하세요"
-              : "조직에 소속된 후 업로드할 수 있습니다"}
-          </p>
-          <p className="mt-1.5 text-sm text-gray-400 sm:text-base">
-            PDF만, 파일당 최대 {MAX_FILE_SIZE_MB}MB · 최대{" "}
-            {MAX_CONCURRENT_UPLOADS}개
-          </p>
+        role="button"
+        tabIndex={canUpload ? 0 : -1}
+        aria-label="PDF 파일 선택"
+        aria-disabled={!canUpload}
+        onClick={() => {
+          if (canUpload) inputRef.current?.click();
+        }}
+        onKeyDown={(event) => {
+          if (!canUpload) return;
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
+        onDrop={handleDrop}
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (canUpload) setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
+        className={`flex min-h-[190px] flex-col items-center justify-center rounded-2xl border-2 border-dashed px-5 py-7 text-center transition-colors sm:min-h-[210px] ${
+          !canUpload
+            ? "cursor-not-allowed border-gray-200 bg-gray-50 opacity-60"
+            : isDragging
+              ? "cursor-pointer border-[#df3326] bg-red-50"
+              : "cursor-pointer border-gray-300 bg-gray-50/40 hover:border-gray-400 hover:bg-gray-50"
+        }`}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".pdf,application/pdf"
+          multiple
+          disabled={!canUpload}
+          className="hidden"
+          onChange={handleFileChange}
+        />
+        <span className="flex h-20 w-20 items-center justify-center rounded-full bg-red-50 text-[#df3326]">
+          <UploadIcon className="h-8 w-8" />
+        </span>
+        <p className="mt-5 text-base font-semibold text-gray-900 sm:text-lg">
+          {canUpload
+            ? "클릭하거나 PDF를 드래그하세요"
+            : "조직에 소속된 후 업로드할 수 있습니다"}
+        </p>
+        <p className="mt-1.5 text-sm text-gray-400 sm:text-base">
+          PDF만, 파일당 최대 {MAX_FILE_SIZE_MB}MB · 최대{" "}
+          {MAX_CONCURRENT_UPLOADS}개
+        </p>
       </div>
 
       <section className="flex flex-col gap-3 rounded-2xl bg-gray-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
@@ -442,104 +437,104 @@ export default function DocumentUploadSection({
           </h3>
           <div className="mt-3 space-y-3">
             {pending.map((item) => (
-                <article
-                  key={item.id}
-                  className="rounded-lg border border-gray-200 bg-gray-50/40 p-4"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="flex min-w-0 flex-wrap items-center gap-2">
-                        <p className="max-w-full truncate font-medium text-gray-900">
-                          {item.file.name}
-                        </p>
-                        {renderPendingStatusBadge(item.status)}
-                      </div>
-                      <p className="mt-1 text-sm text-gray-500">
-                        {(item.file.size / 1024).toFixed(1)} KB
+              <article
+                key={item.id}
+                className="rounded-lg border border-gray-200 bg-gray-50/40 p-4"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <p className="max-w-full truncate font-medium text-gray-900">
+                        {item.file.name}
                       </p>
+                      {renderPendingStatusBadge(item.status)}
                     </div>
-                    {item.status !== "uploading" && (
-                      <Button
-                        variant="dangerLink"
-                        size="inline"
-                        onClick={() =>
-                          setPending((prev) =>
-                            prev.filter((p) => p.id !== item.id),
-                          )
-                        }
-                        className="shrink-0"
-                      >
-                        제거
-                      </Button>
-                    )}
+                    <p className="mt-1 text-sm text-gray-500">
+                      {(item.file.size / 1024).toFixed(1)} KB
+                    </p>
                   </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {expiryOptions.map((option) => {
-                      const isSelected = item.expiryPreset === option.key;
-                      return (
-                        <button
-                          key={option.key}
-                          type="button"
-                          aria-pressed={isSelected}
-                          onClick={() =>
-                            applyPendingExpiryPreset(item.id, option.key)
-                          }
-                          disabled={item.status === "uploading"}
-                          className={`cursor-pointer rounded-md border px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                            isSelected
-                              ? "border-[#df3326] bg-red-50 text-[#df3326]"
-                              : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                          }`}
-                        >
-                          {option.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {item.expiryPreset === "custom" && (
-                    <label
-                      htmlFor={`pending-expires-at-${item.id}`}
-                      className="mt-4 block"
+                  {item.status !== "uploading" && (
+                    <Button
+                      variant="dangerLink"
+                      size="inline"
+                      onClick={() =>
+                        setPending((prev) =>
+                          prev.filter((p) => p.id !== item.id),
+                        )
+                      }
+                      className="shrink-0"
                     >
-                      <span className="sr-only">유효기간 직접 지정</span>
-                      <input
-                        id={`pending-expires-at-${item.id}`}
-                        type="date"
-                        value={item.expiresAtInput}
-                        min={todayDateValue}
-                        onChange={(event) =>
-                          updatePendingExpiry(item.id, event.target.value)
+                      제거
+                    </Button>
+                  )}
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {expiryOptions.map((option) => {
+                    const isSelected = item.expiryPreset === option.key;
+                    return (
+                      <button
+                        key={option.key}
+                        type="button"
+                        aria-pressed={isSelected}
+                        onClick={() =>
+                          applyPendingExpiryPreset(item.id, option.key)
                         }
                         disabled={item.status === "uploading"}
-                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 transition-all duration-150 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#df3326] disabled:opacity-50"
-                      />
-                    </label>
-                  )}
-
-                  <p className="mt-3 text-sm text-gray-500">
-                    {renderExpiryDescription(item)}
-                  </p>
-                  {item.expiryError && (
-                    <p className="mt-2 text-sm text-red-600">
-                      {item.expiryError}
-                    </p>
-                  )}
-                  {item.error && (
-                    <div className="mt-3 flex flex-wrap items-center gap-3">
-                      <p className="text-sm text-red-600">{item.error}</p>
-                      <Button
-                        variant="link"
-                        size="inline"
-                        onClick={() => handleRetry(item.id)}
-                        disabled={isUploading}
+                        className={`cursor-pointer rounded-md border px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                          isSelected
+                            ? "border-[#df3326] bg-red-50 text-[#df3326]"
+                            : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                        }`}
                       >
-                        재시도
-                      </Button>
-                    </div>
-                  )}
-                </article>
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {item.expiryPreset === "custom" && (
+                  <label
+                    htmlFor={`pending-expires-at-${item.id}`}
+                    className="mt-4 block"
+                  >
+                    <span className="sr-only">유효기간 직접 지정</span>
+                    <input
+                      id={`pending-expires-at-${item.id}`}
+                      type="date"
+                      value={item.expiresAtInput}
+                      min={todayDateValue}
+                      onChange={(event) =>
+                        updatePendingExpiry(item.id, event.target.value)
+                      }
+                      disabled={item.status === "uploading"}
+                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 transition-all duration-150 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#df3326] disabled:opacity-50"
+                    />
+                  </label>
+                )}
+
+                <p className="mt-3 text-sm text-gray-500">
+                  {renderExpiryDescription(item)}
+                </p>
+                {item.expiryError && (
+                  <p className="mt-2 text-sm text-red-600">
+                    {item.expiryError}
+                  </p>
+                )}
+                {item.error && (
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <p className="text-sm text-red-600">{item.error}</p>
+                    <Button
+                      variant="link"
+                      size="inline"
+                      onClick={() => handleRetry(item.id)}
+                      disabled={isUploading}
+                    >
+                      재시도
+                    </Button>
+                  </div>
+                )}
+              </article>
             ))}
           </div>
         </div>

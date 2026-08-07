@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import Button from "./Button";
 import Dialog, { type DialogSize } from "./Dialog";
+import { ExclamationTriangleIcon, InfoIcon } from "../Icons";
 
 export type ConfirmDialogVariant = "primary" | "danger";
 
@@ -59,9 +60,22 @@ export default function ConfirmDialog({
       onOpenChange={handleOpenChange}
       title={title}
       description={description}
+      icon={
+        variant === "danger" ? (
+          <ExclamationTriangleIcon className="h-5 w-5" />
+        ) : (
+          <InfoIcon className="h-5 w-5" />
+        )
+      }
+      iconClassName={
+        variant === "danger"
+          ? "bg-red-50 text-red-600 ring-red-100"
+          : "bg-red-50 text-[var(--color-primary)] ring-red-100"
+      }
       size={size}
       closeDisabled={loading}
-      bodyClassName="space-y-4"
+      bodyClassName="space-y-4 empty:hidden"
+      footerClassName="peer-empty:border-t peer-empty:border-gray-100"
       footer={
         <>
           <Button
@@ -85,7 +99,7 @@ export default function ConfirmDialog({
       {error && (
         <p
           role="alert"
-          className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700"
+          className="rounded-lg border border-red-100 bg-red-50 px-3.5 py-3 text-sm text-red-700"
         >
           {error}
         </p>

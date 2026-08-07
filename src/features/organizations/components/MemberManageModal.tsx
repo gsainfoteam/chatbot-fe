@@ -148,6 +148,7 @@ export default function MemberManageModal({
         }}
         title={`${organization.name} 멤버 관리`}
         description="이메일로 초대하고 역할을 변경할 수 있습니다."
+        size="lg"
         closeDisabled={
           inviteLoading || actingId !== null || memberToRemove !== null
         }
