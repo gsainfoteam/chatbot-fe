@@ -6,6 +6,7 @@ import {
   rejectOrganizationInvitation,
 } from "../../../api/organizations";
 import type { OrgInvitation } from "../../../api/types";
+import { MailIcon } from "../../../components/Icons";
 import { Button, ConfirmDialog } from "../../../components/ui";
 import { organizationQueryKeys } from "../queryKeys";
 import { organizationRoleLabel } from "../utils";
@@ -14,7 +15,9 @@ interface InvitationBannerProps {
   onAccepted: () => void;
 }
 
-export default function InvitationBanner({ onAccepted }: InvitationBannerProps) {
+export default function InvitationBanner({
+  onAccepted,
+}: InvitationBannerProps) {
   const queryClient = useQueryClient();
   const [invitations, setInvitations] = useState<OrgInvitation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,9 +75,7 @@ export default function InvitationBanner({ onAccepted }: InvitationBannerProps) 
         queryKey: organizationQueryKeys.all,
       });
     } catch (err) {
-      throw err instanceof Error
-        ? err
-        : new Error("초대 거절에 실패했습니다.");
+      throw err instanceof Error ? err : new Error("초대 거절에 실패했습니다.");
     } finally {
       setActingId(null);
     }
@@ -88,20 +89,23 @@ export default function InvitationBanner({ onAccepted }: InvitationBannerProps) 
     <>
       <section
         aria-labelledby="org-invitation-heading"
-        className="mb-6 overflow-hidden rounded-lg border border-amber-200 bg-amber-50"
+        className="mt-2 border-b border-gray-200 px-1 pb-3"
       >
-        <div className="border-b border-amber-200 px-5 py-4">
+        <div className="flex items-center gap-2 px-1 py-1.5">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-amber-50 text-amber-600">
+            <MailIcon className="h-4 w-4" />
+          </span>
           <h2
             id="org-invitation-heading"
-            className="text-base font-semibold text-amber-950"
+            className="text-sm font-semibold text-gray-700"
           >
-            조직 초대
+            받은 초대
           </h2>
-          <p className="mt-1 text-sm text-amber-800">
-            받은 초대를 수락하거나 거절할 수 있습니다.
-          </p>
+          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+            {invitations.length}
+          </span>
         </div>
-        <div className="space-y-3 p-4">
+        <div className="mt-1.5 space-y-2">
           {error && (
             <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}
@@ -110,17 +114,27 @@ export default function InvitationBanner({ onAccepted }: InvitationBannerProps) 
           {invitations.map((invite) => (
             <div
               key={invite.id}
-              className="flex flex-col gap-3 rounded-lg border border-amber-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+              className="rounded-lg border border-gray-200 bg-white p-3"
             >
               <div className="min-w-0">
-                <p className="truncate font-medium text-gray-900">
+                <p className="truncate text-sm font-semibold text-gray-900">
                   {invite.organizationName}
                 </p>
-                <p className="mt-0.5 text-sm text-gray-500">
-                  {invite.organizationSlug} · {organizationRoleLabel(invite.role)}로 초대됨
+                <p className="mt-1 truncate text-xs text-gray-500">
+                  {organizationRoleLabel(invite.role)}(으)로 초대됨 ·{" "}
+                  {invite.organizationSlug}
                 </p>
               </div>
-              <div className="flex shrink-0 gap-2">
+              <div className="mt-3 flex justify-end gap-1.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setRejectingInvite(invite)}
+                  disabled={actingId !== null}
+                  className="text-gray-500"
+                >
+                  거절
+                </Button>
                 <Button
                   size="sm"
                   onClick={() => void handleAccept(invite.id)}
@@ -129,14 +143,6 @@ export default function InvitationBanner({ onAccepted }: InvitationBannerProps) 
                   disabled={actingId !== null}
                 >
                   수락
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setRejectingInvite(invite)}
-                  disabled={actingId !== null}
-                >
-                  거절
                 </Button>
               </div>
             </div>
@@ -160,9 +166,7 @@ export default function InvitationBanner({ onAccepted }: InvitationBannerProps) 
         variant="danger"
         fallbackErrorMessage="초대 거절에 실패했습니다."
         onConfirm={() =>
-          rejectingInvite
-            ? handleReject(rejectingInvite.id)
-            : Promise.resolve()
+          rejectingInvite ? handleReject(rejectingInvite.id) : Promise.resolve()
         }
       />
     </>

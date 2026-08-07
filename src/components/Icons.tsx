@@ -224,6 +224,15 @@ export const UsersIcon = createIcon(
   "w-4 h-4",
 );
 
+export const MailIcon = createIcon(
+  "0 0 24 24",
+  [
+    "M4.5 5.25h15A2.25 2.25 0 0121.75 7.5v9a2.25 2.25 0 01-2.25 2.25h-15A2.25 2.25 0 012.25 16.5v-9A2.25 2.25 0 014.5 5.25z",
+    "M3 7l9 6 9-6",
+  ],
+  "w-4 h-4",
+);
+
 export const PlusIcon = createIcon(
   "0 0 24 24",
   ["M12 5v14", "M5 12h14"],

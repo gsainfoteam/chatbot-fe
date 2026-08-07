@@ -4,6 +4,7 @@ import { canManageOrg } from "../../../api/roles";
 import type { Organization } from "../../../api/types";
 import { PlusIcon, UsersIcon } from "../../../components/Icons";
 import { Button, Dialog } from "../../../components/ui";
+import InvitationBanner from "./InvitationBanner";
 import MemberManageModal from "./MemberManageModal";
 import OrganizationAvatar from "./OrganizationAvatar";
 
@@ -17,6 +18,7 @@ interface OrganizationPanelProps {
   totalDocumentCount: number;
   onOrganizationSelect: (organizationId: string | "all") => void;
   onRefresh: () => void;
+  onInvitationAccepted: () => void;
 }
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -31,6 +33,7 @@ export default function OrganizationPanel({
   totalDocumentCount,
   onOrganizationSelect,
   onRefresh,
+  onInvitationAccepted,
 }: OrganizationPanelProps) {
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState("");
@@ -132,6 +135,8 @@ export default function OrganizationPanel({
             </button>
           )}
         </div>
+
+        <InvitationBanner onAccepted={onInvitationAccepted} />
 
         <div className="mt-2 space-y-2">
           {error && (

@@ -48,6 +48,7 @@ interface DocumentListSectionProps {
     previousDocument: DocumentItem,
     nextDocument: DocumentItem | null,
   ) => void;
+  organizationEmptyMessage?: string;
 }
 
 interface ExpiryEditState {
@@ -186,6 +187,7 @@ export default function DocumentListSection({
   onRetryFetch,
   onDocumentsChange,
   onDocumentMutation,
+  organizationEmptyMessage,
 }: DocumentListSectionProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [reprocessingId, setReprocessingId] = useState<string | null>(null);
@@ -516,6 +518,10 @@ export default function DocumentListSection({
         {listLoading ? (
           <div className="flex min-h-[240px] items-center justify-center rounded-lg border border-gray-200 bg-white text-sm text-gray-500">
             목록을 불러오는 중...
+          </div>
+        ) : organizationEmptyMessage ? (
+          <div className="flex min-h-[240px] items-center justify-center rounded-lg border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
+            {organizationEmptyMessage}
           </div>
         ) : listError ? (
           <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-lg border border-gray-200 bg-white p-6 text-center">

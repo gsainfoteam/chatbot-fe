@@ -16,7 +16,6 @@ import { UploadIcon } from "../../components/Icons";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { Button } from "../../components/ui";
 import {
-  InvitationBanner,
   OrganizationPanel,
   useDocumentManagementAccess,
 } from "../../features/organizations";
@@ -385,18 +384,17 @@ export default function UploadPage() {
             size="lg"
             leftIcon={<UploadIcon className="h-4 w-4" />}
             onClick={() => setUploadModalOpen(true)}
+            disabled={orgsLoading || organizations.length === 0}
+            title={
+              organizations.length === 0
+                ? "조직 초대를 수락하거나 조직을 생성한 뒤 업로드할 수 있습니다."
+                : undefined
+            }
             className="shrink-0 self-start"
           >
             PDF 업로드
           </Button>
         </header>
-
-        <InvitationBanner
-          onAccepted={() => {
-            void fetchOrganizations();
-            void fetchDocuments(filterOrganizationId);
-          }}
-        />
 
         <div className="upload-page-layout grid items-start gap-8 lg:gap-10">
           <OrganizationPanel
@@ -416,6 +414,10 @@ export default function UploadPage() {
             onRefresh={() => {
               void fetchOrganizations();
             }}
+            onInvitationAccepted={() => {
+              void fetchOrganizations();
+              void fetchDocuments(filterOrganizationId);
+            }}
           />
 
           <DocumentListSection
@@ -430,6 +432,13 @@ export default function UploadPage() {
             }}
             onDocumentsChange={handleDocumentsChange}
             onDocumentMutation={handleDocumentMutation}
+            organizationEmptyMessage={
+              !orgsLoading && organizations.length === 0
+                ? isGlobalSuperAdmin
+                  ? "조직을 생성하면 문서를 업로드하고 관리할 수 있습니다."
+                  : "조직 초대를 수락하면 문서를 관리할 수 있습니다."
+                : undefined
+            }
           />
         </div>
 
