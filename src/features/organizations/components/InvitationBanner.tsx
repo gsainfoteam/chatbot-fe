@@ -5,14 +5,11 @@ import {
   rejectOrganizationInvitation,
 } from "../../../api/organizations";
 import type { OrgInvitation } from "../../../api/types";
-import { ConfirmDialog } from "../../../components/ui";
+import { Button, ConfirmDialog } from "../../../components/ui";
+import { organizationRoleLabel } from "../utils";
 
 interface InvitationBannerProps {
   onAccepted: () => void;
-}
-
-function roleLabel(role: OrgInvitation["role"]): string {
-  return role === "MANAGER" ? "관리자" : "팀원";
 }
 
 export default function InvitationBanner({ onAccepted }: InvitationBannerProps) {
@@ -111,26 +108,27 @@ export default function InvitationBanner({ onAccepted }: InvitationBannerProps) 
                   {invite.organizationName}
                 </p>
                 <p className="mt-0.5 text-sm text-gray-500">
-                  {invite.organizationSlug} · {roleLabel(invite.role)}로 초대됨
+                  {invite.organizationSlug} · {organizationRoleLabel(invite.role)}로 초대됨
                 </p>
               </div>
               <div className="flex shrink-0 gap-2">
-                <button
-                  type="button"
+                <Button
+                  size="sm"
                   onClick={() => void handleAccept(invite.id)}
-                  disabled={actingId === invite.id}
-                  className="cursor-pointer rounded-md bg-[#df3326] px-3 py-2 text-sm font-medium text-white hover:bg-[#c72a1f] disabled:cursor-not-allowed disabled:opacity-50"
+                  loading={actingId === invite.id}
+                  loadingText="처리 중..."
+                  disabled={actingId !== null}
                 >
-                  {actingId === invite.id ? "처리 중..." : "수락"}
-                </button>
-                <button
-                  type="button"
+                  수락
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => setRejectingInvite(invite)}
-                  disabled={actingId === invite.id}
-                  className="cursor-pointer rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={actingId !== null}
                 >
                   거절
-                </button>
+                </Button>
               </div>
             </div>
           ))}

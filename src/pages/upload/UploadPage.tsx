@@ -13,10 +13,12 @@ import {
 } from "../../api/upload";
 import type { DocumentItem, DocumentStatus, Organization } from "../../api/types";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import {
+  InvitationBanner,
+  OrganizationPanel,
+} from "../../features/organizations";
 import DocumentListSection from "./components/DocumentListSection";
 import DocumentUploadSection from "./components/DocumentUploadSection";
-import InvitationBanner from "./components/InvitationBanner";
-import OrganizationPanel from "./components/OrganizationPanel";
 import "./UploadPage.css";
 
 const POLL_INTERVAL_MS = 3000;

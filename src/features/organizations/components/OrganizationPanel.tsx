@@ -2,6 +2,8 @@ import { useState } from "react";
 import { createOrganization } from "../../../api/organizations";
 import { canManageOrg } from "../../../api/roles";
 import type { Organization } from "../../../api/types";
+import { Button } from "../../../components/ui";
+import { organizationRoleLabel } from "../utils";
 import MemberManageModal from "./MemberManageModal";
 
 interface OrganizationPanelProps {
@@ -14,14 +16,14 @@ interface OrganizationPanelProps {
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-function effectiveRoleLabel(role: Organization["effectiveRole"]): string {
+function roleBadgeClasses(role: Organization["effectiveRole"]): string {
   switch (role) {
     case "SUPER_ADMIN":
-      return "슈퍼 관리자";
+      return "border-red-100 bg-red-50 text-red-700";
     case "MANAGER":
-      return "관리자";
+      return "border-blue-100 bg-blue-50 text-blue-700";
     case "MEMBER":
-      return "팀원";
+      return "border-gray-200 bg-gray-100 text-gray-700";
   }
 }
 
@@ -93,16 +95,17 @@ export default function OrganizationPanel({
           </p>
         </div>
         {isGlobalSuperAdmin && (
-          <button
-            type="button"
+          <Button
+            variant={showCreate ? "secondary" : "primary"}
+            size="sm"
             onClick={() => {
               setShowCreate((prev) => !prev);
               setFormError(null);
             }}
-            className="shrink-0 cursor-pointer rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="shrink-0"
           >
             {showCreate ? "생성 취소" : "조직 생성"}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -138,14 +141,13 @@ export default function OrganizationPanel({
             {formError && (
               <p className="text-sm text-red-600">{formError}</p>
             )}
-            <button
-              type="button"
+            <Button
               onClick={() => void handleCreate()}
-              disabled={creating}
-              className="cursor-pointer rounded-md bg-[#df3326] px-4 py-2 text-sm font-medium text-white hover:bg-[#c72a1f] disabled:cursor-not-allowed disabled:opacity-50"
+              loading={creating}
+              loadingText="생성 중..."
             >
-              {creating ? "생성 중..." : "생성"}
-            </button>
+              생성
+            </Button>
           </div>
         )}
 
@@ -170,7 +172,7 @@ export default function OrganizationPanel({
               return (
                 <div
                   key={org.id}
-                  className="rounded-lg border border-gray-200 bg-gray-50/40 p-4"
+                  className="rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -182,18 +184,21 @@ export default function OrganizationPanel({
                         {org.isDefault ? " · 기본" : ""}
                       </p>
                     </div>
-                    <span className="shrink-0 rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-                      {effectiveRoleLabel(org.effectiveRole)}
+                    <span
+                      className={`shrink-0 rounded-md border px-2 py-0.5 text-xs font-medium ${roleBadgeClasses(org.effectiveRole)}`}
+                    >
+                      {organizationRoleLabel(org.effectiveRole)}
                     </span>
                   </div>
                   {canManage && (
-                    <button
-                      type="button"
+                    <Button
+                      variant="accent"
+                      size="sm"
                       onClick={() => setManagingOrg(org)}
-                      className="mt-3 cursor-pointer text-sm font-medium text-[#df3326] hover:underline"
+                      className="mt-3"
                     >
                       멤버 관리
-                    </button>
+                    </Button>
                   )}
                 </div>
               );

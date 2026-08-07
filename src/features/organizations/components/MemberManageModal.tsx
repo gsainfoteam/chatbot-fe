@@ -5,8 +5,19 @@ import {
   removeOrganizationMember,
   updateOrganizationMemberRole,
 } from "../../../api/organizations";
-import type { Organization, OrgMemberRole, OrgMembership } from "../../../api/types";
-import { ConfirmDialog, Dialog } from "../../../components/ui";
+import type {
+  Organization,
+  OrgMemberRole,
+  OrgMembership,
+} from "../../../api/types";
+import {
+  Button,
+  ConfirmDialog,
+  Dialog,
+  Select,
+  type SelectOption,
+} from "../../../components/ui";
+import { membershipStatusLabel } from "../utils";
 
 interface MemberManageModalProps {
   organization: Organization;
@@ -25,13 +36,10 @@ function validateEmail(email: string): { isValid: boolean; error?: string } {
   return { isValid: true };
 }
 
-function roleLabel(role: OrgMemberRole): string {
-  return role === "MANAGER" ? "관리자" : "팀원";
-}
-
-function statusLabel(status: OrgMembership["status"]): string {
-  return status === "PENDING" ? "초대 대기" : "활성";
-}
+const MEMBER_ROLE_OPTIONS: SelectOption[] = [
+  { value: "MEMBER", label: "팀원" },
+  { value: "MANAGER", label: "관리자" },
+];
 
 export default function MemberManageModal({
   organization,
@@ -159,22 +167,23 @@ export default function MemberManageModal({
               }}
               className="min-w-0 flex-1 rounded-md border border-gray-300 px-3 py-2.5 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#df3326]"
             />
-            <select
+            <Select
               value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value as OrgMemberRole)}
-              className="rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#df3326]"
-            >
-              <option value="MEMBER">팀원</option>
-              <option value="MANAGER">관리자</option>
-            </select>
-            <button
-              type="button"
+              onValueChange={(value) => setInviteRole(value as OrgMemberRole)}
+              options={MEMBER_ROLE_OPTIONS}
+              ariaLabel="초대할 멤버 역할"
+              width="full"
+              className="sm:w-[120px]"
+              triggerClassName="bg-white"
+            />
+            <Button
               onClick={() => void handleInvite()}
               disabled={inviteLoading || !inviteEmail.trim()}
-              className="cursor-pointer rounded-md bg-[#df3326] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#c72a1f] disabled:cursor-not-allowed disabled:opacity-50"
+              loading={inviteLoading}
+              loadingText="초대 중..."
             >
-              {inviteLoading ? "초대 중..." : "초대"}
-            </button>
+              초대
+            </Button>
           </div>
         </div>
 
@@ -204,33 +213,33 @@ export default function MemberManageModal({
                     {member.inviteeEmail}
                   </p>
                   <p className="mt-0.5 text-xs text-gray-500">
-                    {statusLabel(member.status)}
+                    {membershipStatusLabel(member.status)}
                     {member.userName ? ` · ${member.userName}` : ""}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <select
+                  <Select
                     value={member.role}
                     disabled={actingId === member.id}
-                    onChange={(e) =>
+                    onValueChange={(value) =>
                       void handleRoleChange(
                         member,
-                        e.target.value as OrgMemberRole,
+                        value as OrgMemberRole,
                       )
                     }
-                    className="rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900 disabled:opacity-50"
-                  >
-                    <option value="MEMBER">{roleLabel("MEMBER")}</option>
-                    <option value="MANAGER">{roleLabel("MANAGER")}</option>
-                  </select>
-                  <button
-                    type="button"
+                    options={MEMBER_ROLE_OPTIONS}
+                    ariaLabel={`${member.inviteeEmail} 역할`}
+                    width="sm"
+                    triggerClassName="bg-white"
+                  />
+                  <Button
+                    variant="danger"
+                    size="sm"
                     onClick={() => setMemberToRemove(member)}
                     disabled={actingId === member.id}
-                    className="cursor-pointer rounded-md px-2 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     제거
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}
