@@ -7,6 +7,8 @@ export type {
 } from "./ConfirmDialog";
 export { default as Dialog } from "./Dialog";
 export type { DialogProps, DialogSize } from "./Dialog";
+export { default as DatePicker } from "./DatePicker";
+export type { DatePickerProps } from "./DatePicker";
 export { default as Select } from "./Select";
 export type {
   SelectOption,

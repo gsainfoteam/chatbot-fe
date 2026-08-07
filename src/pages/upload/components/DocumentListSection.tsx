@@ -19,7 +19,13 @@ import {
   TransferIcon,
   UnlinkIcon,
 } from "../../../components/Icons";
-import { Button, ConfirmDialog, Select } from "../../../components/ui";
+import {
+  Button,
+  ConfirmDialog,
+  DatePicker,
+  Dialog,
+  Select,
+} from "../../../components/ui";
 import ShareTransferModal from "./ShareTransferModal";
 import {
   formatKoreanDate,
@@ -76,12 +82,7 @@ const SORT_OPTIONS = [
 
 type PendingDocumentAction =
   | { type: "delete"; document: DocumentItem }
-  | { type: "reprocess"; document: DocumentItem }
-  | {
-      type: "expiry";
-      document: DocumentItem;
-      nextExpiresAt: string | null;
-    };
+  | { type: "reprocess"; document: DocumentItem };
 
 function getCooldownLabel(
   reprocessAvailableAt: string | null,
@@ -263,6 +264,10 @@ export default function DocumentListSection({
     });
   }, [documents, searchQuery, sortOrder, statusFilter]);
 
+  const expiryDocument = expiryEdit
+    ? (documents.find((item) => item.id === expiryEdit.id) ?? null)
+    : null;
+
   const cooldownKey = useMemo(
     () =>
       documents
@@ -414,7 +419,7 @@ export default function DocumentListSection({
     });
   };
 
-  const requestExpiryUpdate = () => {
+  const handleSaveExpiry = async () => {
     if (!expiryEdit) return;
 
     let nextExpiresAt: string | null = null;
@@ -442,23 +447,15 @@ export default function DocumentListSection({
       return;
     }
 
-    setPendingAction({ type: "expiry", document, nextExpiresAt });
-  };
-
-  const handleUpdateExpiry = async (
-    id: string,
-    nextExpiresAt: string | null,
-  ) => {
     try {
-      setUpdatingExpiryId(id);
-      const doc = await updateUploadExpiry(id, nextExpiresAt);
+      setUpdatingExpiryId(document.id);
+      const doc = await updateUploadExpiry(document.id, nextExpiresAt);
       onDocumentsChange((prev) => upsertDocument(prev, doc));
       setExpiryEdit(null);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "유효기간 변경에 실패했습니다.";
       setExpiryEdit((prev) => (prev ? { ...prev, error: message } : prev));
-      throw new Error(message);
     } finally {
       setUpdatingExpiryId(null);
     }
@@ -542,7 +539,6 @@ export default function DocumentListSection({
         ) : (
           <div className="space-y-4">
             {filteredDocuments.map((item) => {
-              const isEditingExpiry = expiryEdit?.id === item.id;
               const isMenuOpen = openDocumentMenuId === item.id;
               const canView =
                 item.status === "ready" && item.gcsPdfPath != null;
@@ -811,102 +807,6 @@ export default function DocumentListSection({
                       )}
                     </div>
                   </div>
-
-                  {isEditingExpiry && expiryEdit && (
-                    <div className="mt-3 space-y-3 rounded-lg border border-gray-200 bg-gray-50/70 p-4">
-                      <p className="text-sm font-medium text-gray-800">
-                        유효기간 변경
-                      </p>
-                      <div className="flex flex-wrap gap-4 text-sm text-gray-700">
-                        <label className="inline-flex cursor-pointer items-center gap-2">
-                          <input
-                            type="radio"
-                            name={`expiry-mode-${item.id}`}
-                            checked={expiryEdit.mode === "date"}
-                            onChange={() =>
-                              setExpiryEdit((prev) =>
-                                prev
-                                  ? {
-                                      ...prev,
-                                      mode: "date",
-                                      error: null,
-                                      value:
-                                        prev.value ||
-                                        (item.expiresAt
-                                          ? toDateInputValue(
-                                              new Date(item.expiresAt),
-                                            )
-                                          : ""),
-                                    }
-                                  : prev,
-                              )
-                            }
-                            className="accent-[#df3326]"
-                          />
-                          만료일 지정
-                        </label>
-                        <label className="inline-flex cursor-pointer items-center gap-2">
-                          <input
-                            type="radio"
-                            name={`expiry-mode-${item.id}`}
-                            checked={expiryEdit.mode === "indefinite"}
-                            onChange={() =>
-                              setExpiryEdit((prev) =>
-                                prev
-                                  ? {
-                                      ...prev,
-                                      mode: "indefinite",
-                                      error: null,
-                                    }
-                                  : prev,
-                              )
-                            }
-                            className="accent-[#df3326]"
-                          />
-                          무기한으로 변경
-                        </label>
-                      </div>
-                      {expiryEdit.mode === "date" && (
-                        <input
-                          type="date"
-                          value={expiryEdit.value}
-                          min={todayDateValue}
-                          onChange={(event) =>
-                            setExpiryEdit((prev) =>
-                              prev
-                                ? {
-                                    ...prev,
-                                    value: event.target.value,
-                                    error: null,
-                                  }
-                                : prev,
-                            )
-                          }
-                          className="w-full max-w-md rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#df3326]"
-                        />
-                      )}
-                      {expiryEdit.error && (
-                        <p className="text-sm text-red-600">
-                          {expiryEdit.error}
-                        </p>
-                      )}
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={requestExpiryUpdate}
-                          disabled={updatingExpiryId === item.id}
-                        >
-                          저장
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          onClick={() => setExpiryEdit(null)}
-                          disabled={updatingExpiryId === item.id}
-                        >
-                          닫기
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                 </article>
               );
             })}
@@ -943,6 +843,126 @@ export default function DocumentListSection({
         />
       )}
 
+      <Dialog
+        open={expiryEdit !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && updatingExpiryId === null) setExpiryEdit(null);
+        }}
+        title="유효기간 변경"
+        description="문서가 활성화될 기간을 설정합니다."
+        size="md"
+        closeDisabled={updatingExpiryId !== null}
+        bodyClassName="space-y-4"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setExpiryEdit(null)}
+              disabled={updatingExpiryId !== null}
+            >
+              취소
+            </Button>
+            <Button
+              onClick={() => void handleSaveExpiry()}
+              loading={updatingExpiryId !== null}
+              loadingText="변경 중..."
+            >
+              변경 저장
+            </Button>
+          </>
+        }
+      >
+        {expiryEdit && (
+          <>
+            {expiryDocument && (
+              <p className="truncate text-sm font-medium text-gray-800">
+                문서: {expiryDocument.title}
+              </p>
+            )}
+
+            <p className="flex items-center justify-between gap-3 rounded-md bg-gray-50 px-3 py-2.5 text-sm text-gray-600">
+              <span>현재 유효기간</span>
+              <strong className="shrink-0 font-medium text-gray-900">
+                {expiryDocument?.expiresAt
+                  ? `~${formatKoreanDate(expiryDocument.expiresAt)}`
+                  : "무기한"}
+              </strong>
+            </p>
+
+            <Select
+              label="변경할 기간"
+              value={expiryEdit.mode}
+              onValueChange={(value) =>
+                setExpiryEdit((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        mode: value as ExpiryEditState["mode"],
+                        value:
+                          value === "date" && !prev.value
+                            ? expiryDocument?.expiresAt
+                              ? toDateInputValue(
+                                  new Date(expiryDocument.expiresAt),
+                                )
+                              : todayDateValue
+                            : prev.value,
+                        error: null,
+                      }
+                    : prev,
+                )
+              }
+              options={[
+                { value: "date", label: "만료일 지정" },
+                { value: "indefinite", label: "무기한" },
+              ]}
+              variant="form"
+              disabled={updatingExpiryId !== null}
+            />
+
+            {expiryEdit.mode === "date" && (
+              <div>
+                <label
+                  htmlFor="document-expiry-date"
+                  className="mb-1.5 block text-sm font-medium text-gray-700"
+                >
+                  만료일
+                </label>
+                <DatePicker
+                  id="document-expiry-date"
+                  value={expiryEdit.value}
+                  min={todayDateValue}
+                  disabled={updatingExpiryId !== null}
+                  ariaLabel="문서 만료일 선택"
+                  onChange={(value) =>
+                    setExpiryEdit((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            value,
+                            error: null,
+                          }
+                        : prev,
+                    )
+                  }
+                />
+                <p className="mt-1.5 text-xs text-gray-500">
+                  지정한 날짜의 자정 전까지 챗봇 답변에 사용됩니다.
+                </p>
+              </div>
+            )}
+
+            {expiryEdit.error && (
+              <p
+                role="alert"
+                className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700"
+              >
+                {expiryEdit.error}
+              </p>
+            )}
+          </>
+        )}
+      </Dialog>
+
       {pendingAction?.type === "delete" && (
         <ConfirmDialog
           open
@@ -975,29 +995,6 @@ export default function DocumentListSection({
         />
       )}
 
-      {pendingAction?.type === "expiry" && (
-        <ConfirmDialog
-          open
-          onOpenChange={(nextOpen) => {
-            if (!nextOpen) setPendingAction(null);
-          }}
-          title="유효기간을 변경할까요?"
-          description={`"${pendingAction.document.title}" 문서의 유효기간을 ${
-            pendingAction.nextExpiresAt === null
-              ? "무기한"
-              : `${formatKoreanDate(pendingAction.nextExpiresAt)}까지`
-          }로 변경합니다.`}
-          confirmLabel="유효기간 변경"
-          loadingLabel="변경 중..."
-          fallbackErrorMessage="유효기간 변경에 실패했습니다."
-          onConfirm={() =>
-            handleUpdateExpiry(
-              pendingAction.document.id,
-              pendingAction.nextExpiresAt,
-            )
-          }
-        />
-      )}
     </section>
   );
 }
