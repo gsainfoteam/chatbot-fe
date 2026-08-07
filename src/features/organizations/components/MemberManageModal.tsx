@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getOrganizationMembers,
   inviteOrganizationMember,
@@ -17,6 +18,7 @@ import {
   Select,
   type SelectOption,
 } from "../../../components/ui";
+import { organizationQueryKeys } from "../queryKeys";
 import { membershipStatusLabel } from "../utils";
 
 interface MemberManageModalProps {
@@ -47,8 +49,7 @@ export default function MemberManageModal({
   onClose,
   onMembershipChanged,
 }: MemberManageModalProps) {
-  const [members, setMembers] = useState<OrgMembership[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<OrgMemberRole>("MEMBER");
@@ -58,24 +59,18 @@ export default function MemberManageModal({
     null,
   );
 
-  const fetchMembers = useCallback(async () => {
-    setError(null);
-    try {
-      setLoading(true);
-      const list = await getOrganizationMembers(organization.id);
-      setMembers(list);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "멤버 목록을 불러오지 못했습니다.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [organization.id]);
-
-  useEffect(() => {
-    void fetchMembers();
-  }, [fetchMembers]);
+  const membersQueryKey = organizationQueryKeys.members(organization.id);
+  const membersQuery = useQuery({
+    queryKey: membersQueryKey,
+    queryFn: () => getOrganizationMembers(organization.id),
+  });
+  const members = membersQuery.data ?? [];
+  const queryError = membersQuery.isError
+    ? membersQuery.error instanceof Error
+      ? membersQuery.error.message
+      : "멤버 목록을 불러오지 못했습니다."
+    : null;
+  const displayedError = error ?? queryError;
 
   const handleInvite = async () => {
     const validation = validateEmail(inviteEmail);
@@ -93,7 +88,7 @@ export default function MemberManageModal({
       });
       setInviteEmail("");
       setInviteRole("MEMBER");
-      await fetchMembers();
+      await queryClient.invalidateQueries({ queryKey: membersQueryKey });
     } catch (err) {
       setError(err instanceof Error ? err.message : "초대에 실패했습니다.");
     } finally {
@@ -113,7 +108,7 @@ export default function MemberManageModal({
         role,
       });
       onMembershipChanged();
-      await fetchMembers();
+      await queryClient.invalidateQueries({ queryKey: membersQueryKey });
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "역할 변경에 실패했습니다.",
@@ -129,7 +124,7 @@ export default function MemberManageModal({
     try {
       await removeOrganizationMember(organization.id, membership.id);
       onMembershipChanged();
-      await fetchMembers();
+      await queryClient.invalidateQueries({ queryKey: membersQueryKey });
     } catch (err) {
       throw err instanceof Error ? err : new Error("제거에 실패했습니다.");
     } finally {
@@ -192,13 +187,13 @@ export default function MemberManageModal({
           </div>
         </div>
 
-        {error && (
+        {displayedError && (
           <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
+            {displayedError}
           </p>
         )}
 
-        {loading ? (
+        {membersQuery.isLoading ? (
           <p className="py-6 text-center text-sm text-gray-500">
             멤버 목록 불러오는 중...
           </p>
