@@ -79,7 +79,7 @@
     width: clampInt(ds.width, 360, 280, 520),
     height: clampInt(ds.height, 520, 360, 860),
     hideButton: parseBoolean(ds.hideButton),
-    resizable: parseBoolean(ds.resizable),
+    resizable: parseBoolean(ds.resizable, true),
     theme: ds.theme || "light",
     buttonIcon: buttonIcon,
     // 색상 옵션들

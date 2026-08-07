@@ -117,6 +117,8 @@ test("keeps the existing launcher and panel layout by default", () => {
   assert.equal(panel.style.height, "520px");
   assert.equal(panel.style.bottom, "86px");
   assert.equal(window.ChatbotWidget.getConfig().hideButton, false);
+  assert.equal(window.ChatbotWidget.getConfig().resizable, true);
+  assert.equal(panel.children[1].style.display, "block");
 });
 
 test("supports a custom trigger without reserving space for the launcher", () => {
