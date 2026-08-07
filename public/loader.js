@@ -9,6 +9,11 @@
     return Math.min(max, Math.max(min, val));
   }
 
+  function parseBoolean(v, fallback = false) {
+    if (v == null || v === "") return fallback;
+    return !["false", "0", "no", "off"].includes(String(v).toLowerCase());
+  }
+
   // ---- utils: 색상 검증 ----
   function validateColor(color, fallback) {
     if (!color) return fallback;
@@ -71,8 +76,10 @@
     widgetKey: ds.widgetKey || "dev",
     position: ds.position === "left" ? "left" : "right",
     offset: clampInt(ds.offset, 18, 0, 80),
-    width: clampInt(ds.width, 360, 280, 520),
-    height: clampInt(ds.height, 520, 360, 860),
+    width: clampInt(ds.width, 360, 320, 640),
+    height: clampInt(ds.height, 520, 420, 720),
+    hideButton: parseBoolean(ds.hideButton),
+    resizable: parseBoolean(ds.resizable, true),
     theme: ds.theme || "light",
     buttonIcon: buttonIcon,
     // 색상 옵션들
@@ -90,6 +97,10 @@
   console.log("[loader.js] 최종 config:", config);
 
   const BTN_SIZE = 56;
+
+  function desktopPanelBottom() {
+    return config.offset + (config.hideButton ? 0 : BTN_SIZE + 12);
+  }
 
   // ---- 2) launcher button ----
   const btn = document.createElement("button");
@@ -124,6 +135,7 @@
       '<svg fill="#ffffff" viewBox="0 -64 640 640" xmlns="http://www.w3.org/2000/svg" stroke="#ffffff" style="width: 34px; height: auto;"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M32,224H64V416H32A31.96166,31.96166,0,0,1,0,384V256A31.96166,31.96166,0,0,1,32,224Zm512-48V448a64.06328,64.06328,0,0,1-64,64H160a64.06328,64.06328,0,0,1-64-64V176a79.974,79.974,0,0,1,80-80H288V32a32,32,0,0,1,64,0V96H464A79.974,79.974,0,0,1,544,176ZM264,256a40,40,0,1,0-40,40A39.997,39.997,0,0,0,264,256Zm-8,128H192v32h64Zm96,0H288v32h64ZM456,256a40,40,0,1,0-40,40A39.997,39.997,0,0,0,456,256Zm-8,128H384v32h64ZM640,256V384a31.96166,31.96166,0,0,1-32,32H576V224h32A31.96166,31.96166,0,0,1,640,256Z"></path></g></svg>',
   };
   btn.innerHTML = buttonIconSVG[config.buttonIcon] || buttonIconSVG.logo;
+  btn.style.display = config.hideButton ? "none" : "flex";
 
   // hover/press 효과
   btn.addEventListener(
@@ -157,7 +169,7 @@
   wrap.style.cssText = `
     position:fixed;
     ${config.position}:${config.offset}px;
-    bottom:${config.offset + BTN_SIZE + 12}px;
+    bottom:${desktopPanelBottom()}px;
 
     width:${config.width}px;
     height:${config.height}px;
@@ -196,13 +208,12 @@
       wrap.style.width = config.width + "px";
       wrap.style.height = config.height + "px";
       wrap.style.maxHeight = "";
-      wrap.style.bottom = config.offset + BTN_SIZE + 12 + "px";
+      wrap.style.bottom = desktopPanelBottom() + "px";
       wrap.style[config.position] = config.offset + "px";
       wrap.style.boxShadow = "0 16px 40px rgba(0,0,0,.22)";
     }
   }
   applyResponsive();
-  mq.addEventListener?.("change", applyResponsive);
 
   const iframe = document.createElement("iframe");
   // pageUrl을 URL에 포함시켜 postMessage 타이밍에 의존하지 않고 즉시 사용 가능하게 함
@@ -212,6 +223,32 @@
   iframe.style.cssText = `width:100%; height:100%; border:0; background:transparent;`;
   iframe.allow = "clipboard-read; clipboard-write";
   wrap.appendChild(iframe);
+
+  // 데스크톱에서 선택적으로 드래그하여 패널 크기를 조절한다.
+  const resizeHandle = document.createElement("button");
+  resizeHandle.type = "button";
+  resizeHandle.setAttribute("aria-label", "채팅창 크기 조절");
+  resizeHandle.style.cssText = `
+    position:absolute;
+    top:0;
+    ${config.position === "right" ? "left" : "right"}:0;
+    width:20px;
+    height:20px;
+    padding:0;
+    border:0;
+    background:linear-gradient(${config.position === "right" ? "135deg" : "225deg"}, rgba(100,116,139,.55) 0 2px, transparent 2px 5px, rgba(100,116,139,.35) 5px 7px, transparent 7px);
+    cursor:${config.position === "right" ? "nwse-resize" : "nesw-resize"};
+    touch-action:none;
+    z-index:1;
+    display:${!mq.matches && config.resizable ? "block" : "none"};
+  `;
+  wrap.appendChild(resizeHandle);
+
+  mq.addEventListener?.("change", () => {
+    applyResponsive();
+    resizeHandle.style.display =
+      !mq.matches && config.resizable ? "block" : "none";
+  });
 
   // ---- 상태 ----
   let isOpen = false;
@@ -331,6 +368,50 @@
   function toggle() {
     isOpen ? close() : open();
   }
+
+  function resize(width, height) {
+    config.width = clampInt(width, config.width, 320, 640);
+    config.height = clampInt(height, config.height, 420, 720);
+    applyResponsive();
+    return { width: config.width, height: config.height };
+  }
+
+  function setLauncherVisible(visible) {
+    config.hideButton = !visible;
+    btn.style.display = visible ? "flex" : "none";
+    applyResponsive();
+  }
+
+  resizeHandle.addEventListener("pointerdown", (event) => {
+    if (!config.resizable || mq.matches) return;
+
+    event.preventDefault();
+    resizeHandle.setPointerCapture?.(event.pointerId);
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startWidth = config.width;
+    const startHeight = config.height;
+
+    const onPointerMove = (moveEvent) => {
+      const horizontalDelta = moveEvent.clientX - startX;
+      resize(
+        startWidth +
+          (config.position === "right" ? -horizontalDelta : horizontalDelta),
+        startHeight - (moveEvent.clientY - startY)
+      );
+    };
+
+    const onPointerUp = (upEvent) => {
+      resizeHandle.releasePointerCapture?.(upEvent.pointerId);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
+  });
 
   btn.addEventListener("click", toggle);
   overlay.addEventListener("click", close);
@@ -498,6 +579,20 @@
     // 위젯 닫기
     close: function () {
       close();
+    },
+
+    // 위젯 패널 크기 변경 (모바일 레이아웃에는 다음 데스크톱 전환 시 적용)
+    resize: function (width, height) {
+      return resize(width, height);
+    },
+
+    // 커스텀 트리거를 사용할 때 기본 런처 표시 여부 제어
+    showLauncher: function () {
+      setLauncherVisible(true);
+    },
+
+    hideLauncher: function () {
+      setLauncherVisible(false);
     },
 
     // 위젯 상태 확인
