@@ -151,6 +151,6 @@ test("resizes within the documented desktop bounds", () => {
   assert.equal(minimum.height, 420);
 
   const maximum = window.ChatbotWidget.resize(2000, 2000);
-  assert.equal(maximum.width, 520);
-  assert.equal(maximum.height, 860);
+  assert.equal(maximum.width, 640);
+  assert.equal(maximum.height, 720);
 });

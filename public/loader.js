@@ -76,8 +76,8 @@
     widgetKey: ds.widgetKey || "dev",
     position: ds.position === "left" ? "left" : "right",
     offset: clampInt(ds.offset, 18, 0, 80),
-    width: clampInt(ds.width, 360, 320, 520),
-    height: clampInt(ds.height, 520, 420, 860),
+    width: clampInt(ds.width, 360, 320, 640),
+    height: clampInt(ds.height, 520, 420, 720),
     hideButton: parseBoolean(ds.hideButton),
     resizable: parseBoolean(ds.resizable, true),
     theme: ds.theme || "light",
@@ -365,8 +365,8 @@
   }
 
   function resize(width, height) {
-    config.width = clampInt(width, config.width, 320, 520);
-    config.height = clampInt(height, config.height, 420, 860);
+    config.width = clampInt(width, config.width, 320, 640);
+    config.height = clampInt(height, config.height, 420, 720);
     applyResponsive();
     return { width: config.width, height: config.height };
   }
