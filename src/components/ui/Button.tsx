@@ -20,7 +20,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const baseClasses =
-  "inline-flex cursor-pointer items-center justify-center gap-2 rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex cursor-pointer items-center justify-center gap-2 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
@@ -36,10 +36,10 @@ const variantClasses: Record<ButtonVariant, string> = {
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  inline: "min-h-0 p-0 text-sm",
-  sm: "min-h-8 px-3 py-1.5 text-sm",
-  md: "min-h-10 px-4 py-2 text-sm",
-  lg: "min-h-11 px-5 py-2.5 text-base",
+  inline: "min-h-0 rounded-md p-0 text-sm",
+  sm: "min-h-8 rounded-md px-3 py-1.5 text-sm",
+  md: "min-h-10 rounded-md px-4 py-2 text-sm",
+  lg: "min-h-11 rounded-lg px-5 py-2.5 text-base",
 };
 
 function joinClasses(...classes: Array<string | undefined>): string {
