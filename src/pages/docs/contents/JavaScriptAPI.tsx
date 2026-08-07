@@ -21,7 +21,7 @@ ChatbotWidget.open();
 // 위젯 닫기
 ChatbotWidget.close();
 
-// 패널 크기 변경 (허용 범위: 280~520 x 360~860px)
+// 패널 크기 변경 (허용 범위: 320~520 x 420~860px)
 ChatbotWidget.resize(420, 640);
 
 // 자체 버튼을 사용하는 경우 기본 런처 제어

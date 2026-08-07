@@ -146,7 +146,11 @@ test("resizes within the documented desktop bounds", () => {
   assert.equal(panel.style.width, "450px");
   assert.equal(panel.style.height, "700px");
 
-  const clamped = window.ChatbotWidget.resize(100, 2000);
-  assert.equal(clamped.width, 280);
-  assert.equal(clamped.height, 860);
+  const minimum = window.ChatbotWidget.resize(100, 100);
+  assert.equal(minimum.width, 320);
+  assert.equal(minimum.height, 420);
+
+  const maximum = window.ChatbotWidget.resize(2000, 2000);
+  assert.equal(maximum.width, 520);
+  assert.equal(maximum.height, 860);
 });
