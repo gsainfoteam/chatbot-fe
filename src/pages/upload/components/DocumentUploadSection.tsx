@@ -334,15 +334,13 @@ export default function DocumentUploadSection({
           </span>
           <Button
             variant="ghost"
-            size="lg"
             onClick={() => onOpenChange(false)}
             disabled={isUploading}
-            className="min-w-24 flex-1 bg-gray-100 active:scale-[0.98] sm:flex-none"
+            className="min-w-20 flex-1 bg-gray-100 active:scale-[0.98] sm:flex-none"
           >
             취소
           </Button>
           <Button
-            size="lg"
             onClick={() => {
               const targets = pending.filter((p) => p.status === "pending");
               void runQueue(targets);
@@ -350,7 +348,7 @@ export default function DocumentUploadSection({
             disabled={!hasUploadable}
             loading={isUploading}
             loadingText="업로드 중..."
-            className="min-w-32 flex-1 active:scale-[0.98] sm:flex-none"
+            className="min-w-28 flex-1 active:scale-[0.98] sm:flex-none"
           >
             {pendingCount > 0 ? `업로드 (${pendingCount}개)` : "업로드"}
           </Button>
@@ -378,7 +376,7 @@ export default function DocumentUploadSection({
           if (canUpload) setIsDragging(true);
         }}
         onDragLeave={() => setIsDragging(false)}
-        className={`flex min-h-[190px] flex-col items-center justify-center rounded-2xl border-2 border-dashed px-5 py-7 text-center transition-colors sm:min-h-[210px] ${
+        className={`flex min-h-[155px] flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-5 text-center transition-colors sm:min-h-[165px] ${
           !canUpload
             ? "cursor-not-allowed border-gray-200 bg-gray-50 opacity-60"
             : isDragging
@@ -395,22 +393,22 @@ export default function DocumentUploadSection({
           className="hidden"
           onChange={handleFileChange}
         />
-        <span className="flex h-20 w-20 items-center justify-center rounded-full bg-red-50 text-[#df3326]">
-          <UploadIcon className="h-8 w-8" />
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-[#df3326]">
+          <UploadIcon className="h-6 w-6" />
         </span>
-        <p className="mt-5 text-base font-semibold text-gray-900 sm:text-lg">
+        <p className="mt-3.5 text-base font-semibold text-gray-900">
           {canUpload
             ? "클릭하거나 PDF를 드래그하세요"
             : "조직에 소속된 후 업로드할 수 있습니다"}
         </p>
-        <p className="mt-1.5 text-sm text-gray-400 sm:text-base">
+        <p className="mt-1 text-sm text-gray-400">
           PDF만, 파일당 최대 {MAX_FILE_SIZE_MB}MB · 최대{" "}
           {MAX_CONCURRENT_UPLOADS}개
         </p>
       </div>
 
-      <section className="flex flex-col gap-3 rounded-2xl bg-gray-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        <span className="shrink-0 text-sm font-semibold text-gray-600 sm:text-base">
+      <section className="flex flex-col gap-2.5 rounded-xl bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
+        <span className="shrink-0 text-sm font-semibold text-gray-600">
           업로드 조직
         </span>
         {organizations.length === 0 ? (
@@ -424,8 +422,7 @@ export default function DocumentUploadSection({
             onValueChange={onOrganizationChange}
             options={organizationOptions}
             variant="form"
-            className="w-full sm:w-[220px]"
-            triggerClassName="!h-12 !rounded-xl !px-4 !text-base"
+            className="w-full sm:w-[200px]"
           />
         )}
       </section>
