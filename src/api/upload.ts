@@ -41,6 +41,44 @@ export interface GetUploadListParams {
   offset?: number;
 }
 
+export type AccessibleUploadStatus =
+  | "all"
+  | "active"
+  | "processing"
+  | "failed"
+  | "expired";
+
+export type AccessibleUploadSort = "recent" | "name" | "expiry";
+
+export interface GetAccessibleUploadsParams {
+  organizationId: string | "all";
+  page: number;
+  size: number;
+  query?: string;
+  status?: AccessibleUploadStatus;
+  sort?: AccessibleUploadSort;
+}
+
+export interface AccessibleUploadPage {
+  number: number;
+  size: number;
+  filteredTotal: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+export interface AccessibleUploadSummary {
+  totalDocuments: number;
+  organizationCounts: Record<string, number>;
+}
+
+export interface AccessibleUploadsResponse {
+  items: DocumentItem[];
+  page: AccessibleUploadPage;
+  summary: AccessibleUploadSummary;
+}
+
 function getErrorMessage(err: unknown, fallback: string): string {
   if (axios.isAxiosError(err) && err.response?.data != null) {
     const data = err.response.data as { message?: string };
@@ -100,26 +138,29 @@ export async function getUploadList(
   }
 }
 
-/** 내가 관리할 수 있는 문서 전체 (여러 조직 합침) */
-export async function getManageableUploads(
-  params?: GetUploadListParams,
-): Promise<DocumentItem[]> {
-  const requestParams: { limit?: number; offset?: number } = {};
-  if (params?.limit != null) {
-    requestParams.limit = Math.min(100, Math.max(1, params.limit));
-  }
-  if (params?.offset != null && params.offset >= 0) {
-    requestParams.offset = params.offset;
-  }
+/** 현재 사용자에게 접근 가능한 문서 목록과 전체 집계 조회 */
+export async function getAccessibleUploads(
+  params: GetAccessibleUploadsParams,
+  signal?: AbortSignal,
+): Promise<AccessibleUploadsResponse> {
+  const query = params.query?.trim();
+  const requestParams: GetAccessibleUploadsParams = {
+    organizationId: params.organizationId,
+    page: Math.max(1, params.page),
+    size: Math.min(100, Math.max(1, params.size)),
+    status: params.status ?? "all",
+    sort: params.sort ?? "recent",
+    ...(query ? { query } : {}),
+  };
 
   try {
-    const res = await apiClient.get<DocumentItem[]>(
-      "/v1/admin/upload/manageable",
-      { params: requestParams },
+    const res = await apiClient.get<AccessibleUploadsResponse>(
+      "/v1/admin/upload/accessible",
+      { params: requestParams, signal },
     );
     return res.data;
   } catch (err) {
-    throwAdminUploadError(err, "관리 문서 목록을 불러오는데 실패했습니다.");
+    throwAdminUploadError(err, "접근 가능한 문서 목록을 불러오는데 실패했습니다.");
   }
 }
 

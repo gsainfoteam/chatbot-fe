@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { getToken, useVerifyToken } from "../../api/auth";
-import {
-  getOrganizationDocuments,
-  getOrganizations,
-} from "../../api/organizations";
+import { getOrganizations } from "../../api/organizations";
 import { isSuperAdmin } from "../../api/roles";
 import {
   AdminUploadApiError,
-  getManageableUploads,
+  getAccessibleUploads,
   getUploadById,
+} from "../../api/upload";
+import type {
+  AccessibleUploadPage,
+  AccessibleUploadSort,
+  AccessibleUploadStatus,
 } from "../../api/upload";
 import type { DocumentItem, DocumentStatus, Organization } from "../../api/types";
 import { UploadIcon } from "../../components/Icons";
@@ -24,41 +26,20 @@ import DocumentUploadSection from "./components/DocumentUploadSection";
 import "./UploadPage.css";
 
 const POLL_INTERVAL_MS = 3000;
+const SEARCH_DEBOUNCE_MS = 300;
+const DOCUMENT_PAGE_SIZE = 20;
+
+const EMPTY_PAGE: AccessibleUploadPage = {
+  number: 1,
+  size: DOCUMENT_PAGE_SIZE,
+  filteredTotal: 0,
+  totalPages: 0,
+  hasNext: false,
+  hasPrevious: false,
+};
 
 function isPollingStatus(status: DocumentStatus): boolean {
   return status === "queued" || status === "processing";
-}
-
-function upsertDocument(
-  list: DocumentItem[],
-  doc: DocumentItem,
-): DocumentItem[] {
-  const idx = list.findIndex((d) => d.id === doc.id);
-  if (idx >= 0) {
-    return list.map((d, i) => (i === idx ? doc : d));
-  }
-  return [doc, ...list];
-}
-
-function getRelatedOrganizationIds(document: DocumentItem): Set<string> {
-  return new Set(
-    [
-      document.ownerOrganization?.id,
-      ...(document.sharedOrganizations ?? []).map(
-        (organization) => organization.id,
-      ),
-    ].filter((id): id is string => Boolean(id)),
-  );
-}
-
-function getDocumentCounts(documents: DocumentItem[]): Record<string, number> {
-  const counts: Record<string, number> = {};
-  documents.forEach((document) => {
-    getRelatedOrganizationIds(document).forEach((organizationId) => {
-      counts[organizationId] = (counts[organizationId] ?? 0) + 1;
-    });
-  });
-  return counts;
 }
 
 function pickDefaultOrganizationId(organizations: Organization[]): string {
@@ -85,18 +66,37 @@ export default function UploadPage() {
     {},
   );
   const [totalDocumentCount, setTotalDocumentCount] = useState(0);
+  const [documentPage, setDocumentPage] = useState(1);
+  const [documentPageInfo, setDocumentPageInfo] =
+    useState<AccessibleUploadPage>(EMPTY_PAGE);
+  const [searchInput, setSearchInput] = useState("");
+  const [documentQuery, setDocumentQuery] = useState("");
+  const [documentStatus, setDocumentStatus] =
+    useState<AccessibleUploadStatus>("all");
+  const [documentSort, setDocumentSort] =
+    useState<AccessibleUploadSort>("recent");
+  const [documentRefreshKey, setDocumentRefreshKey] = useState(0);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
   const [pollingError, setPollingError] = useState<string | null>(null);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   const uploadedListRef = useRef(uploadedList);
+  const documentRequestIdRef = useRef(0);
 
   useEffect(() => {
     uploadedListRef.current = uploadedList;
   }, [uploadedList]);
 
   const isGlobalSuperAdmin = isSuperAdmin(data?.role);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDocumentPage(1);
+      setDocumentQuery(searchInput.trim());
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [searchInput]);
 
   const fetchOrganizations = useCallback(async () => {
     setOrgsError(null);
@@ -121,34 +121,62 @@ export default function UploadPage() {
     }
   }, []);
 
-  const fetchDocuments = useCallback(async (organizationId: string | "all") => {
-    setListError(null);
-    setListLoading(true);
-    try {
-      const list =
-        organizationId === "all"
-          ? await getManageableUploads({ limit: 50, offset: 0 })
-          : await getOrganizationDocuments(organizationId);
-      setUploadedList(list);
-      if (organizationId === "all") {
-        setDocumentCounts(getDocumentCounts(list));
-        setTotalDocumentCount(list.length);
-      } else {
-        setDocumentCounts((previous) => ({
-          ...previous,
-          [organizationId]: list.length,
-        }));
+  const fetchDocuments = useCallback(
+    async (signal?: AbortSignal) => {
+      const requestId = ++documentRequestIdRef.current;
+      setListError(null);
+      setListLoading(true);
+      try {
+        const response = await getAccessibleUploads(
+          {
+            organizationId: filterOrganizationId,
+            page: documentPage,
+            size: DOCUMENT_PAGE_SIZE,
+            query: documentQuery || undefined,
+            status: documentStatus,
+            sort: documentSort,
+          },
+          signal,
+        );
+        if (signal?.aborted || requestId !== documentRequestIdRef.current) {
+          return;
+        }
+
+        setDocumentCounts(response.summary.organizationCounts);
+        setTotalDocumentCount(response.summary.totalDocuments);
+        setDocumentPageInfo(response.page);
+
+        if (
+          response.page.totalPages > 0 &&
+          documentPage > response.page.totalPages
+        ) {
+          setDocumentPage(response.page.totalPages);
+          return;
+        }
+        setUploadedList(response.items);
+      } catch (err) {
+        if (signal?.aborted || requestId !== documentRequestIdRef.current) {
+          return;
+        }
+        setListError(
+          err instanceof Error
+            ? err.message
+            : "목록을 불러오는데 실패했습니다.",
+        );
+      } finally {
+        if (!signal?.aborted && requestId === documentRequestIdRef.current) {
+          setListLoading(false);
+        }
       }
-    } catch (err) {
-      setListError(
-        err instanceof Error
-          ? err.message
-          : "목록을 불러오는데 실패했습니다.",
-      );
-    } finally {
-      setListLoading(false);
-    }
-  }, []);
+    },
+    [
+      documentPage,
+      documentQuery,
+      documentSort,
+      documentStatus,
+      filterOrganizationId,
+    ],
+  );
 
   useEffect(() => {
     if (!hasToken || isLoading || isError || !data?.uuid) return;
@@ -157,14 +185,16 @@ export default function UploadPage() {
 
   useEffect(() => {
     if (!hasToken || isLoading || isError || !data?.uuid) return;
-    void fetchDocuments(filterOrganizationId);
+    const controller = new AbortController();
+    void fetchDocuments(controller.signal);
+    return () => controller.abort();
   }, [
     hasToken,
     isLoading,
     isError,
     data?.uuid,
-    filterOrganizationId,
     fetchDocuments,
+    documentRefreshKey,
   ]);
 
   const pollingIdsKey = useMemo(
@@ -219,6 +249,12 @@ export default function UploadPage() {
           ? "일부 문서의 처리 상태를 불러오지 못했습니다. 자동으로 다시 시도합니다."
           : null,
       );
+      const hasSettledDocument =
+        missingIds.size > 0 ||
+        uploadedListRef.current.some((item) => {
+          const update = updates.get(item.id);
+          return update != null && !isPollingStatus(update.status);
+        });
       setUploadedList((prev) =>
         prev
           .filter((item) => !missingIds.has(item.id))
@@ -227,6 +263,11 @@ export default function UploadPage() {
             return update && isPollingStatus(item.status) ? update : item;
           }),
       );
+
+      if (hasSettledDocument) {
+        setDocumentRefreshKey((previous) => previous + 1);
+        return;
+      }
 
       if (!cancelled) {
         timeoutId = window.setTimeout(() => {
@@ -251,70 +292,9 @@ export default function UploadPage() {
     [],
   );
 
-  const revalidateDocuments = useCallback(async () => {
-    try {
-      const allDocumentsPromise = getManageableUploads({
-        limit: 50,
-        offset: 0,
-      });
-      const visibleDocumentsPromise =
-        filterOrganizationId === "all"
-          ? allDocumentsPromise
-          : getOrganizationDocuments(filterOrganizationId);
-      const [allDocuments, visibleDocuments] = await Promise.all([
-        allDocumentsPromise,
-        visibleDocumentsPromise,
-      ]);
-
-      setUploadedList(visibleDocuments);
-      setDocumentCounts(getDocumentCounts(allDocuments));
-      setTotalDocumentCount(allDocuments.length);
-    } catch {
-      // API 변경은 이미 성공했으므로 낙관적으로 반영한 화면 상태를 유지합니다.
-    }
-  }, [filterOrganizationId]);
-
-  const handleDocumentMutation = useCallback(
-    (previousDocument: DocumentItem, nextDocument: DocumentItem | null) => {
-      const previousOrganizationIds =
-        getRelatedOrganizationIds(previousDocument);
-      const nextOrganizationIds = nextDocument
-        ? getRelatedOrganizationIds(nextDocument)
-        : new Set<string>();
-      const affectedOrganizationIds = new Set([
-        ...previousOrganizationIds,
-        ...nextOrganizationIds,
-      ]);
-
-      setDocumentCounts((previousCounts) => {
-        const nextCounts = { ...previousCounts };
-        affectedOrganizationIds.forEach((organizationId) => {
-          const delta =
-            Number(nextOrganizationIds.has(organizationId)) -
-            Number(previousOrganizationIds.has(organizationId));
-          if (delta === 0) return;
-          nextCounts[organizationId] = Math.max(
-            0,
-            (nextCounts[organizationId] ?? 0) + delta,
-          );
-        });
-        return nextCounts;
-      });
-
-      const wasVisibleInAll = previousDocument.canManage !== false;
-      const isVisibleInAll =
-        nextDocument != null && nextDocument.canManage !== false;
-      const totalDelta = Number(isVisibleInAll) - Number(wasVisibleInAll);
-      if (totalDelta !== 0) {
-        setTotalDocumentCount((previous) =>
-          Math.max(0, previous + totalDelta),
-        );
-      }
-
-      void revalidateDocuments();
-    },
-    [revalidateDocuments],
-  );
+  const refreshDocuments = useCallback(() => {
+    setDocumentRefreshKey((previous) => previous + 1);
+  }, []);
 
   if (!hasToken) {
     return <Navigate to="/" replace />;
@@ -406,6 +386,7 @@ export default function UploadPage() {
             documentCounts={documentCounts}
             totalDocumentCount={totalDocumentCount}
             onOrganizationSelect={(organizationId) => {
+              setDocumentPage(1);
               setFilterOrganizationId(organizationId);
               if (organizationId !== "all") {
                 setUploadOrganizationId(organizationId);
@@ -416,7 +397,7 @@ export default function UploadPage() {
             }}
             onInvitationAccepted={() => {
               void fetchOrganizations();
-              void fetchDocuments(filterOrganizationId);
+              refreshDocuments();
             }}
           />
 
@@ -427,11 +408,25 @@ export default function UploadPage() {
             listLoading={listLoading}
             listError={listError}
             pollingError={pollingError}
+            searchQuery={searchInput}
+            statusFilter={documentStatus}
+            sortOrder={documentSort}
+            pageInfo={documentPageInfo}
+            onSearchQueryChange={setSearchInput}
+            onStatusFilterChange={(status) => {
+              setDocumentPage(1);
+              setDocumentStatus(status);
+            }}
+            onSortOrderChange={(sort) => {
+              setDocumentPage(1);
+              setDocumentSort(sort);
+            }}
+            onPageChange={setDocumentPage}
             onRetryFetch={() => {
-              void fetchDocuments(filterOrganizationId);
+              void fetchDocuments();
             }}
             onDocumentsChange={handleDocumentsChange}
-            onDocumentMutation={handleDocumentMutation}
+            onDocumentMutation={refreshDocuments}
             organizationEmptyMessage={
               !orgsLoading && organizations.length === 0
                 ? isGlobalSuperAdmin
@@ -448,21 +443,9 @@ export default function UploadPage() {
           organizations={organizations}
           selectedOrganizationId={uploadOrganizationId}
           onOrganizationChange={setUploadOrganizationId}
-          onUploaded={(doc) => {
-            const ownerOrganizationId =
-              doc.ownerOrganization?.id ?? uploadOrganizationId;
-            setDocumentCounts((previous) => ({
-              ...previous,
-              [ownerOrganizationId]:
-                (previous[ownerOrganizationId] ?? 0) + 1,
-            }));
-            setTotalDocumentCount((previous) => previous + 1);
-            if (
-              filterOrganizationId === "all" ||
-              ownerOrganizationId === filterOrganizationId
-            ) {
-              setUploadedList((prev) => upsertDocument(prev, doc));
-            }
+          onUploaded={() => {
+            setDocumentPage(1);
+            refreshDocuments();
           }}
         />
       </div>
