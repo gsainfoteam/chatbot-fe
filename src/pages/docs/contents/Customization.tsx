@@ -84,6 +84,24 @@ export default function Customization() {
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">logo</td>
                 </tr>
+                <tr>
+                  <td className="px-4 py-3 text-sm font-mono text-gray-900">
+                    data-hide-button
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    커스텀 버튼을 사용할 때 기본 런처 숨김 (true / false)
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">false</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 text-sm font-mono text-gray-900">
+                    data-resizable
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    데스크톱에서 패널 모서리 드래그 크기 조절 (true / false)
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">true</td>
+                </tr>
               </tbody>
             </table>
           </div>

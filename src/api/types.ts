@@ -51,19 +51,88 @@ export interface VerifyTokenResponse {
   role?: string;
 }
 
-export interface UploadResponseMetadata {
-  resource_name?: string;
-  status?: string;
-  queued_for_processing?: boolean;
-  message_id?: string;
-  gcs_path?: string;
+export type DocumentStatus =
+  | "uploading"
+  | "queued"
+  | "processing"
+  | "ready"
+  | "failed";
+
+export type OrgEffectiveRole = "SUPER_ADMIN" | "MANAGER" | "MEMBER";
+export type OrgMemberRole = "MANAGER" | "MEMBER";
+export type OrgMembershipStatus = "PENDING" | "ACCEPTED";
+export type DocumentAccessRelation = "OWNER" | "SHARED";
+
+export interface OrganizationSummary {
+  id: string;
+  name: string;
+  slug: string;
 }
 
-export interface UploadResponse {
+export interface Organization extends OrganizationSummary {
+  isDefault: boolean;
+  effectiveRole: OrgEffectiveRole;
+  createdAt: string;
+}
+
+export interface CreateOrganizationRequest {
+  name: string;
+  slug: string;
+}
+
+export interface InviteOrgMemberRequest {
+  inviteeEmail: string;
+  role: OrgMemberRole;
+}
+
+export interface UpdateOrgMemberRoleRequest {
+  role: OrgMemberRole;
+}
+
+export interface OrgMembership {
+  id: string;
+  organizationId: string;
+  inviteeEmail: string;
+  memberIdpUuid: string | null;
+  role: OrgMemberRole;
+  status: OrgMembershipStatus;
+  memberName: string | null;
+  acceptedAt: string | null;
+  createdAt: string;
+}
+
+export interface OrgInvitation extends OrgMembership {
+  organizationName: string;
+  organizationSlug: string;
+}
+
+export interface DocumentUploader {
+  idpUuid: string;
+  email: string;
+  name: string;
+}
+
+export interface DocumentItem {
   id: string;
   title: string;
-  metadata?: UploadResponseMetadata;
+  resourceName: string;
+  status: DocumentStatus;
+  summary: string | null;
+  gcsPdfPath: string;
+  errorMessage: string | null;
   uploadedAt: string;
+  processedAt: string | null;
+  canReprocess: boolean;
+  reprocessAvailableAt: string | null;
+  expiresAt: string | null;
+  isExpired: boolean;
+  ownerOrganization?: OrganizationSummary;
+  uploader?: DocumentUploader | null;
+  sharedOrganizations?: OrganizationSummary[];
+  accessRelation?: DocumentAccessRelation;
+  canManage?: boolean;
+  canShare?: boolean;
+  canTransfer?: boolean;
 }
 
 export interface ChatMessage {

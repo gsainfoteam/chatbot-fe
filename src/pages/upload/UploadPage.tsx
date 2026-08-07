@@ -1,91 +1,320 @@
-import { useRef, useState, useEffect } from "react";
-import { Navigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, Navigate } from "react-router-dom";
 import { getToken, useVerifyToken } from "../../api/auth";
 import {
-  uploadPdf,
-  deleteUpload,
-  getUploadList,
-  isPdfFile,
-  isWithinSizeLimit,
-  MAX_FILE_SIZE_MB,
+  getOrganizationDocuments,
+  getOrganizations,
+} from "../../api/organizations";
+import { isSuperAdmin } from "../../api/roles";
+import {
+  AdminUploadApiError,
+  getManageableUploads,
+  getUploadById,
 } from "../../api/upload";
-import type { UploadResponse } from "../../api/types";
+import type { DocumentItem, DocumentStatus, Organization } from "../../api/types";
+import { UploadIcon } from "../../components/Icons";
 import LoadingSpinner from "../../components/LoadingSpinner";
-import { UploadIcon, XIcon } from "../../components/Icons";
-import { getResourceLink } from "./utils";
+import { Button } from "../../components/ui";
+import {
+  OrganizationPanel,
+  useDocumentManagementAccess,
+} from "../../features/organizations";
+import DocumentListSection from "./components/DocumentListSection";
+import DocumentUploadSection from "./components/DocumentUploadSection";
+import "./UploadPage.css";
 
-const SUPER_ADMIN = "SUPER_ADMIN";
-const MAX_CONCURRENT_UPLOADS = 10;
+const POLL_INTERVAL_MS = 3000;
 
-type PendingStatus = "pending" | "uploading" | "success" | "error";
-
-interface PendingUpload {
-  id: string;
-  file: File;
-  status: PendingStatus;
-  error?: string;
+function isPollingStatus(status: DocumentStatus): boolean {
+  return status === "queued" || status === "processing";
 }
 
-function validateFile(file: File): string | null {
-  if (!isPdfFile(file)) {
-    return "PDF 파일만 업로드할 수 있습니다.";
+function upsertDocument(
+  list: DocumentItem[],
+  doc: DocumentItem,
+): DocumentItem[] {
+  const idx = list.findIndex((d) => d.id === doc.id);
+  if (idx >= 0) {
+    return list.map((d, i) => (i === idx ? doc : d));
   }
-  if (!isWithinSizeLimit(file)) {
-    return `파일 크기는 ${MAX_FILE_SIZE_MB}MB 이하여야 합니다.`;
-  }
-  return null;
+  return [doc, ...list];
 }
 
-function nextId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+function getRelatedOrganizationIds(document: DocumentItem): Set<string> {
+  return new Set(
+    [
+      document.ownerOrganization?.id,
+      ...(document.sharedOrganizations ?? []).map(
+        (organization) => organization.id,
+      ),
+    ].filter((id): id is string => Boolean(id)),
+  );
 }
 
-function fileKey(f: File): string {
-  return `${f.name}:${f.size}:${f.lastModified}`;
+function getDocumentCounts(documents: DocumentItem[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  documents.forEach((document) => {
+    getRelatedOrganizationIds(document).forEach((organizationId) => {
+      counts[organizationId] = (counts[organizationId] ?? 0) + 1;
+    });
+  });
+  return counts;
+}
+
+function pickDefaultOrganizationId(organizations: Organization[]): string {
+  const defaultOrg = organizations.find((org) => org.isDefault);
+  return defaultOrg?.id ?? organizations[0]?.id ?? "";
 }
 
 export default function UploadPage() {
   const hasToken = !!getToken();
   const { data, isLoading, isError } = useVerifyToken(hasToken);
+  const documentManagementAccess = useDocumentManagementAccess();
 
-  const [pending, setPending] = useState<PendingUpload[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadedList, setUploadedList] = useState<UploadResponse[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [orgsLoading, setOrgsLoading] = useState(true);
+  const [orgsError, setOrgsError] = useState<string | null>(null);
+
+  const [uploadOrganizationId, setUploadOrganizationId] = useState("");
+  const [filterOrganizationId, setFilterOrganizationId] = useState<
+    string | "all"
+  >("all");
+
+  const [uploadedList, setUploadedList] = useState<DocumentItem[]>([]);
+  const [documentCounts, setDocumentCounts] = useState<Record<string, number>>(
+    {},
+  );
+  const [totalDocumentCount, setTotalDocumentCount] = useState(0);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [limitNotice, setLimitNotice] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [pollingError, setPollingError] = useState<string | null>(null);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
-  const fetchList = () => {
-    setListError(null);
-    getUploadList({ limit: 50 })
-      .then((list) => {
-        setUploadedList(list);
-      })
-      .catch((err) => {
-        setListError(
-          err instanceof Error
-            ? err.message
-            : "목록을 불러오는데 실패했습니다.",
-        );
-      })
-      .finally(() => setListLoading(false));
-  };
+  const uploadedListRef = useRef(uploadedList);
 
   useEffect(() => {
-    if (
-      !hasToken ||
-      isLoading ||
-      isError ||
-      !data?.uuid ||
-      data.role !== SUPER_ADMIN
-    )
-      return;
-    fetchList();
-  }, [hasToken, isLoading, isError, data?.uuid, data?.role]);
+    uploadedListRef.current = uploadedList;
+  }, [uploadedList]);
+
+  const isGlobalSuperAdmin = isSuperAdmin(data?.role);
+
+  const fetchOrganizations = useCallback(async () => {
+    setOrgsError(null);
+    try {
+      setOrgsLoading(true);
+      const list = await getOrganizations();
+      setOrganizations(list);
+      setUploadOrganizationId((prev) => {
+        if (prev && list.some((org) => org.id === prev)) return prev;
+        return pickDefaultOrganizationId(list);
+      });
+      setFilterOrganizationId((prev) => {
+        if (prev === "all" || list.some((org) => org.id === prev)) return prev;
+        return "all";
+      });
+    } catch (err) {
+      setOrgsError(
+        err instanceof Error ? err.message : "조직 목록을 불러오지 못했습니다.",
+      );
+    } finally {
+      setOrgsLoading(false);
+    }
+  }, []);
+
+  const fetchDocuments = useCallback(async (organizationId: string | "all") => {
+    setListError(null);
+    setListLoading(true);
+    try {
+      const list =
+        organizationId === "all"
+          ? await getManageableUploads({ limit: 50, offset: 0 })
+          : await getOrganizationDocuments(organizationId);
+      setUploadedList(list);
+      if (organizationId === "all") {
+        setDocumentCounts(getDocumentCounts(list));
+        setTotalDocumentCount(list.length);
+      } else {
+        setDocumentCounts((previous) => ({
+          ...previous,
+          [organizationId]: list.length,
+        }));
+      }
+    } catch (err) {
+      setListError(
+        err instanceof Error
+          ? err.message
+          : "목록을 불러오는데 실패했습니다.",
+      );
+    } finally {
+      setListLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasToken || isLoading || isError || !data?.uuid) return;
+    void fetchOrganizations();
+  }, [hasToken, isLoading, isError, data?.uuid, fetchOrganizations]);
+
+  useEffect(() => {
+    if (!hasToken || isLoading || isError || !data?.uuid) return;
+    void fetchDocuments(filterOrganizationId);
+  }, [
+    hasToken,
+    isLoading,
+    isError,
+    data?.uuid,
+    filterOrganizationId,
+    fetchDocuments,
+  ]);
+
+  const pollingIdsKey = useMemo(
+    () =>
+      uploadedList
+        .filter((item) => isPollingStatus(item.status))
+        .map((item) => item.id)
+        .join(","),
+    [uploadedList],
+  );
+
+  useEffect(() => {
+    if (!pollingIdsKey) return;
+
+    let cancelled = false;
+    let timeoutId: number | undefined;
+    let controller: AbortController | undefined;
+
+    const poll = async (): Promise<void> => {
+      const ids = uploadedListRef.current
+        .filter((item) => isPollingStatus(item.status))
+        .map((item) => item.id);
+      if (ids.length === 0) return;
+
+      controller = new AbortController();
+      const results = await Promise.allSettled(
+        ids.map((id) => getUploadById(id, controller?.signal)),
+      );
+      if (cancelled) return;
+
+      const updates = new Map<string, DocumentItem>();
+      const missingIds = new Set<string>();
+      let hasPollingError = false;
+
+      results.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          updates.set(result.value.id, result.value);
+          return;
+        }
+        if (
+          result.reason instanceof AdminUploadApiError &&
+          result.reason.status === 404
+        ) {
+          missingIds.add(ids[index]);
+          return;
+        }
+        hasPollingError = true;
+      });
+
+      setPollingError(
+        hasPollingError
+          ? "일부 문서의 처리 상태를 불러오지 못했습니다. 자동으로 다시 시도합니다."
+          : null,
+      );
+      setUploadedList((prev) =>
+        prev
+          .filter((item) => !missingIds.has(item.id))
+          .map((item) => {
+            const update = updates.get(item.id);
+            return update && isPollingStatus(item.status) ? update : item;
+          }),
+      );
+
+      if (!cancelled) {
+        timeoutId = window.setTimeout(() => {
+          void poll();
+        }, POLL_INTERVAL_MS);
+      }
+    };
+
+    void poll();
+
+    return () => {
+      cancelled = true;
+      controller?.abort();
+      if (timeoutId != null) window.clearTimeout(timeoutId);
+    };
+  }, [pollingIdsKey]);
+
+  const handleDocumentsChange = useCallback(
+    (updater: (prev: DocumentItem[]) => DocumentItem[]) => {
+      setUploadedList(updater);
+    },
+    [],
+  );
+
+  const revalidateDocuments = useCallback(async () => {
+    try {
+      const allDocumentsPromise = getManageableUploads({
+        limit: 50,
+        offset: 0,
+      });
+      const visibleDocumentsPromise =
+        filterOrganizationId === "all"
+          ? allDocumentsPromise
+          : getOrganizationDocuments(filterOrganizationId);
+      const [allDocuments, visibleDocuments] = await Promise.all([
+        allDocumentsPromise,
+        visibleDocumentsPromise,
+      ]);
+
+      setUploadedList(visibleDocuments);
+      setDocumentCounts(getDocumentCounts(allDocuments));
+      setTotalDocumentCount(allDocuments.length);
+    } catch {
+      // API 변경은 이미 성공했으므로 낙관적으로 반영한 화면 상태를 유지합니다.
+    }
+  }, [filterOrganizationId]);
+
+  const handleDocumentMutation = useCallback(
+    (previousDocument: DocumentItem, nextDocument: DocumentItem | null) => {
+      const previousOrganizationIds =
+        getRelatedOrganizationIds(previousDocument);
+      const nextOrganizationIds = nextDocument
+        ? getRelatedOrganizationIds(nextDocument)
+        : new Set<string>();
+      const affectedOrganizationIds = new Set([
+        ...previousOrganizationIds,
+        ...nextOrganizationIds,
+      ]);
+
+      setDocumentCounts((previousCounts) => {
+        const nextCounts = { ...previousCounts };
+        affectedOrganizationIds.forEach((organizationId) => {
+          const delta =
+            Number(nextOrganizationIds.has(organizationId)) -
+            Number(previousOrganizationIds.has(organizationId));
+          if (delta === 0) return;
+          nextCounts[organizationId] = Math.max(
+            0,
+            (nextCounts[organizationId] ?? 0) + delta,
+          );
+        });
+        return nextCounts;
+      });
+
+      const wasVisibleInAll = previousDocument.canManage !== false;
+      const isVisibleInAll =
+        nextDocument != null && nextDocument.canManage !== false;
+      const totalDelta = Number(isVisibleInAll) - Number(wasVisibleInAll);
+      if (totalDelta !== 0) {
+        setTotalDocumentCount((previous) =>
+          Math.max(0, previous + totalDelta),
+        );
+      }
+
+      void revalidateDocuments();
+    },
+    [revalidateDocuments],
+  );
 
   if (!hasToken) {
     return <Navigate to="/" replace />;
@@ -97,390 +326,146 @@ export default function UploadPage() {
         <LoadingSpinner
           message="권한 확인 중..."
           fullScreen
-          className="bg-gray-50/55"
+          className="bg-white/70"
         />
       </div>
     );
   }
 
-  if (isError || !data?.uuid || data.role !== SUPER_ADMIN) {
+  if (isError || !data?.uuid) {
     return <Navigate to="/" replace />;
   }
 
-  const addFiles = (files: File[]) => {
-    if (files.length === 0) return;
-    const existingKeys = new Set(pending.map((p) => fileKey(p.file)));
-    const toAdd: PendingUpload[] = [];
-    for (const f of files) {
-      const key = fileKey(f);
-      if (existingKeys.has(key)) continue;
-      existingKeys.add(key);
-      const error = validateFile(f);
-      toAdd.push({
-        id: nextId(),
-        file: f,
-        status: error ? "error" : "pending",
-        error: error ?? undefined,
-      });
-    }
-    const available = Math.max(MAX_CONCURRENT_UPLOADS - pending.length, 0);
-    if (toAdd.length > available) {
-      setLimitNotice(
-        `한 번에 최대 ${MAX_CONCURRENT_UPLOADS}개까지만 업로드할 수 있습니다.`,
-      );
-    } else {
-      setLimitNotice(null);
-    }
-    setPending((prev) => [...prev, ...toAdd.slice(0, available)]);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const chosen = e.target.files;
-    if (!chosen || chosen.length === 0) return;
-    addFiles(Array.from(chosen));
-    e.target.value = "";
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const dropped = e.dataTransfer.files;
-    if (!dropped || dropped.length === 0) return;
-    addFiles(Array.from(dropped));
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleRemove = (id: string) => {
-    setPending((prev) => prev.filter((p) => p.id !== id));
-  };
-
-  const uploadSingle = async (item: PendingUpload): Promise<void> => {
-    setPending((prev) =>
-      prev.map((p) =>
-        p.id === item.id ? { ...p, status: "uploading", error: undefined } : p,
-      ),
+  if (documentManagementAccess.isLoading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <LoadingSpinner
+          message="문서 관리 권한 확인 중..."
+          fullScreen
+          className="bg-white/70"
+        />
+      </div>
     );
-    try {
-      const title = item.file.name.trim() || "제목 없음";
-      await uploadPdf(item.file, title);
-      setPending((prev) =>
-        prev.map((p) =>
-          p.id === item.id ? { ...p, status: "success", error: undefined } : p,
-        ),
-      );
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "업로드에 실패했습니다.";
-      setPending((prev) =>
-        prev.map((p) =>
-          p.id === item.id ? { ...p, status: "error", error: message } : p,
-        ),
-      );
-    }
-  };
+  }
 
-  const runQueue = async (items: PendingUpload[]) => {
-    if (items.length === 0) return;
-    setIsUploading(true);
-    try {
-      await Promise.all(items.map((item) => uploadSingle(item)));
-      setPending((prev) => prev.filter((p) => p.status !== "success"));
-      fetchList();
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleUploadAll = () => {
-    const targets = pending.filter((p) => p.status === "pending");
-    void runQueue(targets);
-  };
-
-  const handleRetry = (id: string) => {
-    const target = pending.find((p) => p.id === id);
-    if (!target) return;
-    const error = validateFile(target.file);
-    if (error) {
-      setPending((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, status: "error", error } : p)),
-      );
-      return;
-    }
-    void runQueue([{ ...target, status: "pending", error: undefined }]);
-  };
-
-  const handleDelete = async (id: string) => {
-    setDeleteError(null);
-    try {
-      setDeletingId(id);
-      await deleteUpload(id);
-      fetchList();
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "삭제에 실패했습니다.";
-      setDeleteError(message);
-      // 404(이미 삭제됨)인 경우에도 목록에서 제거해 화면이 바로 갱신되도록 함
-      if (message === "이미 삭제되었거나 존재하지 않는 파일입니다.") {
-        setUploadedList((prev) => prev.filter((item) => item.id !== id));
-        setDeleteError(null);
-      }
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
-  const pendingCount = pending.filter((p) => p.status === "pending").length;
-  const hasUploadable = pendingCount > 0 && !isUploading;
-
-  const renderStatusBadge = (status: PendingStatus) => {
-    switch (status) {
-      case "pending":
-        return (
-          <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs shrink-0">
-            대기
-          </span>
-        );
-      case "uploading":
-        return (
-          <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs shrink-0">
-            업로드 중...
-          </span>
-        );
-      case "success":
-        return (
-          <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs shrink-0">
-            완료
-          </span>
-        );
-      case "error":
-        return (
-          <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs shrink-0">
-            실패
-          </span>
-        );
-    }
-  };
+  if (!documentManagementAccess.canAccess) {
+    return (
+      <main className="min-h-[calc(100dvh-4rem)] bg-white">
+        <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6">
+          <h1 className="text-2xl font-bold text-gray-900">문서 관리</h1>
+          <p className="mt-4 text-sm leading-6 text-gray-600">
+            문서 관리는 조직에 소속된 Admin이거나, 조직 초대를 받은 경우에만
+            이용할 수 있습니다. 조직 관리자에게 초대를 요청하거나, 초대 메일을
+            확인해주세요.
+          </p>
+          <Link
+            to="/dashboard"
+            className="mt-8 inline-flex min-h-10 items-center justify-center rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)]"
+          >
+            대시보드로 이동
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">파일 업로드</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            PDF 파일을 선택하면 파일 이름이 제목으로 저장됩니다. 한 번에 최대{" "}
-            {MAX_CONCURRENT_UPLOADS}개까지 업로드할 수 있습니다. (각 파일 최대{" "}
-            {MAX_FILE_SIZE_MB}MB)
-          </p>
+    <main className="min-h-[calc(100dvh-4rem)] bg-white">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <header className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-3xl font-bold text-gray-900">문서 관리</h1>
+            <p className="mt-2 text-sm text-gray-600">
+              PDF 파일은 자동으로 챗봇 답변에 적용되며, 만료된 문서는 답변에서
+              제외됩니다.
+            </p>
+          </div>
+          <Button
+            size="lg"
+            leftIcon={<UploadIcon className="h-4 w-4" />}
+            onClick={() => setUploadModalOpen(true)}
+            disabled={orgsLoading || organizations.length === 0}
+            title={
+              organizations.length === 0
+                ? "조직 초대를 수락하거나 조직을 생성한 뒤 업로드할 수 있습니다."
+                : undefined
+            }
+            className="shrink-0 self-start"
+          >
+            PDF 업로드
+          </Button>
+        </header>
+
+        <div className="upload-page-layout grid items-start gap-8 lg:gap-10">
+          <OrganizationPanel
+            organizations={organizations}
+            loading={orgsLoading}
+            error={orgsError}
+            isGlobalSuperAdmin={isGlobalSuperAdmin}
+            selectedOrganizationId={filterOrganizationId}
+            documentCounts={documentCounts}
+            totalDocumentCount={totalDocumentCount}
+            onOrganizationSelect={(organizationId) => {
+              setFilterOrganizationId(organizationId);
+              if (organizationId !== "all") {
+                setUploadOrganizationId(organizationId);
+              }
+            }}
+            onRefresh={() => {
+              void fetchOrganizations();
+            }}
+            onInvitationAccepted={() => {
+              void fetchOrganizations();
+              void fetchDocuments(filterOrganizationId);
+            }}
+          />
+
+          <DocumentListSection
+            documents={uploadedList}
+            organizations={organizations}
+            filterOrganizationId={filterOrganizationId}
+            listLoading={listLoading}
+            listError={listError}
+            pollingError={pollingError}
+            onRetryFetch={() => {
+              void fetchDocuments(filterOrganizationId);
+            }}
+            onDocumentsChange={handleDocumentsChange}
+            onDocumentMutation={handleDocumentMutation}
+            organizationEmptyMessage={
+              !orgsLoading && organizations.length === 0
+                ? isGlobalSuperAdmin
+                  ? "조직을 생성하면 문서를 업로드하고 관리할 수 있습니다."
+                  : "조직 초대를 수락하면 문서를 관리할 수 있습니다."
+                : undefined
+            }
+          />
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">PDF 업로드</h2>
-          </div>
-
-          <div className="p-6 space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                파일 <span className="text-red-500">*</span>
-              </label>
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => inputRef.current?.click()}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    inputRef.current?.click();
-                  }
-                }}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                className={`
-                  border-2 border-dashed rounded-lg p-8 sm:p-12 text-center cursor-pointer transition-colors duration-150
-                  ${
-                    isDragging
-                      ? "border-[#df3326] bg-red-50/50"
-                      : "border-gray-300 hover:border-gray-400 hover:bg-gray-50/50"
-                  }
-                `}
-              >
-                <input
-                  ref={inputRef}
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  multiple
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-                <div className="flex justify-center">
-                  <UploadIcon className="w-12 h-12 text-gray-400" />
-                </div>
-                <p className="mt-3 text-sm font-medium text-gray-700">
-                  클릭하거나 PDF 파일을 여기에 드래그하세요 (최대{" "}
-                  {MAX_CONCURRENT_UPLOADS}개까지 업로드 가능)
-                </p>
-                <p className="mt-1 text-xs text-gray-500">
-                  PDF만 업로드 가능, 각 파일 최대 {MAX_FILE_SIZE_MB}MB
-                </p>
-              </div>
-
-              {limitNotice && (
-                <p className="mt-2 text-sm text-red-600">{limitNotice}</p>
-              )}
-
-              {pending.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  {pending.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-4 py-3 text-sm"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-700 truncate min-w-0">
-                            {item.file.name}
-                          </span>
-                          {renderStatusBadge(item.status)}
-                        </div>
-                        <p className="mt-0.5 text-xs text-gray-500 truncate">
-                          {(item.file.size / 1024).toFixed(1)} KB
-                          {item.error ? ` · ${item.error}` : ""}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        {item.status === "error" && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRetry(item.id);
-                            }}
-                            disabled={isUploading}
-                            className="text-[#df3326] hover:text-[#c72a1f] font-medium disabled:opacity-50"
-                          >
-                            재시도
-                          </button>
-                        )}
-                        {item.status !== "uploading" && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemove(item.id);
-                            }}
-                            className="text-red-600 hover:text-red-700 font-medium"
-                          >
-                            제거
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={handleUploadAll}
-              disabled={!hasUploadable}
-              className="w-full px-6 py-2.5 bg-[#df3326] text-white font-medium rounded-md hover:bg-[#c72a1f] active:scale-[0.98] transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isUploading
-                ? "업로드 중..."
-                : pendingCount > 0
-                  ? `업로드 (${pendingCount}개)`
-                  : "업로드"}
-            </button>
-          </div>
-        </div>
-
-        {/* 내가 업로드한 파일 목록 */}
-        <div className="mt-8 bg-white rounded-lg border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">
-              내가 업로드한 파일
-            </h2>
-          </div>
-          {listLoading ? (
-            <div className="p-8 text-center text-gray-500">
-              목록을 불러오는 중...
-            </div>
-          ) : listError ? (
-            <div className="p-6 flex flex-col items-center gap-3">
-              <p className="text-sm text-red-600">{listError}</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setListLoading(true);
-                  fetchList();
-                }}
-                className="text-sm font-medium text-[#df3326] hover:underline"
-              >
-                다시 시도
-              </button>
-            </div>
-          ) : uploadedList.length === 0 ? (
-            <div className="p-8 text-center text-gray-500 text-sm">
-              업로드한 파일이 없습니다.
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-200">
-              {uploadedList.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between gap-3 px-6 py-4 text-sm"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-gray-900 truncate">
-                      {item.title}
-                    </p>
-                    <p className="text-gray-500 text-xs mt-0.5">
-                      {new Date(item.uploadedAt).toLocaleString("ko-KR")}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {item.metadata?.status === "uploaded" &&
-                      item.metadata?.gcs_path && (
-                        <a
-                          href={getResourceLink(item.metadata.gcs_path)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[#df3326] hover:text-[#c72a1f] hover:bg-red-50 rounded-md font-medium transition-colors"
-                        >
-                          문서 보기
-                        </a>
-                      )}
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(item.id)}
-                      disabled={deletingId === item.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md font-medium shrink-0 disabled:opacity-50"
-                    >
-                      <XIcon className="w-4 h-4" />
-                      {deletingId === item.id ? "삭제 중..." : "삭제"}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          {deleteError && (
-            <div className="px-6 py-3 border-t border-gray-200 bg-red-50 text-sm text-red-700">
-              {deleteError}
-            </div>
-          )}
-        </div>
+        <DocumentUploadSection
+          open={uploadModalOpen}
+          onOpenChange={setUploadModalOpen}
+          organizations={organizations}
+          selectedOrganizationId={uploadOrganizationId}
+          onOrganizationChange={setUploadOrganizationId}
+          onUploaded={(doc) => {
+            const ownerOrganizationId =
+              doc.ownerOrganization?.id ?? uploadOrganizationId;
+            setDocumentCounts((previous) => ({
+              ...previous,
+              [ownerOrganizationId]:
+                (previous[ownerOrganizationId] ?? 0) + 1,
+            }));
+            setTotalDocumentCount((previous) => previous + 1);
+            if (
+              filterOrganizationId === "all" ||
+              ownerOrganizationId === filterOrganizationId
+            ) {
+              setUploadedList((prev) => upsertDocument(prev, doc));
+            }
+          }}
+        />
       </div>
-    </div>
+    </main>
   );
 }

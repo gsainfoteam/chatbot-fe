@@ -1,0 +1,23 @@
+.upload-document-panel {
+  min-height: 560px;
+}
+
+.upload-page-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.document-list-scroll {
+  min-height: 0;
+}
+
+@media (min-width: 1024px) {
+  .upload-page-layout {
+    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .upload-document-panel {
+    min-height: 480px;
+  }
+}
