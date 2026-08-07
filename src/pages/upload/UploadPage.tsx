@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { getToken, useVerifyToken } from "../../api/auth";
 import {
   getOrganizationDocuments,
@@ -18,6 +18,7 @@ import { Button } from "../../components/ui";
 import {
   InvitationBanner,
   OrganizationPanel,
+  useDocumentManagementAccess,
 } from "../../features/organizations";
 import DocumentListSection from "./components/DocumentListSection";
 import DocumentUploadSection from "./components/DocumentUploadSection";
@@ -69,6 +70,7 @@ function pickDefaultOrganizationId(organizations: Organization[]): string {
 export default function UploadPage() {
   const hasToken = !!getToken();
   const { data, isLoading, isError } = useVerifyToken(hasToken);
+  const documentManagementAccess = useDocumentManagementAccess();
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [orgsLoading, setOrgsLoading] = useState(true);
@@ -333,6 +335,39 @@ export default function UploadPage() {
 
   if (isError || !data?.uuid) {
     return <Navigate to="/" replace />;
+  }
+
+  if (documentManagementAccess.isLoading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <LoadingSpinner
+          message="문서 관리 권한 확인 중..."
+          fullScreen
+          className="bg-white/70"
+        />
+      </div>
+    );
+  }
+
+  if (!documentManagementAccess.canAccess) {
+    return (
+      <main className="min-h-[calc(100dvh-4rem)] bg-white">
+        <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6">
+          <h1 className="text-2xl font-bold text-gray-900">문서 관리</h1>
+          <p className="mt-4 text-sm leading-6 text-gray-600">
+            문서 관리는 조직에 소속된 Admin이거나, 조직 초대를 받은 경우에만
+            이용할 수 있습니다. 조직 관리자에게 초대를 요청하거나, 초대 메일을
+            확인해주세요.
+          </p>
+          <Link
+            to="/dashboard"
+            className="mt-8 inline-flex min-h-10 items-center justify-center rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-hover)]"
+          >
+            대시보드로 이동
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   return (

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   acceptOrganizationInvitation,
   getOrganizationInvitations,
@@ -6,6 +7,7 @@ import {
 } from "../../../api/organizations";
 import type { OrgInvitation } from "../../../api/types";
 import { Button, ConfirmDialog } from "../../../components/ui";
+import { organizationQueryKeys } from "../queryKeys";
 import { organizationRoleLabel } from "../utils";
 
 interface InvitationBannerProps {
@@ -13,6 +15,7 @@ interface InvitationBannerProps {
 }
 
 export default function InvitationBanner({ onAccepted }: InvitationBannerProps) {
+  const queryClient = useQueryClient();
   const [invitations, setInvitations] = useState<OrgInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +49,9 @@ export default function InvitationBanner({ onAccepted }: InvitationBannerProps) 
     try {
       await acceptOrganizationInvitation(membershipId);
       setInvitations((prev) => prev.filter((item) => item.id !== membershipId));
+      await queryClient.invalidateQueries({
+        queryKey: organizationQueryKeys.all,
+      });
       onAccepted();
     } catch (err) {
       setError(
@@ -62,6 +68,9 @@ export default function InvitationBanner({ onAccepted }: InvitationBannerProps) 
     try {
       await rejectOrganizationInvitation(membershipId);
       setInvitations((prev) => prev.filter((item) => item.id !== membershipId));
+      await queryClient.invalidateQueries({
+        queryKey: organizationQueryKeys.all,
+      });
     } catch (err) {
       throw err instanceof Error
         ? err
