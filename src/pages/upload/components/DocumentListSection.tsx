@@ -13,7 +13,9 @@ import {
   EllipsisVerticalIcon,
   EyeIcon,
   RefreshIcon,
+  ShareIcon,
   TrashIcon,
+  TransferIcon,
 } from "../../../components/Icons";
 import { Button, ConfirmDialog, Select } from "../../../components/ui";
 import ShareTransferModal from "./ShareTransferModal";
@@ -638,6 +640,7 @@ export default function DocumentListSection({
                               }}
                               className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
                             >
+                              <ShareIcon className="h-[18px] w-[18px] shrink-0" />
                               다른 조직에 공유
                             </button>
                           )}
@@ -670,6 +673,7 @@ export default function DocumentListSection({
                               }}
                               className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
                             >
+                              <TransferIcon className="h-[18px] w-[18px] shrink-0" />
                               소유권 이양
                             </button>
                           )}
