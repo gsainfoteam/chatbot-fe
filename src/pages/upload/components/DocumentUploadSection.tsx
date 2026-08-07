@@ -7,6 +7,7 @@ import {
 } from "../../../api/upload";
 import type { DocumentItem, Organization } from "../../../api/types";
 import { UploadIcon } from "../../../components/Icons";
+import { Button, Select } from "../../../components/ui";
 import {
   formatKoreanDate,
   getOneYearLaterValue,
@@ -74,6 +75,14 @@ export default function DocumentUploadSection({
   const expiryPresets = useMemo(() => getSemesterExpiryPresets(), []);
   const todayDateValue = useMemo(() => toDateInputValue(new Date()), []);
   const oneYearLaterValue = useMemo(() => getOneYearLaterValue(), []);
+  const organizationOptions = useMemo(
+    () =>
+      organizations.map((org) => ({
+        value: org.id,
+        label: `${org.name}${org.isDefault ? " (기본)" : ""}`,
+      })),
+    [organizations],
+  );
 
   const canUpload = organizations.length > 0 && !!selectedOrganizationId;
   const pendingCount = pending.filter((p) => p.status === "pending").length;
@@ -323,29 +332,25 @@ export default function DocumentUploadSection({
       </div>
 
       <div className="p-6">
-        <label className="mb-4 block text-sm">
-          <span className="mb-1.5 block font-medium text-gray-700">
-            업로드 조직
-          </span>
-          {organizations.length === 0 ? (
+        {organizations.length === 0 ? (
+          <div className="mb-4 text-sm">
+            <span className="mb-1.5 block font-medium text-gray-700">
+              업로드 조직
+            </span>
             <p className="rounded-md bg-gray-50 px-3 py-2.5 text-sm text-gray-500">
               소속 조직이 없어 업로드할 수 없습니다.
             </p>
-          ) : (
-            <select
-              value={selectedOrganizationId}
-              onChange={(e) => onOrganizationChange(e.target.value)}
-              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#df3326]"
-            >
-              {organizations.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
-                  {org.isDefault ? " (기본)" : ""}
-                </option>
-              ))}
-            </select>
-          )}
-        </label>
+          </div>
+        ) : (
+          <Select
+            label="업로드 조직"
+            value={selectedOrganizationId}
+            onValueChange={onOrganizationChange}
+            options={organizationOptions}
+            variant="form"
+            className="mb-4"
+          />
+        )}
 
         <div
           role="button"
@@ -428,17 +433,18 @@ export default function DocumentUploadSection({
                       </p>
                     </div>
                     {item.status !== "uploading" && (
-                      <button
-                        type="button"
+                      <Button
+                        variant="dangerLink"
+                        size="inline"
                         onClick={() =>
                           setPending((prev) =>
                             prev.filter((p) => p.id !== item.id),
                           )
                         }
-                        className="shrink-0 cursor-pointer text-sm font-medium text-red-500 hover:text-red-700"
+                        className="shrink-0"
                       >
                         제거
-                      </button>
+                      </Button>
                     )}
                   </div>
 
@@ -497,14 +503,14 @@ export default function DocumentUploadSection({
                   {item.error && (
                     <div className="mt-3 flex flex-wrap items-center gap-3">
                       <p className="text-sm text-red-600">{item.error}</p>
-                      <button
-                        type="button"
+                      <Button
+                        variant="link"
+                        size="inline"
                         onClick={() => handleRetry(item.id)}
                         disabled={isUploading}
-                        className="cursor-pointer text-sm font-medium text-[#df3326] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         재시도
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </article>
@@ -513,21 +519,19 @@ export default function DocumentUploadSection({
           </div>
         </div>
 
-        <button
-          type="button"
+        <Button
+          size="lg"
           onClick={() => {
             const targets = pending.filter((p) => p.status === "pending");
             void runQueue(targets);
           }}
           disabled={!hasUploadable}
-          className="mt-6 w-full cursor-pointer rounded-md bg-[#df3326] px-6 py-2.5 font-medium text-white transition-all duration-150 hover:bg-[#c72a1f] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+          loading={isUploading}
+          loadingText="업로드 중..."
+          className="mt-6 w-full active:scale-[0.98]"
         >
-          {isUploading
-            ? "업로드 중..."
-            : pendingCount > 0
-              ? `업로드 (${pendingCount}개)`
-              : "업로드"}
-        </button>
+          {pendingCount > 0 ? `업로드 (${pendingCount}개)` : "업로드"}
+        </Button>
 
         {limitNotice && (
           <div

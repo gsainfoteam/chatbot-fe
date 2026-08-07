@@ -8,4 +8,10 @@ export type {
 export { default as Dialog } from "./Dialog";
 export type { DialogProps, DialogSize } from "./Dialog";
 export { default as Select } from "./Select";
-export type { SelectOption, SelectProps, SelectWidth } from "./Select";
+export type {
+  SelectOption,
+  SelectProps,
+  SelectSize,
+  SelectVariant,
+  SelectWidth,
+} from "./Select";

@@ -5,8 +5,10 @@ export type ButtonVariant =
   | "secondary"
   | "danger"
   | "ghost"
-  | "accent";
-export type ButtonSize = "sm" | "md" | "lg";
+  | "accent"
+  | "link"
+  | "dangerLink";
+export type ButtonSize = "inline" | "sm" | "md" | "lg";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -29,9 +31,12 @@ const variantClasses: Record<ButtonVariant, string> = {
   ghost: "bg-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-900",
   accent:
     "bg-red-50 text-[var(--color-primary)] hover:bg-red-100 hover:text-[var(--color-primary-hover)]",
+  link: "bg-transparent text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] hover:underline",
+  dangerLink: "bg-transparent text-red-500 hover:text-red-700",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
+  inline: "min-h-0 p-0 text-sm",
   sm: "min-h-8 px-3 py-1.5 text-sm",
   md: "min-h-10 px-4 py-2 text-sm",
   lg: "min-h-11 px-5 py-2.5 text-base",

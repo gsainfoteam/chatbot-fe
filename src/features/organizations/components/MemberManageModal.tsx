@@ -173,8 +173,8 @@ export default function MemberManageModal({
               options={MEMBER_ROLE_OPTIONS}
               ariaLabel="초대할 멤버 역할"
               width="full"
+              variant="form"
               className="sm:w-[120px]"
-              triggerClassName="bg-white"
             />
             <Button
               onClick={() => void handleInvite()}
@@ -230,7 +230,8 @@ export default function MemberManageModal({
                     options={MEMBER_ROLE_OPTIONS}
                     ariaLabel={`${member.inviteeEmail} 역할`}
                     width="sm"
-                    triggerClassName="bg-white"
+                    variant="form"
+                    size="sm"
                   />
                   <Button
                     variant="danger"

@@ -8,7 +8,9 @@ export interface SelectOption {
   disabled?: boolean;
 }
 
-export type SelectWidth = "sm" | "md" | "lg" | "full";
+export type SelectWidth = "auto" | "sm" | "md" | "lg" | "full";
+export type SelectVariant = "default" | "form";
+export type SelectSize = "sm" | "md";
 
 export interface SelectProps {
   value?: string;
@@ -23,6 +25,8 @@ export interface SelectProps {
   helperText?: string;
   error?: string;
   width?: SelectWidth;
+  variant?: SelectVariant;
+  size?: SelectSize;
   disabled?: boolean;
   required?: boolean;
   className?: string;
@@ -30,10 +34,21 @@ export interface SelectProps {
 }
 
 const widthClasses: Record<SelectWidth, string> = {
+  auto: "w-auto min-w-[120px]",
   sm: "w-[120px]",
   md: "w-[200px]",
   lg: "w-[260px]",
   full: "w-full",
+};
+
+const triggerVariantClasses: Record<SelectVariant, string> = {
+  default: "rounded-lg bg-gray-50 hover:bg-gray-100",
+  form: "rounded-md bg-white",
+};
+
+const triggerSizeClasses: Record<SelectSize, string> = {
+  sm: "h-8 px-2.5 py-1.5",
+  md: "h-10 px-3 py-2",
 };
 
 function joinClasses(...classes: Array<string | undefined | false>): string {
@@ -72,6 +87,8 @@ export default function Select({
   helperText,
   error,
   width = "full",
+  variant = "default",
+  size = "md",
   disabled = false,
   required = false,
   className,
@@ -90,7 +107,12 @@ export default function Select({
       {label && (
         <label
           htmlFor={triggerId}
-          className="mb-1.5 block text-xs font-medium text-gray-500"
+          className={joinClasses(
+            "mb-1.5 block font-medium",
+            variant === "form"
+              ? "text-sm text-gray-700"
+              : "text-xs text-gray-500",
+          )}
         >
           {label}
           {required && (
@@ -114,10 +136,16 @@ export default function Select({
           aria-describedby={describedBy}
           aria-invalid={error ? true : undefined}
           className={joinClasses(
-            "flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-lg border bg-gray-50 px-3 py-2 text-left text-sm text-gray-900 transition-colors",
-            "hover:border-gray-300 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/25",
+            "flex w-full cursor-pointer items-center justify-between gap-2 border text-left text-sm text-gray-900 transition-colors",
+            "hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/25",
             "data-[placeholder]:text-gray-400 disabled:cursor-not-allowed disabled:opacity-50",
-            error ? "border-red-500" : "border-gray-200",
+            triggerVariantClasses[variant],
+            triggerSizeClasses[size],
+            error
+              ? "border-red-500"
+              : variant === "form"
+                ? "border-gray-300"
+                : "border-gray-200",
             triggerClassName,
           )}
         >

@@ -15,6 +15,7 @@ import {
   RefreshIcon,
   TrashIcon,
 } from "../../../components/Icons";
+import { Select } from "../../../components/ui";
 import ShareTransferModal from "./ShareTransferModal";
 import {
   formatKoreanDate,
@@ -378,25 +379,28 @@ export default function DocumentListSection({
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
-          <label className="flex items-center gap-2 text-sm text-gray-600">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
             <span className="shrink-0">조직 필터</span>
-            <select
+            <Select
               value={filterOrganizationId}
-              onChange={(e) =>
+              onValueChange={(value) =>
                 onFilterChange(
-                  e.target.value === "all" ? "all" : e.target.value,
+                  value === "all" ? "all" : value,
                 )
               }
-              className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#df3326]"
-            >
-              <option value="all">전체</option>
-              {organizations.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              options={[
+                { value: "all", label: "전체" },
+                ...organizations.map((org) => ({
+                  value: org.id,
+                  label: org.name,
+                })),
+              ]}
+              ariaLabel="문서 목록 조직 필터"
+              width="auto"
+              variant="form"
+              size="sm"
+            />
+          </div>
           <span className="text-sm font-medium text-gray-500">
             총 {documents.length}개
           </span>

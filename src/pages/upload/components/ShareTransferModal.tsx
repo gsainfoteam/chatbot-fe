@@ -5,7 +5,12 @@ import {
   unshareUpload,
 } from "../../../api/upload";
 import type { DocumentItem, Organization } from "../../../api/types";
-import { Button, ConfirmDialog, Dialog } from "../../../components/ui";
+import {
+  Button,
+  ConfirmDialog,
+  Dialog,
+  Select,
+} from "../../../components/ui";
 
 type Mode = "share" | "unshare" | "transfer";
 
@@ -153,22 +158,16 @@ export default function ShareTransferModal({
               : "선택할 수 있는 조직이 없습니다."}
           </p>
         ) : (
-          <label className="block text-sm">
-            <span className="mb-1.5 block font-medium text-gray-700">
-              대상 조직
-            </span>
-            <select
-              value={targetId}
-              onChange={(e) => setTargetId(e.target.value)}
-              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#df3326]"
-            >
-              {candidates.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Select
+            label="대상 조직"
+            value={targetId}
+            onValueChange={setTargetId}
+            options={candidates.map((org) => ({
+              value: org.id,
+              label: org.name,
+            }))}
+            variant="form"
+          />
         )}
 
         {error && (
