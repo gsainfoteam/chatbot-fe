@@ -6,6 +6,18 @@ export function getResourceLink(gcsPath: string): string {
   return `${import.meta.env.VITE_RESOURCE_CENTER_URL}/resource/${match?.[1]}`;
 }
 
+/**
+ * 검색 비교용 문자열 정규화.
+ * macOS 파일명에서 흔한 분해형 한글(NFD)을 조합형(NFC)으로 통일합니다.
+ */
+export function normalizeSearchText(value: string): string {
+  return value
+    .normalize("NFC")
+    .toLocaleLowerCase("ko-KR")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** Date 객체를 date 입력값(YYYY-MM-DD)으로 변환 */
 export function toDateInputValue(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");

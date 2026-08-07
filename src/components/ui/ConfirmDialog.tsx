@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import Button from "./Button";
-import Dialog from "./Dialog";
+import Dialog, { type DialogSize } from "./Dialog";
 
 export type ConfirmDialogVariant = "primary" | "danger";
 
@@ -14,6 +14,7 @@ export interface ConfirmDialogProps {
   cancelLabel?: string;
   loadingLabel?: string;
   variant?: ConfirmDialogVariant;
+  size?: DialogSize;
   fallbackErrorMessage?: string;
 }
 
@@ -27,6 +28,7 @@ export default function ConfirmDialog({
   cancelLabel = "취소",
   loadingLabel = "처리 중...",
   variant = "primary",
+  size = "sm",
   fallbackErrorMessage = "요청을 처리하지 못했습니다.",
 }: ConfirmDialogProps) {
   const [loading, setLoading] = useState(false);
@@ -57,7 +59,7 @@ export default function ConfirmDialog({
       onOpenChange={handleOpenChange}
       title={title}
       description={description}
-      size="sm"
+      size={size}
       closeDisabled={loading}
       bodyClassName="space-y-4"
       footer={

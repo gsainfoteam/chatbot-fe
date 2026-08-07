@@ -7,7 +7,7 @@ import {
 } from "../../../api/upload";
 import type { DocumentItem, Organization } from "../../../api/types";
 import { UploadIcon } from "../../../components/Icons";
-import { Button, Select } from "../../../components/ui";
+import { Button, Dialog, Select } from "../../../components/ui";
 import {
   formatKoreanDate,
   getOneYearLaterValue,
@@ -37,8 +37,10 @@ interface PendingUpload {
 }
 
 interface DocumentUploadSectionProps {
+  open: boolean;
   organizations: Organization[];
   selectedOrganizationId: string;
+  onOpenChange: (open: boolean) => void;
   onOrganizationChange: (organizationId: string) => void;
   onUploaded: (doc: DocumentItem) => void;
 }
@@ -62,8 +64,10 @@ function fileKey(f: File): string {
 }
 
 export default function DocumentUploadSection({
+  open,
   organizations,
   selectedOrganizationId,
+  onOpenChange,
   onOrganizationChange,
   onUploaded,
 }: DocumentUploadSectionProps) {
@@ -314,45 +318,51 @@ export default function DocumentUploadSection({
   };
 
   return (
-    <section
-      aria-labelledby="pdf-upload-heading"
-      className="overflow-hidden rounded-lg border border-gray-200 bg-white"
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="PDF 업로드"
+      description={`최대 ${MAX_CONCURRENT_UPLOADS}개, 파일당 최대 ${MAX_FILE_SIZE_MB}MB까지 업로드할 수 있습니다.`}
+      size="lg"
+      closeDisabled={isUploading}
+      contentClassName="!max-w-[600px] !rounded-[28px] !border-0 shadow-2xl"
+      headerClassName="!items-center !border-b-0 !px-6 !pt-6 !pb-3 sm:!px-10 sm:!pt-9 sm:!pb-5"
+      titleClassName="!text-xl !font-bold sm:!text-2xl"
+      descriptionClassName="sr-only"
+      closeButtonClassName="!flex !h-11 !w-11 !items-center !justify-center !rounded-full !bg-gray-50 !p-0 hover:!bg-gray-100"
+      bodyClassName="space-y-6 !px-6 !py-3 sm:!px-10 sm:!pb-6"
+      footerClassName="!flex-wrap !border-t-0 !px-6 !pt-2 !pb-6 sm:!flex-nowrap sm:!px-10 sm:!pb-10"
+      footer={
+        <>
+          <span className="mr-auto w-full self-center pb-2 text-sm text-gray-500 sm:w-auto sm:pb-0">
+            업로드 대기 {pending.length}개
+          </span>
+          <Button
+            variant="ghost"
+            size="lg"
+            onClick={() => onOpenChange(false)}
+            disabled={isUploading}
+            className="min-w-24 flex-1 bg-gray-100 active:scale-[0.98] sm:flex-none"
+          >
+            취소
+          </Button>
+          <Button
+            size="lg"
+            onClick={() => {
+              const targets = pending.filter((p) => p.status === "pending");
+              void runQueue(targets);
+            }}
+            disabled={!hasUploadable}
+            loading={isUploading}
+            loadingText="업로드 중..."
+            className="min-w-32 flex-1 active:scale-[0.98] sm:flex-none"
+          >
+            {pendingCount > 0 ? `업로드 (${pendingCount}개)` : "업로드"}
+          </Button>
+        </>
+      }
     >
-      <div className="border-b border-gray-200 p-6">
-        <h2
-          id="pdf-upload-heading"
-          className="text-xl font-semibold text-gray-900"
-        >
-          PDF 업로드
-        </h2>
-        <p className="mt-1 text-sm text-gray-500">
-          최대 {MAX_CONCURRENT_UPLOADS}개, 파일당 최대 {MAX_FILE_SIZE_MB}
-          MB까지 업로드할 수 있습니다.
-        </p>
-      </div>
-
-      <div className="p-6">
-        {organizations.length === 0 ? (
-          <div className="mb-4 text-sm">
-            <span className="mb-1.5 block font-medium text-gray-700">
-              업로드 조직
-            </span>
-            <p className="rounded-md bg-gray-50 px-3 py-2.5 text-sm text-gray-500">
-              소속 조직이 없어 업로드할 수 없습니다.
-            </p>
-          </div>
-        ) : (
-          <Select
-            label="업로드 조직"
-            value={selectedOrganizationId}
-            onValueChange={onOrganizationChange}
-            options={organizationOptions}
-            variant="form"
-            className="mb-4"
-          />
-        )}
-
-        <div
+      <div
           role="button"
           tabIndex={canUpload ? 0 : -1}
           aria-label="PDF 파일 선택"
@@ -373,7 +383,7 @@ export default function DocumentUploadSection({
             if (canUpload) setIsDragging(true);
           }}
           onDragLeave={() => setIsDragging(false)}
-          className={`flex min-h-[210px] flex-col items-center justify-center rounded-lg border-2 border-dashed px-5 py-8 text-center transition-colors ${
+          className={`flex min-h-[190px] flex-col items-center justify-center rounded-2xl border-2 border-dashed px-5 py-7 text-center transition-colors sm:min-h-[210px] ${
             !canUpload
               ? "cursor-not-allowed border-gray-200 bg-gray-50 opacity-60"
               : isDragging
@@ -390,32 +400,48 @@ export default function DocumentUploadSection({
             className="hidden"
             onChange={handleFileChange}
           />
-          <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-red-50 text-[#df3326]">
-            <UploadIcon className="h-6 w-6" />
+          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-red-50 text-[#df3326]">
+            <UploadIcon className="h-8 w-8" />
           </span>
-          <p className="mt-4 text-sm font-medium text-gray-700 sm:text-base">
+          <p className="mt-5 text-base font-semibold text-gray-900 sm:text-lg">
             {canUpload
               ? "클릭하거나 PDF를 드래그하세요"
               : "조직에 소속된 후 업로드할 수 있습니다"}
           </p>
-          <p className="mt-1 text-xs text-gray-500 sm:text-sm">
+          <p className="mt-1.5 text-sm text-gray-400 sm:text-base">
             PDF만, 파일당 최대 {MAX_FILE_SIZE_MB}MB · 최대{" "}
             {MAX_CONCURRENT_UPLOADS}개
           </p>
-        </div>
+      </div>
 
-        <div className="mt-6">
+      <section className="flex flex-col gap-3 rounded-2xl bg-gray-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+        <span className="shrink-0 text-sm font-semibold text-gray-600 sm:text-base">
+          업로드 조직
+        </span>
+        {organizations.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            소속 조직이 없어 업로드할 수 없습니다.
+          </p>
+        ) : (
+          <Select
+            ariaLabel="업로드 조직"
+            value={selectedOrganizationId}
+            onValueChange={onOrganizationChange}
+            options={organizationOptions}
+            variant="form"
+            className="w-full sm:w-[220px]"
+            triggerClassName="!h-12 !rounded-xl !px-4 !text-base"
+          />
+        )}
+      </section>
+
+      {pending.length > 0 && (
+        <div>
           <h3 className="text-sm font-medium text-gray-700 sm:text-base">
-            업로드 대기 ({pending.length})
+            선택한 파일
           </h3>
-
           <div className="mt-3 space-y-3">
-            {pending.length === 0 ? (
-              <div className="rounded-lg border border-gray-200 px-5 py-8 text-center text-sm text-gray-500">
-                업로드할 PDF를 선택해주세요.
-              </div>
-            ) : (
-              pending.map((item) => (
+            {pending.map((item) => (
                 <article
                   key={item.id}
                   className="rounded-lg border border-gray-200 bg-gray-50/40 p-4"
@@ -514,34 +540,19 @@ export default function DocumentUploadSection({
                     </div>
                   )}
                 </article>
-              ))
-            )}
+            ))}
           </div>
         </div>
+      )}
 
-        <Button
-          size="lg"
-          onClick={() => {
-            const targets = pending.filter((p) => p.status === "pending");
-            void runQueue(targets);
-          }}
-          disabled={!hasUploadable}
-          loading={isUploading}
-          loadingText="업로드 중..."
-          className="mt-6 w-full active:scale-[0.98]"
+      {limitNotice && (
+        <div
+          aria-live="polite"
+          className="rounded-lg bg-red-50 px-4 py-3 text-center text-sm text-red-600"
         >
-          {pendingCount > 0 ? `업로드 (${pendingCount}개)` : "업로드"}
-        </Button>
-
-        {limitNotice && (
-          <div
-            aria-live="polite"
-            className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-center text-sm text-red-600"
-          >
-            {limitNotice}
-          </div>
-        )}
-      </div>
-    </section>
+          {limitNotice}
+        </div>
+      )}
+    </Dialog>
   );
 }

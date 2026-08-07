@@ -16,12 +16,14 @@ import {
   ShareIcon,
   TrashIcon,
   TransferIcon,
+  UploadIcon,
 } from "../../../components/Icons";
-import { Button, ConfirmDialog, Select } from "../../../components/ui";
+import { Button, ConfirmDialog } from "../../../components/ui";
 import ShareTransferModal from "./ShareTransferModal";
 import {
   formatKoreanDate,
   getResourceLink,
+  normalizeSearchText,
   parseFutureExpiresAt,
   toDateInputValue,
 } from "../utils";
@@ -33,7 +35,7 @@ interface DocumentListSectionProps {
   listLoading: boolean;
   listError: string | null;
   pollingError: string | null;
-  onFilterChange: (organizationId: string | "all") => void;
+  onUploadClick: () => void;
   onRetryFetch: () => void;
   onDocumentsChange: (updater: (prev: DocumentItem[]) => DocumentItem[]) => void;
 }
@@ -104,7 +106,7 @@ function renderDocumentStatusBadge(status: DocumentStatus) {
     case "ready":
       return (
         <span className="inline-flex shrink-0 items-center gap-1 rounded bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700">
-          사용 가능
+          활성화
         </span>
       );
     case "failed":
@@ -142,7 +144,7 @@ export default function DocumentListSection({
   listLoading,
   listError,
   pollingError,
-  onFilterChange,
+  onUploadClick,
   onRetryFetch,
   onDocumentsChange,
 }: DocumentListSectionProps) {
@@ -156,12 +158,36 @@ export default function DocumentListSection({
     null,
   );
   const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const [searchQuery, setSearchQuery] = useState("");
   const [shareModal, setShareModal] = useState<{
     document: DocumentItem;
     mode: ShareMode;
   } | null>(null);
   const documentMenuRef = useRef<HTMLDivElement>(null);
   const todayDateValue = useMemo(() => toDateInputValue(new Date()), []);
+  const selectedOrganizationName = useMemo(
+    () =>
+      filterOrganizationId === "all"
+        ? "전체"
+        : (organizations.find((org) => org.id === filterOrganizationId)?.name ??
+          "조직"),
+    [filterOrganizationId, organizations],
+  );
+  const filteredDocuments = useMemo(() => {
+    const query = normalizeSearchText(searchQuery);
+    if (!query) return documents;
+    return documents.filter((item) =>
+      [
+        item.title,
+        item.resourceName,
+        item.ownerOrganization?.name,
+        item.uploader?.name,
+        item.uploader?.email,
+      ].some(
+        (value) => value != null && normalizeSearchText(value).includes(query),
+      ),
+    );
+  }, [documents, searchQuery]);
 
   const cooldownKey = useMemo(
     () =>
@@ -364,50 +390,50 @@ export default function DocumentListSection({
   return (
     <section
       aria-labelledby="document-list-heading"
-      className="upload-document-panel flex min-w-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white"
+      className="upload-document-panel flex min-w-0 flex-col"
     >
-      <div className="flex shrink-0 flex-col gap-4 border-b border-gray-200 p-6 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex shrink-0 flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h2
             id="document-list-heading"
-            className="text-xl font-semibold text-gray-900"
+            className="text-3xl font-bold text-gray-900"
           >
-            문서 목록
+            문서 관리
           </h2>
-          <p className="mt-1 text-sm text-gray-500">
-            만료된 문서는 자동으로 챗봇 답변에서 제외됩니다.
+          <p className="mt-2 text-sm text-gray-600">
+            PDF 파일은 자동으로 챗봇 답변에 적용되며, 만료된 문서는 답변에서
+            제외됩니다.
           </p>
         </div>
-        <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <span className="shrink-0">조직 필터</span>
-            <Select
-              value={filterOrganizationId}
-              onValueChange={(value) =>
-                onFilterChange(
-                  value === "all" ? "all" : value,
-                )
-              }
-              options={[
-                { value: "all", label: "전체" },
-                ...organizations.map((org) => ({
-                  value: org.id,
-                  label: org.name,
-                })),
-              ]}
-              ariaLabel="문서 목록 조직 필터"
-              width="auto"
-              variant="form"
-              size="sm"
-            />
-          </div>
-          <span className="text-sm font-medium text-gray-500">
-            총 {documents.length}개
-          </span>
-        </div>
+        <Button
+          size="lg"
+          leftIcon={<UploadIcon className="h-4 w-4" />}
+          onClick={onUploadClick}
+          className="shrink-0"
+        >
+          PDF 업로드
+        </Button>
       </div>
 
-      <div className="document-list-scroll flex-1 p-4 sm:p-6">
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <label className="block w-full sm:max-w-md">
+          <span className="sr-only">문서 검색</span>
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="문서 검색"
+            className="h-11 w-full rounded-lg border border-gray-200 bg-white px-4 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/25"
+          />
+        </label>
+        <p className="shrink-0 text-sm text-gray-500">
+          {searchQuery.trim()
+            ? `검색 ${filteredDocuments.length}개 · ${selectedOrganizationName} 총 ${documents.length}개`
+            : `${selectedOrganizationName} · 총 ${documents.length}개`}
+        </p>
+      </div>
+
+      <div className="document-list-scroll mt-6 flex-1">
         {pollingError && (
           <div className="mb-3 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
             {pollingError}
@@ -433,9 +459,13 @@ export default function DocumentListSection({
           <div className="flex min-h-[240px] items-center justify-center rounded-lg border border-gray-200 bg-white text-sm text-gray-500">
             표시할 문서가 없습니다.
           </div>
+        ) : filteredDocuments.length === 0 ? (
+          <div className="flex min-h-[240px] items-center justify-center rounded-lg border border-gray-200 bg-white text-sm text-gray-500">
+            검색 결과가 없습니다.
+          </div>
         ) : (
           <div className="space-y-4">
-            {documents.map((item) => {
+            {filteredDocuments.map((item) => {
               const isEditingExpiry = expiryEdit?.id === item.id;
               const isMenuOpen = openDocumentMenuId === item.id;
               const canView =
@@ -860,6 +890,7 @@ export default function DocumentListSection({
           description={`"${pendingAction.document.title}" 문서의 PDF 전체를 다시 처리합니다.\n재처리 과정에서 API 비용이 발생합니다.`}
           confirmLabel="재처리"
           loadingLabel="재처리 중..."
+          size="md"
           fallbackErrorMessage="문서 재처리 요청에 실패했습니다."
           onConfirm={() => handleReprocess(pendingAction.document.id)}
         />

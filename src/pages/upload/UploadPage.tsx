@@ -57,9 +57,14 @@ export default function UploadPage() {
   >("all");
 
   const [uploadedList, setUploadedList] = useState<DocumentItem[]>([]);
+  const [documentCounts, setDocumentCounts] = useState<Record<string, number>>(
+    {},
+  );
+  const [totalDocumentCount, setTotalDocumentCount] = useState(0);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
   const [pollingError, setPollingError] = useState<string | null>(null);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   const uploadedListRef = useRef(uploadedList);
 
@@ -101,6 +106,28 @@ export default function UploadPage() {
           ? await getManageableUploads({ limit: 50, offset: 0 })
           : await getOrganizationDocuments(organizationId);
       setUploadedList(list);
+      if (organizationId === "all") {
+        const nextCounts: Record<string, number> = {};
+        list.forEach((document) => {
+          const relatedOrganizationIds = new Set([
+            document.ownerOrganization?.id,
+            ...(document.sharedOrganizations ?? []).map(
+              (organization) => organization.id,
+            ),
+          ]);
+          relatedOrganizationIds.forEach((id) => {
+            if (!id) return;
+            nextCounts[id] = (nextCounts[id] ?? 0) + 1;
+          });
+        });
+        setDocumentCounts(nextCounts);
+        setTotalDocumentCount(list.length);
+      } else {
+        setDocumentCounts((previous) => ({
+          ...previous,
+          [organizationId]: list.length,
+        }));
+      }
     } catch (err) {
       setListError(
         err instanceof Error
@@ -223,7 +250,7 @@ export default function UploadPage() {
         <LoadingSpinner
           message="권한 확인 중..."
           fullScreen
-          className="bg-gray-50/55"
+          className="bg-white/70"
         />
       </div>
     );
@@ -234,16 +261,8 @@ export default function UploadPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-[calc(100dvh-4rem)] bg-white">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">문서 관리</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            조직별 문서를 업로드·관리합니다. PDF 파일은 자동으로 챗봇 답변에
-            적용되며, 파일 크기에 따라 1분~30분이 소요됩니다.
-          </p>
-        </header>
-
         <InvitationBanner
           onAccepted={() => {
             void fetchOrganizations();
@@ -251,28 +270,23 @@ export default function UploadPage() {
           }}
         />
 
-        <OrganizationPanel
-          organizations={organizations}
-          loading={orgsLoading}
-          error={orgsError}
-          isGlobalSuperAdmin={isGlobalSuperAdmin}
-          onRefresh={() => {
-            void fetchOrganizations();
-          }}
-        />
-
-        <div className="upload-page-layout grid items-start gap-6">
-          <DocumentUploadSection
+        <div className="upload-page-layout grid items-start gap-8 lg:gap-12">
+          <OrganizationPanel
             organizations={organizations}
-            selectedOrganizationId={uploadOrganizationId}
-            onOrganizationChange={setUploadOrganizationId}
-            onUploaded={(doc) => {
-              if (
-                filterOrganizationId === "all" ||
-                doc.ownerOrganization?.id === filterOrganizationId
-              ) {
-                setUploadedList((prev) => upsertDocument(prev, doc));
+            loading={orgsLoading}
+            error={orgsError}
+            isGlobalSuperAdmin={isGlobalSuperAdmin}
+            selectedOrganizationId={filterOrganizationId}
+            documentCounts={documentCounts}
+            totalDocumentCount={totalDocumentCount}
+            onOrganizationSelect={(organizationId) => {
+              setFilterOrganizationId(organizationId);
+              if (organizationId !== "all") {
+                setUploadOrganizationId(organizationId);
               }
+            }}
+            onRefresh={() => {
+              void fetchOrganizations();
             }}
           />
 
@@ -283,13 +297,37 @@ export default function UploadPage() {
             listLoading={listLoading}
             listError={listError}
             pollingError={pollingError}
-            onFilterChange={setFilterOrganizationId}
+            onUploadClick={() => setUploadModalOpen(true)}
             onRetryFetch={() => {
               void fetchDocuments(filterOrganizationId);
             }}
             onDocumentsChange={handleDocumentsChange}
           />
         </div>
+
+        <DocumentUploadSection
+          open={uploadModalOpen}
+          onOpenChange={setUploadModalOpen}
+          organizations={organizations}
+          selectedOrganizationId={uploadOrganizationId}
+          onOrganizationChange={setUploadOrganizationId}
+          onUploaded={(doc) => {
+            const ownerOrganizationId =
+              doc.ownerOrganization?.id ?? uploadOrganizationId;
+            setDocumentCounts((previous) => ({
+              ...previous,
+              [ownerOrganizationId]:
+                (previous[ownerOrganizationId] ?? 0) + 1,
+            }));
+            setTotalDocumentCount((previous) => previous + 1);
+            if (
+              filterOrganizationId === "all" ||
+              ownerOrganizationId === filterOrganizationId
+            ) {
+              setUploadedList((prev) => upsertDocument(prev, doc));
+            }
+          }}
+        />
       </div>
     </main>
   );

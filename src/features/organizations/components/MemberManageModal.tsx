@@ -160,7 +160,7 @@ export default function MemberManageModal({
           <div className="flex flex-col gap-2 sm:flex-row">
             <input
               type="email"
-              placeholder="name@gm.gist.ac.kr"
+              placeholder="name@gist.ac.kr"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               onKeyDown={(e) => {

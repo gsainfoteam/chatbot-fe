@@ -15,7 +15,12 @@ export interface DialogProps {
   closeLabel?: string;
   closeDisabled?: boolean;
   contentClassName?: string;
+  headerClassName?: string;
+  titleClassName?: string;
+  descriptionClassName?: string;
+  closeButtonClassName?: string;
   bodyClassName?: string;
+  footerClassName?: string;
 }
 
 const sizeClasses: Record<DialogSize, string> = {
@@ -39,7 +44,12 @@ export default function Dialog({
   closeLabel = "닫기",
   closeDisabled = false,
   contentClassName,
+  headerClassName,
+  titleClassName,
+  descriptionClassName,
+  closeButtonClassName,
   bodyClassName,
+  footerClassName,
 }: DialogProps) {
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen && closeDisabled) return;
@@ -58,17 +68,32 @@ export default function Dialog({
             if (closeDisabled) event.preventDefault();
           }}
           className={joinClasses(
-            "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl focus:outline-none",
+            "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[28px] border border-gray-200 bg-white shadow-xl focus:outline-none",
             sizeClasses[size],
             contentClassName,
           )}
         >
-          <header className="flex shrink-0 items-start justify-between gap-4 border-b border-gray-200 px-5 py-4">
+          <header
+            className={joinClasses(
+              "flex shrink-0 items-start justify-between gap-4 border-b border-gray-200 px-5 py-4",
+              headerClassName,
+            )}
+          >
             <div className="min-w-0">
-              <DialogPrimitive.Title className="truncate text-lg font-semibold text-gray-900">
+              <DialogPrimitive.Title
+                className={joinClasses(
+                  "truncate text-lg font-semibold text-gray-900",
+                  titleClassName,
+                )}
+              >
                 {title}
               </DialogPrimitive.Title>
-              <DialogPrimitive.Description className="mt-1 whitespace-pre-line text-sm text-gray-500">
+              <DialogPrimitive.Description
+                className={joinClasses(
+                  "mt-1 whitespace-pre-line text-sm text-gray-500",
+                  descriptionClassName,
+                )}
+              >
                 {description}
               </DialogPrimitive.Description>
             </div>
@@ -77,7 +102,10 @@ export default function Dialog({
                 type="button"
                 aria-label={closeLabel}
                 disabled={closeDisabled}
-                className="shrink-0 cursor-pointer rounded-md p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                className={joinClasses(
+                  "shrink-0 cursor-pointer rounded-md p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50",
+                  closeButtonClassName,
+                )}
               >
                 <XIcon className="h-5 w-5" />
               </button>
@@ -94,7 +122,12 @@ export default function Dialog({
           </div>
 
           {footer && (
-            <footer className="flex shrink-0 justify-end gap-2 border-t border-gray-200 px-5 py-4 peer-empty:border-t-0">
+            <footer
+              className={joinClasses(
+                "flex shrink-0 justify-end gap-2 border-t border-gray-200 px-5 py-4 peer-empty:border-t-0",
+                footerClassName,
+              )}
+            >
               {footer}
             </footer>
           )}
