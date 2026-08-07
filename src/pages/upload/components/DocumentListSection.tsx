@@ -38,6 +38,10 @@ interface DocumentListSectionProps {
   pollingError: string | null;
   onRetryFetch: () => void;
   onDocumentsChange: (updater: (prev: DocumentItem[]) => DocumentItem[]) => void;
+  onDocumentMutation: (
+    previousDocument: DocumentItem,
+    nextDocument: DocumentItem | null,
+  ) => void;
 }
 
 interface ExpiryEditState {
@@ -158,6 +162,19 @@ function upsertDocument(
   return [doc, ...list];
 }
 
+function isDocumentVisibleForFilter(
+  document: DocumentItem,
+  organizationId: string | "all",
+): boolean {
+  if (organizationId === "all") return document.canManage !== false;
+  return (
+    document.ownerOrganization?.id === organizationId ||
+    (document.sharedOrganizations ?? []).some(
+      (organization) => organization.id === organizationId,
+    )
+  );
+}
+
 export default function DocumentListSection({
   documents,
   organizations,
@@ -167,6 +184,7 @@ export default function DocumentListSection({
   pollingError,
   onRetryFetch,
   onDocumentsChange,
+  onDocumentMutation,
 }: DocumentListSectionProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [reprocessingId, setReprocessingId] = useState<string | null>(null);
@@ -333,17 +351,20 @@ export default function DocumentListSection({
     return () => window.clearTimeout(timeoutId);
   }, [cooldownKey, documents, onDocumentsChange]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (document: DocumentItem) => {
+    const id = document.id;
     try {
       setDeletingId(id);
       await deleteUpload(id);
       onDocumentsChange((prev) => prev.filter((item) => item.id !== id));
+      onDocumentMutation(document, null);
       if (expiryEdit?.id === id) setExpiryEdit(null);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "삭제에 실패했습니다.";
       if (message === "이미 삭제되었거나 존재하지 않는 파일입니다.") {
         onDocumentsChange((prev) => prev.filter((item) => item.id !== id));
+        onDocumentMutation(document, null);
         if (expiryEdit?.id === id) setExpiryEdit(null);
         return;
       }
@@ -899,23 +920,25 @@ export default function DocumentListSection({
           organizations={organizations}
           mode={shareModal.mode}
           onClose={() => setShareModal(null)}
-          onUpdated={(doc) =>
-            onDocumentsChange((prev) => upsertDocument(prev, doc))
-          }
-          onTransferred={(doc) => {
+          onUpdated={(doc) => {
+            const previousDocument = shareModal.document;
             onDocumentsChange((prev) => {
-              const stillVisible =
-                doc.canManage !== false &&
-                (filterOrganizationId === "all" ||
-                  doc.ownerOrganization?.id === filterOrganizationId ||
-                  (doc.sharedOrganizations ?? []).some(
-                    (org) => org.id === filterOrganizationId,
-                  ));
-              if (!stillVisible) {
+              if (!isDocumentVisibleForFilter(doc, filterOrganizationId)) {
                 return prev.filter((item) => item.id !== doc.id);
               }
               return upsertDocument(prev, doc);
             });
+            onDocumentMutation(previousDocument, doc);
+          }}
+          onTransferred={(doc) => {
+            const previousDocument = shareModal.document;
+            onDocumentsChange((prev) => {
+              if (!isDocumentVisibleForFilter(doc, filterOrganizationId)) {
+                return prev.filter((item) => item.id !== doc.id);
+              }
+              return upsertDocument(prev, doc);
+            });
+            onDocumentMutation(previousDocument, doc);
           }}
         />
       )}
@@ -932,7 +955,7 @@ export default function DocumentListSection({
           loadingLabel="삭제 중..."
           variant="danger"
           fallbackErrorMessage="문서 삭제에 실패했습니다."
-          onConfirm={() => handleDelete(pendingAction.document.id)}
+          onConfirm={() => handleDelete(pendingAction.document)}
         />
       )}
 

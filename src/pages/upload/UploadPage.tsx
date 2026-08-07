@@ -40,6 +40,27 @@ function upsertDocument(
   return [doc, ...list];
 }
 
+function getRelatedOrganizationIds(document: DocumentItem): Set<string> {
+  return new Set(
+    [
+      document.ownerOrganization?.id,
+      ...(document.sharedOrganizations ?? []).map(
+        (organization) => organization.id,
+      ),
+    ].filter((id): id is string => Boolean(id)),
+  );
+}
+
+function getDocumentCounts(documents: DocumentItem[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  documents.forEach((document) => {
+    getRelatedOrganizationIds(document).forEach((organizationId) => {
+      counts[organizationId] = (counts[organizationId] ?? 0) + 1;
+    });
+  });
+  return counts;
+}
+
 function pickDefaultOrganizationId(organizations: Organization[]): string {
   const defaultOrg = organizations.find((org) => org.isDefault);
   return defaultOrg?.id ?? organizations[0]?.id ?? "";
@@ -109,20 +130,7 @@ export default function UploadPage() {
           : await getOrganizationDocuments(organizationId);
       setUploadedList(list);
       if (organizationId === "all") {
-        const nextCounts: Record<string, number> = {};
-        list.forEach((document) => {
-          const relatedOrganizationIds = new Set([
-            document.ownerOrganization?.id,
-            ...(document.sharedOrganizations ?? []).map(
-              (organization) => organization.id,
-            ),
-          ]);
-          relatedOrganizationIds.forEach((id) => {
-            if (!id) return;
-            nextCounts[id] = (nextCounts[id] ?? 0) + 1;
-          });
-        });
-        setDocumentCounts(nextCounts);
+        setDocumentCounts(getDocumentCounts(list));
         setTotalDocumentCount(list.length);
       } else {
         setDocumentCounts((previous) => ({
@@ -242,6 +250,71 @@ export default function UploadPage() {
     [],
   );
 
+  const revalidateDocuments = useCallback(async () => {
+    try {
+      const allDocumentsPromise = getManageableUploads({
+        limit: 50,
+        offset: 0,
+      });
+      const visibleDocumentsPromise =
+        filterOrganizationId === "all"
+          ? allDocumentsPromise
+          : getOrganizationDocuments(filterOrganizationId);
+      const [allDocuments, visibleDocuments] = await Promise.all([
+        allDocumentsPromise,
+        visibleDocumentsPromise,
+      ]);
+
+      setUploadedList(visibleDocuments);
+      setDocumentCounts(getDocumentCounts(allDocuments));
+      setTotalDocumentCount(allDocuments.length);
+    } catch {
+      // API 변경은 이미 성공했으므로 낙관적으로 반영한 화면 상태를 유지합니다.
+    }
+  }, [filterOrganizationId]);
+
+  const handleDocumentMutation = useCallback(
+    (previousDocument: DocumentItem, nextDocument: DocumentItem | null) => {
+      const previousOrganizationIds =
+        getRelatedOrganizationIds(previousDocument);
+      const nextOrganizationIds = nextDocument
+        ? getRelatedOrganizationIds(nextDocument)
+        : new Set<string>();
+      const affectedOrganizationIds = new Set([
+        ...previousOrganizationIds,
+        ...nextOrganizationIds,
+      ]);
+
+      setDocumentCounts((previousCounts) => {
+        const nextCounts = { ...previousCounts };
+        affectedOrganizationIds.forEach((organizationId) => {
+          const delta =
+            Number(nextOrganizationIds.has(organizationId)) -
+            Number(previousOrganizationIds.has(organizationId));
+          if (delta === 0) return;
+          nextCounts[organizationId] = Math.max(
+            0,
+            (nextCounts[organizationId] ?? 0) + delta,
+          );
+        });
+        return nextCounts;
+      });
+
+      const wasVisibleInAll = previousDocument.canManage !== false;
+      const isVisibleInAll =
+        nextDocument != null && nextDocument.canManage !== false;
+      const totalDelta = Number(isVisibleInAll) - Number(wasVisibleInAll);
+      if (totalDelta !== 0) {
+        setTotalDocumentCount((previous) =>
+          Math.max(0, previous + totalDelta),
+        );
+      }
+
+      void revalidateDocuments();
+    },
+    [revalidateDocuments],
+  );
+
   if (!hasToken) {
     return <Navigate to="/" replace />;
   }
@@ -321,6 +394,7 @@ export default function UploadPage() {
               void fetchDocuments(filterOrganizationId);
             }}
             onDocumentsChange={handleDocumentsChange}
+            onDocumentMutation={handleDocumentMutation}
           />
         </div>
 
