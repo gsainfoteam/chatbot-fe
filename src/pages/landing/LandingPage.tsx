@@ -417,70 +417,111 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Letsur Technology Partner */}
-        <section className="bg-gray-50 border-t border-gray-200">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 text-center">
-            <p className="text-[11px] sm:text-xs font-medium tracking-[0.22em] uppercase text-gray-400 mb-3 sm:mb-4">
-              Technology Partner
-            </p>
-
-            <div className="flex flex-col items-center gap-3 sm:gap-3.5">
-              <img
-                src="/letsur-logo.svg"
-                alt="Letsur"
-                className="h-4 sm:h-5 w-auto object-contain"
-              />
-              <div className="space-y-1.5 px-2">
-                <a
-                  href="https://web-wheat-rho.vercel.app/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block text-sm sm:text-base text-gray-900 font-medium leading-snug tracking-tight hover:text-[#df3326] transition-colors"
-                  aria-label="Letsur AI Gateway 페이지로 이동"
-                >
-                  Powered by Letsur AI Gateway
-                </a>
-                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed max-w-lg mx-auto">
-                  GIST 챗봇은 Letsur AI Gateway를 통해 답변을 생성합니다
+        {/* Footer */}
+        <footer className="border-t border-gray-200 bg-gray-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid gap-8 py-8 text-center sm:py-10 md:grid-cols-2 md:text-left lg:grid-cols-[1.1fr_0.7fr_1.2fr] lg:gap-10 lg:py-12">
+              <div>
+                <div className="flex items-center justify-center gap-2.5 md:justify-start">
+                  <img
+                    src="/logo.svg"
+                    alt="GIST 챗봇 로고"
+                    className="h-9 w-9 sm:h-10 sm:w-10"
+                  />
+                  <p className="text-lg font-bold text-gray-900 sm:text-xl">
+                    GIST 챗봇
+                  </p>
+                </div>
+                <p className="mt-4 text-sm leading-relaxed text-gray-500">
+                  GIST 학생들을 위한 챗봇 서비스
+                </p>
+                <p className="mt-3 text-sm text-gray-600">
+                  문의 :{" "}
+                  <a
+                    href="mailto:chatbot@gistory.me"
+                    className="transition-colors hover:text-[#df3326] focus-visible:text-[#df3326] focus-visible:outline-none"
+                  >
+                    chatbot@gistory.me
+                  </a>
                 </p>
               </div>
-              <a
-                href="https://letsur.ai"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#df3326] transition-colors"
-                aria-label="Letsur 웹사이트로 이동"
-              >
-                letsur.ai
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 8l4 4m0 0l-4 4m4-4H3"
-                  />
-                </svg>
-              </a>
-            </div>
-          </div>
-        </section>
 
-        {/* Footer */}
-        <footer className="border-t border-gray-200 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 md:py-12">
-            <div className="text-center text-gray-500 px-2">
-              <p className="mb-2 text-sm sm:text-base">
+              <nav aria-label="바로가기">
+                <h2 className="text-base font-bold text-gray-900 md:mt-1.5">
+                  바로가기
+                </h2>
+                <ul className="mt-3 space-y-2 text-sm text-gray-600">
+                  <li>
+                    <a
+                      href="https://chatbot.gistory.me/docs/quick-start"
+                      className="transition-colors hover:text-[#df3326] focus-visible:text-[#df3326] focus-visible:outline-none"
+                    >
+                      챗봇 시작하기
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://chatbot.gistory.me/docs/faq"
+                      className="transition-colors hover:text-[#df3326] focus-visible:text-[#df3326] focus-visible:outline-none"
+                    >
+                      자주 묻는 질문
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="mailto:chatbot@gistory.me"
+                      className="transition-colors hover:text-[#df3326] focus-visible:text-[#df3326] focus-visible:outline-none"
+                    >
+                      문의하기
+                    </a>
+                  </li>
+                </ul>
+              </nav>
+
+              <div className="border-gray-200 md:col-span-2 md:border-t md:pt-8 lg:col-span-1 lg:border-t-0 lg:border-l lg:py-0 lg:pl-10">
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-gray-400 lg:mt-2">
+                  Technology Partner
+                </p>
+                <img
+                  src="/letsur-logo.svg"
+                  alt="Letsur"
+                  className="mx-auto mt-3 h-5 w-auto object-contain md:mx-0"
+                />
+                <p className="mt-4 text-sm font-bold text-gray-900 sm:text-base">
+                  Powered by Letsur AI Gateway
+                </p>
+                <p className="mt-1.5 text-sm leading-relaxed text-gray-500">
+                  GIST 챗봇은 Letsur AI Gateway를 통해 답변을 생성합니다
+                </p>
+                <a
+                  href="https://letsur.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-[#df3326] focus-visible:text-[#df3326] focus-visible:outline-none"
+                  aria-label="Letsur 웹사이트로 이동"
+                >
+                  letsur.ai
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 8l4 4m0 0l-4 4m4-4H3"
+                    />
+                  </svg>
+                </a>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 py-5 text-center md:text-left">
+              <p className="text-xs text-gray-400">
                 © 2026 INFOTEAM. GIST 학생들을 위한 챗봇 서비스
-              </p>
-              <p className="text-xs sm:text-sm text-gray-400">
-                문의 :{" "}
-                <a href="mailto:chatbot@gistory.me">chatbot@gistory.me</a>
               </p>
             </div>
           </div>
