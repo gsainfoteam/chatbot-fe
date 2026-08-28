@@ -57,12 +57,7 @@ function joinClasses(...classes: Array<string | undefined | false>): string {
 
 function CheckIcon() {
   return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 20 20"
-      fill="none"
-      className="h-4 w-4"
-    >
+    <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-4 w-4">
       <path
         d="m4.5 10.5 3.25 3.25 7.75-7.5"
         stroke="currentColor"
@@ -98,11 +93,16 @@ export default function Select({
   const triggerId = id ?? `select-${generatedId}`;
   const helperId = helperText ? `${triggerId}-helper` : undefined;
   const errorId = error ? `${triggerId}-error` : undefined;
-  const describedBy = [helperId, errorId].filter(Boolean).join(" ") || undefined;
+  const describedBy =
+    [helperId, errorId].filter(Boolean).join(" ") || undefined;
 
   return (
     <div
-      className={joinClasses(widthClasses[width], "min-w-0 shrink-0", className)}
+      className={joinClasses(
+        widthClasses[width],
+        "min-w-0 shrink-0",
+        className,
+      )}
     >
       {label && (
         <label
@@ -149,9 +149,11 @@ export default function Select({
             triggerClassName,
           )}
         >
-          <SelectPrimitive.Value placeholder={placeholder}>
-            {selectedLabel}
-          </SelectPrimitive.Value>
+          <span className="block min-w-0 flex-1 overflow-hidden [&>span]:block [&>span]:min-w-0 [&>span]:overflow-hidden [&>span]:text-ellipsis [&>span]:whitespace-nowrap">
+            <SelectPrimitive.Value placeholder={placeholder}>
+              {selectedLabel}
+            </SelectPrimitive.Value>
+          </span>
           <SelectPrimitive.Icon asChild>
             <ChevronDownIcon className="h-4 w-4 shrink-0 text-gray-400" />
           </SelectPrimitive.Icon>
@@ -161,7 +163,7 @@ export default function Select({
           <SelectPrimitive.Content
             position="popper"
             sideOffset={4}
-            className="z-[70] max-h-[var(--radix-select-content-available-height)] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+            className="z-[70] w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)] max-h-[var(--radix-select-content-available-height)] min-w-0 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
           >
             <SelectPrimitive.Viewport className="max-h-60 overflow-y-auto p-1">
               {options.map((option) => (
@@ -175,7 +177,11 @@ export default function Select({
                     "data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
                   )}
                 >
-                  <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
+                  <span className="w-0 min-w-0 flex-1 overflow-hidden [&>span]:block [&>span]:min-w-0 [&>span]:overflow-hidden [&>span]:text-ellipsis [&>span]:whitespace-nowrap">
+                    <SelectPrimitive.ItemText>
+                      {option.label}
+                    </SelectPrimitive.ItemText>
+                  </span>
                   <SelectPrimitive.ItemIndicator className="absolute right-2.5 inline-flex items-center">
                     <CheckIcon />
                   </SelectPrimitive.ItemIndicator>
