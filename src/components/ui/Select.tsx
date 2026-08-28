@@ -178,7 +178,9 @@ export default function Select({
                   )}
                 >
                   <span className="w-0 min-w-0 flex-1 overflow-hidden [&>span]:block [&>span]:min-w-0 [&>span]:overflow-hidden [&>span]:text-ellipsis [&>span]:whitespace-nowrap">
-                    <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
+                    <SelectPrimitive.ItemText>
+                      {option.label}
+                    </SelectPrimitive.ItemText>
                   </span>
                   <SelectPrimitive.ItemIndicator className="absolute right-2.5 inline-flex items-center">
                     <CheckIcon />
