@@ -49,19 +49,35 @@ export default function Security() {
               ⚠️ 주의사항
             </p>
             <p className="text-sm text-yellow-900">
-              widgetKey는 공개 HTML에 포함되므로, 서버에서는 반드시{" "}
-              <strong>도메인 기반 검증</strong>을 수행해야 합니다.
+              widgetKey는 공개 HTML/앱 바이너리에 포함되므로, 서버에서는 반드시{" "}
+              <strong>출처 기반 검증</strong>을 수행해야 합니다. 웹은 도메인,
+              모바일 앱은 앱 ID로 검증합니다.
             </p>
           </div>
           <p className="text-gray-700 mb-4">
             widgetKey를 통해 서버에서는 다음과 같은 제어가 가능합니다:
           </p>
-          <ul className="space-y-2 text-gray-700 list-disc list-inside">
+          <ul className="space-y-2 text-gray-700 list-disc list-inside mb-4">
             <li>허용 도메인 제한 (allowedOrigins)</li>
+            <li>허용 앱 ID 제한 (allowedAppIds)</li>
             <li>사용량/레이트 리밋</li>
             <li>테마 및 기능 플래그 분기</li>
             <li>로그 분리</li>
           </ul>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-900">
+              📱 <strong>모바일 앱(Flutter 등)의 경우:</strong> 세션 발급 시{" "}
+              <code className="bg-blue-100 px-1.5 py-0.5 rounded text-xs">
+                clientType: "app"
+              </code>
+              과{" "}
+              <code className="bg-blue-100 px-1.5 py-0.5 rounded text-xs">
+                appId
+              </code>
+              를 전달하며, 대시보드에 등록된 허용 앱 ID 목록과 대조하여
+              검증합니다. 아래 CSP 관련 내용은 웹 환경에만 해당합니다.
+            </p>
+          </div>
         </section>
 
         {/* HTTPS 필수 */}
@@ -285,7 +301,9 @@ app.use((req, res, next) => {
 
           {/* Next.js */}
           <div className="mb-6">
-            <h3 className="text-xl font-semibold text-gray-800 mb-3">Next.js</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-3">
+              Next.js
+            </h3>
             <CodeBlock
               code={`// next.config.js
 const securityHeaders = [
@@ -441,8 +459,9 @@ app.get('/', (req, res) => {
             CSP 위반 리포팅
           </h2>
           <p className="text-gray-700 mb-4">
-            CSP 위반이 발생했을 때 서버로 리포트를 전송하도록 설정할 수 있습니다.
-            이를 통해 잠재적인 공격 시도나 설정 오류를 모니터링할 수 있습니다.
+            CSP 위반이 발생했을 때 서버로 리포트를 전송하도록 설정할 수
+            있습니다. 이를 통해 잠재적인 공격 시도나 설정 오류를 모니터링할 수
+            있습니다.
           </p>
 
           <h3 className="text-xl font-semibold text-gray-800 mb-3">
@@ -734,8 +753,8 @@ Permissions-Policy: camera=(), microphone=(), geolocation=()`}
           <div className="space-y-4">
             <div className="border border-gray-200 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-2">
-                Q: 'unsafe-inline'을 사용하지 않으면서 인라인 스크립트를 허용할 수
-                있나요?
+                Q: 'unsafe-inline'을 사용하지 않으면서 인라인 스크립트를 허용할
+                수 있나요?
               </h4>
               <p className="text-gray-700">
                 A: 네, nonce 또는 hash 기반 CSP를 사용하면 됩니다. 위의 "Nonce
@@ -760,9 +779,9 @@ Permissions-Policy: camera=(), microphone=(), geolocation=()`}
                 Q: 와일드카드(*)를 사용해도 되나요?
               </h4>
               <p className="text-gray-700">
-                A: 가능하지만 권장하지 않습니다. 와일드카드는 보안을 약화시킵니다.
-                필요한 도메인만 명시적으로 허용하세요. 서브도메인 와일드카드
-                (*.example.com)는 주의해서 사용하세요.
+                A: 가능하지만 권장하지 않습니다. 와일드카드는 보안을
+                약화시킵니다. 필요한 도메인만 명시적으로 허용하세요. 서브도메인
+                와일드카드 (*.example.com)는 주의해서 사용하세요.
               </p>
             </div>
 

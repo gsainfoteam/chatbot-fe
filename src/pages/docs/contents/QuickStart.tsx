@@ -8,6 +8,19 @@ export default function QuickStart() {
         챗봇 위젯을 웹사이트에 통합하는 가장 빠른 방법을 알아보세요.
       </p>
 
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
+        <p className="text-sm text-blue-900">
+          📱 <strong>Flutter 앱에서 사용하시나요?</strong>{" "}
+          <a
+            href="/docs/flutter/quick-start"
+            className="text-[#df3326] hover:underline font-medium"
+          >
+            Flutter 시작하기
+          </a>{" "}
+          가이드를 확인하세요.
+        </p>
+      </div>
+
       <div className="space-y-8">
         {/* Step 1 */}
         <section>
@@ -51,8 +64,8 @@ export default function QuickStart() {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-900">
               💡 <strong>Widget Key란?</strong> 위젯을 설치한 서비스를 식별하기
-              위한 고유 키입니다. 이를 통해 도메인 제한, 사용량 관리 등이
-              가능합니다.
+              위한 고유 키입니다. 이를 통해 도메인/앱 ID 제한, 사용량 관리
+              등이 가능합니다.
             </p>
           </div>
         </section>

@@ -199,7 +199,7 @@ unsubscribe();`}
           </h2>
           <p className="text-gray-700 mb-4">
             한 페이지에 여러 위젯 키를 사용하는 것은 권장하지 않습니다. 하나의
-            위젯 키에 여러 도메인을 등록하여 사용하세요.
+            위젯 키에 여러 도메인/앱 ID를 등록하여 사용하세요.
           </p>
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <p className="text-sm text-yellow-900">
