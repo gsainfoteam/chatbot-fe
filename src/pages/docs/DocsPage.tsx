@@ -4,6 +4,8 @@ import DocsSidebar from "./DocsSidebar";
 import DocsTOC from "./DocsTOC";
 import QuickStart from "./contents/QuickStart";
 import Installation from "./contents/Installation";
+import FlutterQuickStart from "./contents/FlutterQuickStart";
+import FlutterAPI from "./contents/FlutterAPI";
 import JavaScriptAPI from "./contents/JavaScriptAPI";
 import Customization from "./contents/Customization";
 import Examples from "./contents/Examples";
@@ -63,6 +65,11 @@ export default function DocsPage() {
             <Routes>
               <Route path="quick-start" element={<QuickStart />} />
               <Route path="installation" element={<Installation />} />
+              <Route
+                path="flutter/quick-start"
+                element={<FlutterQuickStart />}
+              />
+              <Route path="flutter/api" element={<FlutterAPI />} />
               <Route path="api/javascript" element={<JavaScriptAPI />} />
               <Route path="customization" element={<Customization />} />
               <Route path="examples" element={<Examples />} />

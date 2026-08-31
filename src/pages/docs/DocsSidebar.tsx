@@ -23,6 +23,20 @@ const navItems: NavItem[] = [
     path: "/docs/installation",
   },
   {
+    title: "Flutter",
+    path: "/docs/flutter/quick-start",
+    children: [
+      {
+        title: "시작하기",
+        path: "/docs/flutter/quick-start",
+      },
+      {
+        title: "API & 설정",
+        path: "/docs/flutter/api",
+      },
+    ],
+  },
+  {
     title: "API Reference",
     path: "/docs/api/javascript",
     children: [
