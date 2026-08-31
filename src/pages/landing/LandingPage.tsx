@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import "./landing.module.css";
 import {
   ClipboardIcon,
@@ -18,35 +18,121 @@ import AnimatedBackground from "@/components/AnimatedBackground";
 import HeroMouseInteraction from "@/components/HeroMouseInteraction";
 import WarpedText from "@/components/WarpedText";
 import CodeBlock from "@/components/CodeBlock";
+import PlatformTabs from "@/components/PlatformTabs";
 
-export default function LandingPage() {
-  const [isVisible] = useState(true);
-  const [isCopied, setIsCopied] = useState(false);
-  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const copyToClipboard = async () => {
-    const code = `<script
+const WEB_INSTALL_SNIPPET = `<script
   src="https://chatbot.gistory.me/loader.js"
   data-widget-key="YOUR_WIDGET_KEY"
 ></script>`;
 
-    try {
-      await navigator.clipboard.writeText(code);
-      setIsCopied(true);
+const FLUTTER_INSTALL_SNIPPET = `dependencies:
+  gist_chatbot_flutter: ^0.1.1`;
 
-      // 기존 timeout이 있으면 클리어
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current);
-      }
+interface QuickStartStep {
+  step: string;
+  title: string;
+  description: string;
+  code: string | null;
+  language?: string;
+}
 
-      // 2초 후 원래 상태로 복원
-      copyTimeoutRef.current = setTimeout(() => {
-        setIsCopied(false);
-      }, 2000);
-    } catch (err) {
-      console.error("복사 실패:", err);
-    }
-  };
+const WEB_QUICK_START_STEPS: QuickStartStep[] = [
+  {
+    step: "1",
+    title: "위젯 키 발급받기",
+    description:
+      "대시보드에서 위젯 키를 발급받으세요. 각 웹사이트마다 고유한 키가 필요합니다.",
+    code: null,
+  },
+  {
+    step: "2",
+    title: "도메인 등록하기",
+    description:
+      "발급받은 위젯 키에 사용할 도메인을 등록하세요. 보안을 위해 허용된 도메인에서만 위젯이 동작합니다.",
+    code: null,
+  },
+  {
+    step: "3",
+    title: "스크립트 추가하기",
+    description: "발급받은 위젯 키를 사용해 스크립트를 웹사이트에 추가하세요.",
+    code: WEB_INSTALL_SNIPPET,
+    language: "html",
+  },
+  {
+    step: "4",
+    title: "완료!",
+    description:
+      "이제 웹사이트 우하단에 챗봇 버튼이 표시됩니다. 필요에 따라 색상이나 위치를 커스터마이징하세요.",
+    code: null,
+  },
+];
+
+const FLUTTER_QUICK_START_STEPS: QuickStartStep[] = [
+  {
+    step: "1",
+    title: "위젯 키 발급받기",
+    description:
+      "대시보드에서 위젯 키를 발급받으세요. 각 서비스마다 고유한 키가 필요합니다.",
+    code: null,
+  },
+  {
+    step: "2",
+    title: "앱 ID 등록하기",
+    description:
+      "발급받은 위젯 키에 앱의 applicationId(Android) 또는 Bundle Identifier(iOS)를 등록하세요. 보안을 위해 등록된 앱에서만 위젯이 동작합니다.",
+    code: null,
+  },
+  {
+    step: "3",
+    title: "패키지 추가하기",
+    description:
+      "pubspec.yaml에 gist_chatbot_flutter 패키지를 추가하고 위젯 키로 GistChatbot을 초기화하세요.",
+    code: FLUTTER_INSTALL_SNIPPET,
+    language: "yaml",
+  },
+  {
+    step: "4",
+    title: "완료!",
+    description:
+      "이제 앱 어디서든 챗봇 패널을 열 수 있습니다. 필요에 따라 색상을 브랜드에 맞게 커스터마이징하세요.",
+    code: null,
+  },
+];
+
+export default function LandingPage() {
+  const [isVisible] = useState(true);
+  const [installPlatform, setInstallPlatform] = useState<"web" | "flutter">(
+    "web"
+  );
+
+  const renderQuickStartSteps = (steps: QuickStartStep[]) => (
+    <div className="space-y-4 sm:space-y-6 md:space-y-8">
+      {steps.map((item, index) => (
+        <div
+          key={index}
+          className={`flex flex-col sm:flex-row gap-4 sm:gap-6 items-start p-5 sm:p-6 bg-gray-50 border border-gray-200 rounded-xl transition-all duration-500 ${
+            isVisible ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-10"
+          }`}
+          style={{ transitionDelay: `${index * 200}ms` }}
+        >
+          <div className="shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-[#df3326] text-white rounded-full flex items-center justify-center font-bold text-base sm:text-lg mx-auto sm:mx-0">
+            {item.step}
+          </div>
+          <div className="flex-1 w-full sm:w-auto">
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 text-center sm:text-left">
+              {item.title}
+            </h3>
+            <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4 text-center sm:text-left">
+              {item.description}
+            </p>
+            {item.code && (
+              <CodeBlock code={item.code} language={item.language} />
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
@@ -78,13 +164,13 @@ export default function LandingPage() {
                 />
               </div>
               <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-600 mb-3 sm:mb-4 leading-relaxed max-w-3xl mx-auto px-2">
-                iframe 기반 챗봇 위젯으로 CSS/JS 충돌 없이
+                웹은 스크립트 한 줄, 앱은 Flutter 패키지로
                 <br className="hidden sm:block" />
                 <span className="sm:hidden"> </span>
                 안정적이고 강력한 챗봇 서비스를 제공하세요
               </p>
               <p className="text-sm sm:text-base text-gray-500 mb-8 sm:mb-12 px-2">
-                복잡한 설정 없이, 몇 분 안에 웹사이트에 통합할 수 있습니다
+                복잡한 설정 없이, 몇 분 안에 웹사이트와 앱에 통합할 수 있습니다
               </p>
             </div>
           </div>
@@ -108,32 +194,55 @@ export default function LandingPage() {
                       설치 코드
                     </span>
                   </div>
-                  <button
-                    onClick={copyToClipboard}
-                    className={`px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
-                      isCopied
-                        ? "bg-[#df3326] text-white border border-[#df3326]"
-                        : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
-                    }`}
+                  <div
+                    role="tablist"
+                    className="inline-flex items-center gap-1 p-0.5 sm:p-1 bg-gray-100 border border-gray-200 rounded-lg"
                   >
-                    {isCopied ? "복사됨!" : "복사하기"}
-                  </button>
+                    {(["web", "flutter"] as const).map((platform) => (
+                      <button
+                        key={platform}
+                        role="tab"
+                        aria-selected={installPlatform === platform}
+                        onClick={() => setInstallPlatform(platform)}
+                        className={`px-2 py-0.5 sm:px-2.5 sm:py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                          installPlatform === platform
+                            ? "bg-white text-[#df3326] shadow-sm"
+                            : "text-gray-600 hover:text-gray-900"
+                        }`}
+                      >
+                        {platform === "web" ? "Web" : "Flutter"}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <CodeBlock
-                  code={`<script
-  src="https://chatbot.gistory.me/loader.js"
-  data-widget-key="YOUR_WIDGET_KEY"
-></script>`}
-                  language="html"
-                />
-                <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-500 px-1 flex items-center gap-1.5 flex-wrap">
-                  <span className="font-medium">💡 팁:</span> 이 코드를
-                  웹사이트의{" "}
-                  <code className="px-1 py-0.5 bg-gray-200 rounded text-xs font-mono">
-                    &lt;body&gt;
-                  </code>{" "}
-                  태그 하단에 추가하세요
-                </p>
+                {installPlatform === "web" ? (
+                  <>
+                    <CodeBlock code={WEB_INSTALL_SNIPPET} language="html" />
+                    <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-500 px-1 flex items-center gap-1.5 flex-wrap">
+                      <span className="font-medium">💡 팁:</span> 이 코드를
+                      웹사이트의{" "}
+                      <code className="px-1 py-0.5 bg-gray-200 rounded text-xs font-mono">
+                        &lt;body&gt;
+                      </code>{" "}
+                      태그 하단에 추가하세요
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <CodeBlock code={FLUTTER_INSTALL_SNIPPET} language="yaml" />
+                    <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-500 px-1 flex items-center gap-1.5 flex-wrap">
+                      <span className="font-medium">💡 팁:</span>{" "}
+                      <code className="px-1 py-0.5 bg-gray-200 rounded text-xs font-mono">
+                        pubspec.yaml
+                      </code>
+                      에 추가한 뒤{" "}
+                      <code className="px-1 py-0.5 bg-gray-200 rounded text-xs font-mono">
+                        flutter pub get
+                      </code>
+                      을 실행하세요
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -280,8 +389,8 @@ export default function LandingPage() {
                   icon: <BoltIcon />,
                   title: "초간단 설치",
                   description:
-                    "스크립트 한 줄만 추가하면 바로 사용할 수 있습니다. 복잡한 빌드 과정이나 설정 파일이 필요 없어요.",
-                  detail: "npm 설치나 번들링 과정 없이 바로 시작하세요.",
+                    "웹은 스크립트 한 줄, Flutter 앱은 패키지 하나만 추가하면 바로 사용할 수 있습니다.",
+                  detail: "복잡한 빌드 과정이나 설정 파일 없이 바로 시작하세요.",
                 },
                 {
                   icon: <ShieldIcon />,
@@ -357,63 +466,19 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 md:space-y-8">
-            {[
-              {
-                step: "1",
-                title: "위젯 키 발급받기",
-                description:
-                  "대시보드에서 위젯 키를 발급받으세요. 각 웹사이트마다 고유한 키가 필요합니다.",
-                code: null,
-              },
-              {
-                step: "2",
-                title: "도메인 등록하기",
-                description:
-                  "발급받은 위젯 키에 사용할 도메인을 등록하세요. 보안을 위해 허용된 도메인에서만 위젯이 동작합니다.",
-                code: null,
-              },
-              {
-                step: "3",
-                title: "스크립트 추가하기",
-                description:
-                  "발급받은 위젯 키를 사용해 스크립트를 웹사이트에 추가하세요.",
-                code: `<script
-  src="https://chatbot.gistory.me/loader.js"
-  data-widget-key="YOUR_WIDGET_KEY"
-></script>`,
-              },
-              {
-                step: "4",
-                title: "완료!",
-                description:
-                  "이제 웹사이트 우하단에 챗봇 버튼이 표시됩니다. 필요에 따라 색상이나 위치를 커스터마이징하세요.",
-                code: null,
-              },
-            ].map((item, index) => (
-              <div
-                key={index}
-                className={`flex flex-col sm:flex-row gap-4 sm:gap-6 items-start p-5 sm:p-6 bg-gray-50 border border-gray-200 rounded-xl transition-all duration-500 ${
-                  isVisible
-                    ? "opacity-100 translate-x-0"
-                    : "opacity-0 -translate-x-10"
-                }`}
-                style={{ transitionDelay: `${index * 200}ms` }}
-              >
-                <div className="shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-[#df3326] text-white rounded-full flex items-center justify-center font-bold text-base sm:text-lg mx-auto sm:mx-0">
-                  {item.step}
-                </div>
-                <div className="flex-1 w-full sm:w-auto">
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 text-center sm:text-left">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4 text-center sm:text-left">
-                    {item.description}
-                  </p>
-                  {item.code && <CodeBlock code={item.code} language="html" />}
-                </div>
-              </div>
-            ))}
+          <div className="max-w-4xl mx-auto">
+            <PlatformTabs
+              tabs={[
+                {
+                  label: "Web",
+                  content: renderQuickStartSteps(WEB_QUICK_START_STEPS),
+                },
+                {
+                  label: "Flutter",
+                  content: renderQuickStartSteps(FLUTTER_QUICK_START_STEPS),
+                },
+              ]}
+            />
           </div>
         </section>
 
