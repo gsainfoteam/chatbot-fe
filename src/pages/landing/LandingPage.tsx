@@ -13,11 +13,14 @@ import {
   CodeIcon,
   LockIcon,
   DocumentIcon,
+  GithubIcon,
+  MailIcon,
 } from "@/components/Icons";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import HeroMouseInteraction from "@/components/HeroMouseInteraction";
 import WarpedText from "@/components/WarpedText";
 import CodeBlock from "@/components/CodeBlock";
+import PartnersSection from "./PartnersSection";
 
 export default function LandingPage() {
   const [isVisible] = useState(true);
@@ -140,7 +143,7 @@ export default function LandingPage() {
         </HeroMouseInteraction>
 
         {/* About Chatbot Section */}
-        <section className="bg-white py-12 sm:py-16 md:py-20 lg:py-32">
+        <section className="bg-white pt-12 pb-6 sm:pt-16 sm:pb-8 md:pt-20 md:pb-10 lg:pt-32 lg:pb-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-10 sm:mb-12 md:mb-16">
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-3 sm:mb-4">
@@ -261,6 +264,9 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        {/* Partners Section */}
+        <PartnersSection />
 
         {/* Features Section */}
         <section className="bg-gray-50 py-12 sm:py-16 md:py-20 lg:py-32">
@@ -418,43 +424,67 @@ export default function LandingPage() {
         </section>
 
         {/* Footer */}
-        <footer className="border-t border-gray-200 bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid gap-8 py-8 text-center sm:py-10 md:grid-cols-2 md:text-left lg:grid-cols-[1.1fr_0.7fr_1.2fr] lg:gap-10 lg:py-12">
-              <div>
-                <div className="flex items-center justify-center gap-2.5 md:justify-start">
+        <footer className="bg-[#df3326]">
+          <div className="mx-auto max-w-5xl px-6 pt-12 pb-6 sm:px-8 sm:pt-16 sm:pb-8">
+            <div className="grid gap-8 md:grid-cols-[1.2fr_1fr_1fr] md:gap-6 lg:gap-10">
+              <div className="text-center md:text-left">
+                <div className="inline-flex items-center gap-2.5 rounded-2xl bg-white px-4 py-2.5">
+                  {/* logo.svg는 사방 ~8% 투명 여백이 있어 scale로 상쇄해 박스에 꽉 채움 */}
                   <img
                     src="/logo.svg"
                     alt="GIST 챗봇 로고"
-                    className="h-9 w-9 sm:h-10 sm:w-10"
+                    className="h-8 w-8 scale-[1.2] sm:h-9 sm:w-9"
                   />
                   <p className="text-lg font-bold text-gray-900 sm:text-xl">
                     GIST 챗봇
                   </p>
                 </div>
-                <p className="mt-4 text-sm leading-relaxed text-gray-500">
+                <p className="mt-4 text-sm font-medium text-white sm:text-base">
                   GIST 학생들을 위한 챗봇 서비스
                 </p>
-                <p className="mt-3 text-sm text-gray-600">
-                  문의 :{" "}
+                <div className="mt-5 flex items-center justify-center gap-3 md:justify-start">
+                  <a
+                    href="https://github.com/gsainfoteam"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Infoteam GitHub으로 이동"
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-white transition-transform duration-200 hover:-translate-y-0.5"
+                  >
+                    <GithubIcon className="h-5 w-5" />
+                  </a>
                   <a
                     href="mailto:chatbot@gistory.me"
-                    className="transition-colors hover:text-[#df3326] focus-visible:text-[#df3326] focus-visible:outline-none"
+                    aria-label="메일로 문의하기"
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#df3326] transition-transform duration-200 hover:-translate-y-0.5"
                   >
-                    chatbot@gistory.me
+                    <MailIcon className="h-5 w-5" />
                   </a>
-                </p>
+                </div>
               </div>
 
-              <nav aria-label="바로가기">
-                <h2 className="text-base font-bold text-gray-900 md:mt-1.5">
-                  바로가기
+              <nav
+                aria-label="소개"
+                className="rounded-2xl bg-white/15 p-6 text-center md:text-left"
+              >
+                <h2 className="flex items-center justify-center gap-2 text-base font-bold text-white md:justify-start">
+                  <span className="h-4 w-1 rounded-full bg-white" aria-hidden="true" />
+                  소개
                 </h2>
-                <ul className="mt-3 space-y-2 text-sm text-gray-600">
+                <ul className="mt-4 space-y-3 text-sm text-white/85">
+                  <li>
+                    <a
+                      href="https://introduce.gistory.me/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none"
+                    >
+                      인포팀 소개
+                    </a>
+                  </li>
                   <li>
                     <a
                       href="https://chatbot.gistory.me/docs/quick-start"
-                      className="transition-colors hover:text-[#df3326] focus-visible:text-[#df3326] focus-visible:outline-none"
+                      className="transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none"
                     >
                       챗봇 시작하기
                     </a>
@@ -462,66 +492,60 @@ export default function LandingPage() {
                   <li>
                     <a
                       href="https://chatbot.gistory.me/docs/faq"
-                      className="transition-colors hover:text-[#df3326] focus-visible:text-[#df3326] focus-visible:outline-none"
+                      className="transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none"
                     >
                       자주 묻는 질문
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="mailto:chatbot@gistory.me"
-                      className="transition-colors hover:text-[#df3326] focus-visible:text-[#df3326] focus-visible:outline-none"
-                    >
-                      문의하기
                     </a>
                   </li>
                 </ul>
               </nav>
 
-              <div className="border-gray-200 md:col-span-2 md:border-t md:pt-8 lg:col-span-1 lg:border-t-0 lg:border-l lg:py-0 lg:pl-10">
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-gray-400 lg:mt-2">
-                  Technology Partner
-                </p>
-                <img
-                  src="/letsur-logo.svg"
-                  alt="Letsur"
-                  className="mx-auto mt-3 h-5 w-auto object-contain md:mx-0"
-                />
-                <p className="mt-4 text-sm font-bold text-gray-900 sm:text-base">
-                  Powered by Letsur AI Gateway
-                </p>
-                <p className="mt-1.5 text-sm leading-relaxed text-gray-500">
-                  GIST 챗봇은 Letsur AI Gateway를 통해 답변을 생성합니다
-                </p>
-                <a
-                  href="https://letsur.ai"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 inline-flex items-center gap-2 text-sm text-gray-600 transition-colors hover:text-[#df3326] focus-visible:text-[#df3326] focus-visible:outline-none"
-                  aria-label="Letsur 웹사이트로 이동"
-                >
-                  letsur.ai
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 8l4 4m0 0l-4 4m4-4H3"
-                    />
-                  </svg>
-                </a>
-              </div>
+              <nav
+                aria-label="바로가기"
+                className="rounded-2xl bg-white/15 p-6 text-center md:text-left"
+              >
+                <h2 className="flex items-center justify-center gap-2 text-base font-bold text-white md:justify-start">
+                  <span className="h-4 w-1 rounded-full bg-white" aria-hidden="true" />
+                  바로가기
+                </h2>
+                <ul className="mt-4 space-y-3 text-sm text-white/85">
+                  <li>
+                    <a
+                      href="https://gijol.vercel.app/dashboard"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none"
+                    >
+                      Gijol
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://ziggle.gistory.me"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none"
+                    >
+                      Ziggle
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://www.gist.ac.kr"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="transition-colors hover:text-white focus-visible:text-white focus-visible:outline-none"
+                    >
+                      GIST 홈페이지
+                    </a>
+                  </li>
+                </ul>
+              </nav>
             </div>
 
-            <div className="border-t border-gray-200 py-5 text-center md:text-left">
-              <p className="text-xs text-gray-400">
-                © 2026 INFOTEAM. GIST 학생들을 위한 챗봇 서비스
+            <div className="mt-10 border-t border-white/25 pt-5 text-center">
+              <p className="text-xs text-white/80">
+                © 2026. INFOTEAM all rights reserved.
               </p>
             </div>
           </div>
