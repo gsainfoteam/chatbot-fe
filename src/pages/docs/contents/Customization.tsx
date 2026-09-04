@@ -80,9 +80,11 @@ export default function Customization() {
                     data-button-icon
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">
-                    채팅 열기 버튼 아이콘 (logo: G 로고 / chat 또는 bubble: 말풍선 / robot: 로봇)
+                    런처 버튼 아이콘. chat-sparkle(말풍선+스파클) / chat(말풍선+점) / chat-text /
+                    chats / chat-search / chat-question / sparkle / search / question / robot /
+                    headset / logo(G 로고)
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">logo</td>
+                  <td className="px-4 py-3 text-sm text-gray-500">chat-sparkle</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-3 text-sm font-mono text-gray-900">
