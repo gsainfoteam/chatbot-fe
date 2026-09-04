@@ -449,6 +449,13 @@ test("emits onLoad, onStateChange and CustomEvents on window", () => {
   assert.deepEqual(seen.slice(1), [["state", true], ["state", false], ["state", true]]);
 });
 
+test("onLoad is a known event name for on()", () => {
+  const { window } = loadWidget();
+  const off = window.ChatbotWidget.on("onLoad", () => {});
+  assert.equal(typeof off, "function");
+  assert.equal(window.ChatbotWidget.getState().ready, false);
+});
+
 test("ready() invokes the callback immediately once loaded", () => {
   const { window } = loadWidget();
   let received = null;
