@@ -13,11 +13,14 @@ import {
   CodeIcon,
   LockIcon,
   DocumentIcon,
+  GithubIcon,
+  MailIcon,
 } from "@/components/Icons";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import HeroMouseInteraction from "@/components/HeroMouseInteraction";
 import WarpedText from "@/components/WarpedText";
 import CodeBlock from "@/components/CodeBlock";
+import PartnersSection from "./PartnersSection";
 import PlatformTabs from "@/components/PlatformTabs";
 
 const WEB_INSTALL_SNIPPET = `<script
@@ -249,7 +252,7 @@ export default function LandingPage() {
         </HeroMouseInteraction>
 
         {/* About Chatbot Section */}
-        <section className="bg-white py-12 sm:py-16 md:py-20 lg:py-32">
+        <section className="bg-white pt-12 pb-6 sm:pt-16 sm:pb-8 md:pt-20 md:pb-10 lg:pt-32 lg:pb-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-10 sm:mb-12 md:mb-16">
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-3 sm:mb-4">
@@ -371,6 +374,9 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Partners Section */}
+        <PartnersSection />
+
         {/* Features Section */}
         <section className="bg-gray-50 py-12 sm:py-16 md:py-20 lg:py-32">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -482,70 +488,116 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Letsur Technology Partner */}
-        <section className="bg-gray-50 border-t border-gray-200">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 text-center">
-            <p className="text-[11px] sm:text-xs font-medium tracking-[0.22em] uppercase text-gray-400 mb-3 sm:mb-4">
-              Technology Partner
-            </p>
-
-            <div className="flex flex-col items-center gap-3 sm:gap-3.5">
-              <img
-                src="/letsur-logo.svg"
-                alt="Letsur"
-                className="h-4 sm:h-5 w-auto object-contain"
-              />
-              <div className="space-y-1.5 px-2">
-                <a
-                  href="https://web-wheat-rho.vercel.app/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block text-sm sm:text-base text-gray-900 font-medium leading-snug tracking-tight hover:text-[#df3326] transition-colors"
-                  aria-label="Letsur AI Gateway 페이지로 이동"
-                >
-                  Powered by Letsur AI Gateway
-                </a>
-                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed max-w-lg mx-auto">
-                  GIST 챗봇은 Letsur AI Gateway를 통해 답변을 생성합니다
-                </p>
-              </div>
-              <a
-                href="https://letsur.ai"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#df3326] transition-colors"
-                aria-label="Letsur 웹사이트로 이동"
-              >
-                letsur.ai
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 8l4 4m0 0l-4 4m4-4H3"
-                  />
-                </svg>
-              </a>
-            </div>
-          </div>
-        </section>
-
         {/* Footer */}
-        <footer className="border-t border-gray-200 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 md:py-12">
-            <div className="text-center text-gray-500 px-2">
-              <p className="mb-2 text-sm sm:text-base">
-                © 2026 INFOTEAM. GIST 학생들을 위한 챗봇 서비스
-              </p>
-              <p className="text-xs sm:text-sm text-gray-400">
-                문의 :{" "}
-                <a href="mailto:chatbot@gistory.me">chatbot@gistory.me</a>
+        <footer className="border-t border-gray-200 bg-gray-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-6 sm:pt-12 sm:pb-8">
+            <div className="max-w-5xl mx-auto grid gap-8 md:grid-cols-[1.4fr_1fr_1fr] md:gap-8 lg:gap-12">
+              <div className="text-center md:text-left">
+                <div className="inline-flex items-center gap-2">
+                  <img
+                    src="/logo.svg"
+                    alt="GIST 챗봇 로고"
+                    className="h-8 w-8 sm:h-9 sm:w-9"
+                  />
+                  <p className="text-base font-semibold text-gray-900 sm:text-lg">
+                    GIST 챗봇
+                  </p>
+                </div>
+                <p className="mt-3 text-sm text-gray-500">
+                  GIST 학생들을 위한 챗봇 서비스
+                </p>
+                <div className="mt-4 flex items-center justify-center gap-2.5 md:justify-start">
+                  <a
+                    href="https://github.com/gsainfoteam"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Infoteam GitHub으로 이동"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition-colors duration-200 hover:border-gray-300 hover:text-gray-900"
+                  >
+                    <GithubIcon className="h-4 w-4" />
+                  </a>
+                  <a
+                    href="mailto:chatbot@gistory.me"
+                    aria-label="메일로 문의하기"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 transition-colors duration-200 hover:border-[#df3326]/40 hover:text-[#df3326]"
+                  >
+                    <MailIcon className="h-4 w-4" />
+                  </a>
+                </div>
+              </div>
+
+              <nav aria-label="소개" className="text-center md:text-left">
+                <h2 className="text-sm font-semibold text-gray-900">소개</h2>
+                <ul className="mt-3 space-y-2.5 text-sm text-gray-500">
+                  <li>
+                    <a
+                      href="https://introduce.gistory.me/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="transition-colors hover:text-[#df3326]"
+                    >
+                      인포팀 소개
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://chatbot.gistory.me/docs/quick-start"
+                      className="transition-colors hover:text-[#df3326]"
+                    >
+                      챗봇 시작하기
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://chatbot.gistory.me/docs/faq"
+                      className="transition-colors hover:text-[#df3326]"
+                    >
+                      자주 묻는 질문
+                    </a>
+                  </li>
+                </ul>
+              </nav>
+
+              <nav aria-label="바로가기" className="text-center md:text-left">
+                <h2 className="text-sm font-semibold text-gray-900">바로가기</h2>
+                <ul className="mt-3 space-y-2.5 text-sm text-gray-500">
+                  <li>
+                    <a
+                      href="https://gijol.vercel.app/dashboard"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="transition-colors hover:text-[#df3326]"
+                    >
+                      Gijol
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://ziggle.gistory.me"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="transition-colors hover:text-[#df3326]"
+                    >
+                      Ziggle
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://www.gist.ac.kr"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="transition-colors hover:text-[#df3326]"
+                    >
+                      GIST 홈페이지
+                    </a>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+
+            <div className="max-w-5xl mx-auto mt-8 border-t border-gray-200 pt-5 text-center sm:mt-10">
+              <p className="text-xs text-gray-400">
+                © 2026. INFOTEAM all rights reserved.
               </p>
             </div>
           </div>
