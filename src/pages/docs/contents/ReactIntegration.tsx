@@ -365,19 +365,29 @@ export function ChatbotLoader({ widgetKey, launcher = "icon", position = "right"
           <p className="text-gray-700 mb-4">
             메시지 송수신 같은 이벤트를 분석 도구에 연결할 수 있습니다.{" "}
             <Code>on()</Code>은 해제 함수를 반환하므로 effect의 cleanup으로
-            그대로 넘기면 됩니다.
+            그대로 넘기면 됩니다. 아래 <Code>trackEvent</Code>는 프로젝트에서
+            쓰는 분석 함수로 바꿔 쓰세요.
           </p>
           <CodeBlock
-            code={`useEffect(() => {
+            code={`import { trackEvent } from "@/lib/analytics"; // 프로젝트의 분석 함수
+
+useEffect(() => {
   const api = window.ChatbotWidget;
   if (!api || Array.isArray(api)) return;
 
   return api.on("onMessageSent", ({ message }) => {
-    gtag("event", "chatbot_message_sent", { length: message.length });
+    trackEvent("chatbot_message_sent", { length: message.length });
   });
 }, []);`}
             language="tsx"
           />
+          <p className="text-sm text-gray-600 mt-4">
+            Google Analytics를 직접 호출하는 예시는{" "}
+            <Link to="/docs/examples" className="text-[#df3326] hover:underline">
+              Examples
+            </Link>
+            의 Google Analytics 연동 예제를 참고하세요.
+          </p>
           <p className="text-sm text-gray-600 mt-4">
             전체 이벤트 목록은{" "}
             <Link to="/docs/api/javascript" className="text-[#df3326] hover:underline">
