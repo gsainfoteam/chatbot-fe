@@ -94,10 +94,11 @@ test("picks a dark foreground for light button colors", () => {
 });
 
 test("reflects the widget's generating state on the launcher", () => {
-  const { window, launcher } = loadWidget();
+  const { window, launcher, panel } = loadWidget();
   const origin = "https://chatbot.gistory.me";
-  const post = (data, from = origin) =>
-    window.dispatchEvent({ type: "message", origin: from, data });
+  const iframeWindow = panel.children[0].contentWindow;
+  const post = (data, from = origin, source = iframeWindow) =>
+    window.dispatchEvent({ type: "message", origin: from, source, data });
 
   assert.equal(launcher.getAttribute("data-generating"), "false");
 
@@ -117,6 +118,14 @@ test("reflects the widget's generating state on the launcher", () => {
   // 다른 origin 의 메시지는 무시
   post({ type: "WM_GENERATING", active: true }, "https://evil.example");
   assert.equal(launcher.getAttribute("data-generating"), "false");
+
+  // 같은 origin 이라도 이 로더의 iframe 이 아닌 창에서 온 메시지는 무시
+  post({ type: "WM_GENERATING", active: true }, origin, { postMessage() {} });
+  assert.equal(launcher.getAttribute("data-generating"), "false");
+  post({ type: "WM_WIDGET_READY" }, origin, window);
+  assert.equal(window.ChatbotWidget.isReady(), false);
+  post({ type: "WM_WIDGET_READY" });
+  assert.equal(window.ChatbotWidget.isReady(), true);
 });
 
 test("data-launcher=pill renders the label variant", () => {

@@ -786,7 +786,9 @@
 
   // ---- postMessage (origin 검증) -----------------------------------------------------
   function onMessage(e) {
-    if (e.origin !== WIDGET_ORIGIN) return;
+    // 위젯 origin 이면서 이 로더가 만든 iframe 에서 온 메시지만 처리한다
+    // (같은 origin 의 다른 창/프레임이 상태를 바꾸지 못하도록)
+    if (e.source !== iframe.contentWindow || e.origin !== WIDGET_ORIGIN) return;
 
     const data = e.data;
     if (!data || typeof data !== "object") return;
