@@ -1,216 +1,12 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
-import vm from "node:vm";
-
-const loaderSource = readFileSync(
-  new URL("../public/loader.js", import.meta.url),
-  "utf8"
-);
-
-// ---------------------------------------------------------------------------
-// 최소 DOM 스텁 (loader.js 가 사용하는 API 만 구현)
-// ---------------------------------------------------------------------------
-
-class EventTargetStub {
-  listeners = new Map();
-
-  addEventListener(type, handler) {
-    const handlers = this.listeners.get(type) ?? [];
-    handlers.push(handler);
-    this.listeners.set(type, handlers);
-  }
-
-  removeEventListener(type, handler) {
-    this.listeners.set(
-      type,
-      (this.listeners.get(type) ?? []).filter((c) => c !== handler)
-    );
-  }
-
-  dispatchEvent(event) {
-    for (const handler of [...(this.listeners.get(event.type) ?? [])]) {
-      handler(event);
-    }
-  }
-}
-
-function createStyle() {
-  const style = {};
-  Object.defineProperty(style, "cssText", {
-    set(value) {
-      for (const declaration of value.split(";")) {
-        const separator = declaration.indexOf(":");
-        if (separator === -1) continue;
-        const property = declaration.slice(0, separator).trim();
-        const propertyValue = declaration.slice(separator + 1).trim();
-        if (!property) continue;
-        const camel = property.replace(/-([a-z])/g, (_, l) => l.toUpperCase());
-        style[camel] = propertyValue;
-      }
-    },
-  });
-  style.setProperty = (name, value) => {
-    style[name] = value;
-  };
-  return style;
-}
-
-class ElementStub extends EventTargetStub {
-  constructor(tagName, doc) {
-    super();
-    this.tagName = tagName.toUpperCase();
-    this.ownerDocument = doc;
-    this.style = createStyle();
-    this.children = [];
-    this.attributes = {};
-    this.parentNode = null;
-    this.innerHTML = "";
-    this.textContent = "";
-    this.contentWindow = { postMessage() {} };
-  }
-
-  appendChild(child) {
-    child.parentNode = this;
-    this.children.push(child);
-    return child;
-  }
-
-  removeChild(child) {
-    this.children = this.children.filter((c) => c !== child);
-    child.parentNode = null;
-    return child;
-  }
-
-  setAttribute(name, value) {
-    this.attributes[name] = String(value);
-  }
-
-  getAttribute(name) {
-    return this.attributes[name] ?? null;
-  }
-
-  hasAttribute(name) {
-    return name in this.attributes;
-  }
-
-  // 런처 라벨 조회용: 자식 요소를 하나 만들어 돌려준다
-  querySelector(selector) {
-    if (selector === ".cbw-label") {
-      if (!this._label) this._label = new ElementStub("span", this.ownerDocument);
-      return this._label;
-    }
-    return null;
-  }
-
-  // 트리거 위임용: 자신 또는 부모 중 selector 의 속성 하나라도 가진 요소
-  closest(selector) {
-    const attrs = [...selector.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1]);
-    let node = this;
-    while (node) {
-      if (attrs.some((a) => node.hasAttribute?.(a))) return node;
-      node = node.parentNode;
-    }
-    return null;
-  }
-}
-
-class DocumentStub extends EventTargetStub {
-  constructor() {
-    super();
-    this.body = new ElementStub("body", this);
-    this.currentScript = null;
-    this.pageElements = []; // 호스트 페이지가 가진 (커스텀 트리거) 요소들
-  }
-
-  createElement(tagName) {
-    return new ElementStub(tagName, this);
-  }
-
-  querySelectorAll(selector) {
-    const attrs = [...selector.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1]);
-    return this.pageElements.filter((el) => attrs.some((a) => el.hasAttribute(a)));
-  }
-}
-
-class CustomEventStub {
-  constructor(type, init) {
-    this.type = type;
-    this.detail = init?.detail;
-  }
-}
-
-function createEnv({ mobile = false } = {}) {
-  const window = new EventTargetStub();
-  const document = new DocumentStub();
-  const mediaQuery = {
-    matches: mobile,
-    listeners: [],
-    addEventListener(type, handler) {
-      if (type === "change") this.listeners.push(handler);
-    },
-    removeEventListener(type, handler) {
-      this.listeners = this.listeners.filter((h) => h !== handler);
-    },
-    setMatches(matches) {
-      this.matches = matches;
-      for (const handler of this.listeners) handler({ matches });
-    },
-  };
-
-  Object.assign(window, {
-    self: window,
-    top: window,
-    parent: window,
-    location: {
-      origin: "https://example.com",
-      pathname: "/",
-      href: "https://example.com/page",
-    },
-    matchMedia: () => mediaQuery,
-  });
-
-  return { window, document, mediaQuery };
-}
-
-function runLoader(env, dataset = {}) {
-  const { window, document } = env;
-  const script = new ElementStub("script", document);
-  script.dataset = dataset;
-  script.src = "https://chatbot.gistory.me/loader.js";
-  document.currentScript = script;
-
-  vm.runInNewContext(loaderSource, {
-    window,
-    document,
-    location: window.location,
-    URL,
-    CustomEvent: CustomEventStub,
-    console: { log() {}, warn() {}, error() {} },
-    requestAnimationFrame: (callback) => callback(),
-    setTimeout: () => {}, // rAF 를 동기로 처리하므로 타임아웃 폴백은 불필요
-  });
-}
-
-function loadWidget(dataset = {}, options = {}) {
-  const env = createEnv(options);
-  runLoader(env, dataset);
-  const [overlay, launcherHost, panel] = env.document.body.children;
-  // launcherHost 의 shadow root 폴백: [style, wrap] → wrap.children[0] 이 버튼
-  const launcher = launcherHost.children[1].children[0];
-  const resizeHandle = panel.children[1];
-  return { ...env, overlay, launcherHost, launcher, panel, resizeHandle };
-}
-
-// 페이지에 (커스텀 트리거) 요소를 하나 만들어 등록한 뒤 클릭 이벤트를 흘려보낸다
-function clickOn(document, attrs = {}, { parent = null } = {}) {
-  const el = new ElementStub("button", document);
-  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
-  if (parent) parent.appendChild(el);
-  document.pageElements.push(el);
-  document.dispatchEvent({ type: "click", target: el, preventDefault() {} });
-  return el;
-}
+import {
+  ElementStub,
+  createEnv,
+  runLoader,
+  loadWidget,
+  clickOn,
+} from "./helpers/loaderStub.js";
 
 // ---------------------------------------------------------------------------
 // 기본 레이아웃 / 기존 옵션 호환
@@ -247,32 +43,43 @@ test("data-launcher=none and legacy data-hide-button both hide the launcher", ()
   }
 });
 
-test("uses chat-sparkle as the default icon and resolves aliases", () => {
+test("uses logo as the default icon and resolves aliases", () => {
   const iconOf = (dataset) => loadWidget(dataset).window.ChatbotWidget.getConfig().buttonIcon;
-  assert.equal(iconOf({}), "chat-sparkle");
+  assert.equal(iconOf({}), "logo");
   assert.equal(iconOf({ buttonIcon: "spark" }), "chat-sparkle");
   assert.equal(iconOf({ buttonIcon: "robot" }), "robot");
   assert.equal(iconOf({ buttonIcon: "bot" }), "robot");
   assert.equal(iconOf({ buttonIcon: "bubble" }), "chat");
   assert.equal(iconOf({ buttonIcon: "logo" }), "logo");
   assert.equal(iconOf({ buttonIcon: "chat-question" }), "chat-question");
+  assert.equal(iconOf({ buttonIcon: "popo" }), "popo-headset");
+  assert.equal(iconOf({ buttonIcon: "popo-headset-chat" }), "popo-headset-chat");
   // 모르는 값이나 내부용 close 는 기본값으로
-  assert.equal(iconOf({ buttonIcon: "nope" }), "chat-sparkle");
-  assert.equal(iconOf({ buttonIcon: "close" }), "chat-sparkle");
+  assert.equal(iconOf({ buttonIcon: "nope" }), "logo");
+  assert.equal(iconOf({ buttonIcon: "close" }), "logo");
 
-  const { launcher } = loadWidget();
-  assert.match(launcher.innerHTML, /data-icon="open"><svg viewBox="0 0 256 256"/);
+  const { launcher } = loadWidget({ buttonIcon: "chat-sparkle" });
+  assert.match(launcher.innerHTML, /data-icon="open" data-key="chat-sparkle"><svg viewBox="0 0 256 256"/);
   assert.match(launcher.innerHTML, /class="cbw-star"/);
   assert.match(launcher.innerHTML, /data-icon="close"><svg/);
 });
 
+test("mascot icons keep their fixed colors and mark the slot with the icon key", () => {
+  const { launcher } = loadWidget({ buttonIcon: "popo-headset" });
+  assert.match(launcher.innerHTML, /data-icon="open" data-key="popo-headset"/);
+  assert.match(launcher.innerHTML, /viewBox="150 140 673 700"/);
+  assert.ok(!launcher.innerHTML.split('data-icon="close"')[0].includes("currentColor"));
+});
+
 test("points the bubble tail toward the launcher's corner", () => {
   const flip = 'transform="matrix(-1 0 0 1 256 0)"';
-  assert.ok(loadWidget().launcher.innerHTML.includes(flip));
-  assert.ok(loadWidget({ position: "right" }).launcher.innerHTML.includes(flip));
-  assert.ok(!loadWidget({ position: "left" }).launcher.innerHTML.includes(flip));
+  const icon = "chat-sparkle"; // 말풍선 계열 아이콘 (기본 마스코트 아이콘은 반전 대상이 아님)
+  assert.ok(loadWidget({ buttonIcon: icon }).launcher.innerHTML.includes(flip));
+  assert.ok(loadWidget({ buttonIcon: icon, position: "right" }).launcher.innerHTML.includes(flip));
+  assert.ok(!loadWidget({ buttonIcon: icon, position: "left" }).launcher.innerHTML.includes(flip));
+  assert.ok(!loadWidget().launcher.innerHTML.includes(flip));
   // 안쪽 기호(스파클)는 반전 그룹 밖에 있어 방향이 유지된다
-  const html = loadWidget().launcher.innerHTML;
+  const html = loadWidget({ buttonIcon: icon }).launcher.innerHTML;
   assert.ok(html.indexOf("</g>") < html.indexOf('fill="var(--c)"'));
 });
 

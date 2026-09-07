@@ -101,10 +101,12 @@
     "magnifying-glass": "search",
     help: "question",
     g: "logo",
+    popo: "popo-headset",
+    mascot: "popo-headset",
   };
-  const DEFAULT_ICON = "chat-sparkle";
+  const DEFAULT_ICON = "logo";
 
-  // 런처 버튼 아이콘 (ICONS 키 또는 별칭, 기본 spark). 유효성은 런처 생성 시 ICONS 기준으로 보정
+  // 런처 버튼 아이콘 (ICONS 키 또는 별칭, 기본 logo). 유효성은 런처 생성 시 ICONS 기준으로 보정
   const rawButtonIcon = String(ds.buttonIcon || DEFAULT_ICON).toLowerCase().trim();
   const buttonIcon = ICON_ALIASES[rawButtonIcon] || rawButtonIcon;
 
@@ -235,6 +237,11 @@
     question: phSvg(PH.question),
     robot: phSvg(PH.robot),
     headset: phSvg(PH.headset),
+    // 팀 마스코트(포포) 변형. 원본 색상 고정(흰 몸통 + #222 선), 선 두께 80%
+    "popo-headset":
+      '<svg viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M39.8 126.6 A96.6 96.6 0 0 1 216.2 126.6" fill="none" stroke="#222222" stroke-width="16.5" stroke-linecap="round"/><svg x="23" y="30" width="210" height="210" viewBox="150 140 673 700" fill="none"><path d="M478.70 196.14C449.46 196.14 400.73 165.25 368.25 165.25C335.76 165.25 328.81 199.02 322.77 206.44C316.72 213.86 267.54 281.1 261.04 291.39C255.29 300.51 208.80 370.16 184.69 486.04C181.56 501.06 179.42 512.37 176.58 533.38C173.74 554.39 175.50 577.52 175.63 590.10C175.77 602.69 177.76 619.24 179.83 638.93C186.32 700.71 218.81 734.18 218.81 734.18C218.81 734.18 254.55 780.51 329.26 798.53C403.98 816.55 459.21 816.55 459.21 816.55H521.85C521.85 816.55 577.08 816.55 651.80 798.53C726.52 780.51 762.25 734.18 762.25 734.18C762.25 734.18 794.74 700.71 801.24 638.93C803.31 619.24 805.3 602.69 805.43 590.10C805.56 577.52 807.32 554.39 804.48 533.38C801.64 512.37 799.50 501.06 796.38 486.04C772.26 370.16 725.77 300.51 720.02 291.39C713.52 281.1 664.34 213.86 658.29 206.44C652.25 199.02 645.30 165.25 612.81 165.25C580.33 165.25 531.60 196.14 502.36 196.14H478.70Z" fill="#ffffff"/><path d="M504.69 196.14H478.70C449.46 196.14 400.73 165.25 368.25 165.25C335.76 165.25 328.81 199.02 322.77 206.44C316.72 213.86 267.54 281.1 261.04 291.39C255.29 300.51 208.80 370.16 184.69 486.04C181.56 501.06 179.42 512.37 176.58 533.38C173.74 554.39 175.50 577.52 175.63 590.10C175.77 602.69 177.76 619.24 179.83 638.93C186.32 700.71 218.81 734.18 218.81 734.18C218.81 734.18 254.55 780.51 329.26 798.53C403.98 816.55 459.21 816.55 459.21 816.55H524.18M476.37 196.14H502.36C531.60 196.14 580.33 165.25 612.81 165.25C645.30 165.25 652.25 199.02 658.29 206.44C664.34 213.86 713.52 281.1 720.02 291.39C725.77 300.51 772.26 370.16 796.38 486.04C799.50 501.06 801.64 512.37 804.48 533.38C807.32 554.39 805.56 577.52 805.43 590.10C805.3 602.69 803.31 619.24 801.24 638.93C794.74 700.71 762.25 734.18 762.25 734.18C762.25 734.18 726.52 780.51 651.80 798.53C577.08 816.55 521.85 816.55 521.85 816.55H456.88" stroke="#222222" stroke-width="31.10" stroke-linecap="round"/><circle cx="374.25" cy="403.41" r="34.02" fill="#222222"/><circle cx="597.83" cy="403.41" r="34.02" fill="#222222"/><path d="M437.44 456.88C437.44 456.88 461.74 456.88 473.89 438.93C486.04 420.99 486.04 398.55 486.04 398.55" stroke="#222222" stroke-width="15.55" stroke-linecap="round"/><path d="M534.65 456.88C534.65 456.88 510.34 456.88 498.19 438.93C486.04 420.99 486.04 398.55 486.04 398.55" stroke="#222222" stroke-width="15.55" stroke-linecap="round"/></svg><rect x="26.1" y="105.6" width="27.3" height="42.0" rx="10.9" fill="#ffffff" stroke="#222222" stroke-width="9.7" stroke-linejoin="round" stroke-linecap="round"/><rect x="202.6" y="105.6" width="27.3" height="42.0" rx="10.9" fill="#ffffff" stroke="#222222" stroke-width="9.7" stroke-linejoin="round" stroke-linecap="round"/><path d="M216.2 147.6 Q220.4 195.9 191.0 195.9" fill="none" stroke="#222222" stroke-width="9.7" stroke-linecap="round"/><circle cx="184.7" cy="195.9" r="9.6" fill="#ffffff" stroke="#222222" stroke-width="9.7" stroke-linejoin="round" stroke-linecap="round"/></svg>',
+    "popo-headset-chat":
+      '<svg viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21.2 143.4 A87.4 87.4 0 0 1 180.8 143.4" fill="none" stroke="#222222" stroke-width="14.9" stroke-linecap="round"/><svg x="6" y="56" width="190" height="190" viewBox="150 140 673 700" fill="none"><path d="M478.70 196.14C449.46 196.14 400.73 165.25 368.25 165.25C335.76 165.25 328.81 199.02 322.77 206.44C316.72 213.86 267.54 281.1 261.04 291.39C255.29 300.51 208.80 370.16 184.69 486.04C181.56 501.06 179.42 512.37 176.58 533.38C173.74 554.39 175.50 577.52 175.63 590.10C175.77 602.69 177.76 619.24 179.83 638.93C186.32 700.71 218.81 734.18 218.81 734.18C218.81 734.18 254.55 780.51 329.26 798.53C403.98 816.55 459.21 816.55 459.21 816.55H521.85C521.85 816.55 577.08 816.55 651.80 798.53C726.52 780.51 762.25 734.18 762.25 734.18C762.25 734.18 794.74 700.71 801.24 638.93C803.31 619.24 805.3 602.69 805.43 590.10C805.56 577.52 807.32 554.39 804.48 533.38C801.64 512.37 799.50 501.06 796.38 486.04C772.26 370.16 725.77 300.51 720.02 291.39C713.52 281.1 664.34 213.86 658.29 206.44C652.25 199.02 645.30 165.25 612.81 165.25C580.33 165.25 531.60 196.14 502.36 196.14H478.70Z" fill="#ffffff"/><path d="M504.69 196.14H478.70C449.46 196.14 400.73 165.25 368.25 165.25C335.76 165.25 328.81 199.02 322.77 206.44C316.72 213.86 267.54 281.1 261.04 291.39C255.29 300.51 208.80 370.16 184.69 486.04C181.56 501.06 179.42 512.37 176.58 533.38C173.74 554.39 175.50 577.52 175.63 590.10C175.77 602.69 177.76 619.24 179.83 638.93C186.32 700.71 218.81 734.18 218.81 734.18C218.81 734.18 254.55 780.51 329.26 798.53C403.98 816.55 459.21 816.55 459.21 816.55H524.18M476.37 196.14H502.36C531.60 196.14 580.33 165.25 612.81 165.25C645.30 165.25 652.25 199.02 658.29 206.44C664.34 213.86 713.52 281.1 720.02 291.39C725.77 300.51 772.26 370.16 796.38 486.04C799.50 501.06 801.64 512.37 804.48 533.38C807.32 554.39 805.56 577.52 805.43 590.10C805.3 602.69 803.31 619.24 801.24 638.93C794.74 700.71 762.25 734.18 762.25 734.18C762.25 734.18 726.52 780.51 651.80 798.53C577.08 816.55 521.85 816.55 521.85 816.55H456.88" stroke="#222222" stroke-width="31.10" stroke-linecap="round"/><circle cx="374.25" cy="403.41" r="34.02" fill="#222222"/><circle cx="597.83" cy="403.41" r="34.02" fill="#222222"/><path d="M437.44 456.88C437.44 456.88 461.74 456.88 473.89 438.93C486.04 420.99 486.04 398.55 486.04 398.55" stroke="#222222" stroke-width="15.55" stroke-linecap="round"/><path d="M534.65 456.88C534.65 456.88 510.34 456.88 498.19 438.93C486.04 420.99 486.04 398.55 486.04 398.55" stroke="#222222" stroke-width="15.55" stroke-linecap="round"/></svg><rect x="8.9" y="124.4" width="24.7" height="38.0" rx="9.9" fill="#ffffff" stroke="#222222" stroke-width="8.8" stroke-linejoin="round" stroke-linecap="round"/><rect x="168.5" y="124.4" width="24.7" height="38.0" rx="9.9" fill="#ffffff" stroke="#222222" stroke-width="8.8" stroke-linejoin="round" stroke-linecap="round"/><path d="M180.8 162.4 Q184.6 206.1 158.0 206.1" fill="none" stroke="#222222" stroke-width="8.8" stroke-linecap="round"/><circle cx="152.3" cy="206.1" r="8.6" fill="#ffffff" stroke="#222222" stroke-width="8.8" stroke-linejoin="round" stroke-linecap="round"/><svg x="146" y="0" width="108" height="108" viewBox="0 0 256 256" fill="none"><g fill="#ffffff" stroke="#222222" stroke-width="20.8" stroke-linejoin="round"><path d="M232,128A104,104,0,0,1,79.12,219.82L45.07,231.17a16,16,0,0,1-20.24-20.24l11.35-34.05A104,104,0,1,1,232,128Z"/></g><circle cx="84" cy="128" r="19.4" fill="#222222"/><circle cx="128" cy="128" r="19.4" fill="#222222"/><circle cx="172" cy="128" r="19.4" fill="#222222"/></svg></svg>',
     logo:
       '<svg viewBox="0 0 173 150" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M83.7427 87.1014L109.873 87.108V114.663H78.4867C56.3773 114.663 38.456 96.74 38.456 74.632C38.456 52.524 56.3773 34.6014 78.4867 34.6014H137.464L172.871 4.57764e-05H74.632C33.4147 4.57764e-05 0 33.4134 0 74.632C0 115.849 33.4147 149.264 74.632 149.264H112.308H147.541H147.544V58.7254H147.541H112.779L83.7427 87.1014Z" fill="currentColor"/></svg>',
     close:
@@ -332,7 +339,8 @@
       transition: opacity 200ms ease, transform 280ms cubic-bezier(.2,.8,.2,1);
     }
     .cbw-ic svg { display: block; width: 30px; height: 30px; }
-    .cbw-ic[data-icon="logo"] svg { width: 28px; height: 28px; }
+    .cbw-ic[data-key="logo"] svg { width: 28px; height: 28px; }
+    .cbw-ic[data-key^="popo"] svg { width: 33px; height: 33px; }
     .cbw-ic[data-icon="close"] { opacity: 0; transform: translateY(8px) scale(.6); }
     .cbw-launcher[aria-expanded="true"] .cbw-ic[data-icon="open"] { opacity: 0; transform: translateY(-8px) scale(.6); }
     .cbw-launcher[aria-expanded="true"] .cbw-ic[data-icon="close"] { opacity: 1; transform: none; }
@@ -369,7 +377,8 @@
     @media (max-width: 640px) {
       .cbw-launcher { --size: 50px; --radius: 19px; }
       .cbw-ic svg { width: 27px; height: 27px; }
-      .cbw-ic[data-icon="logo"] svg { width: 25px; height: 25px; }
+      .cbw-ic[data-key="logo"] svg { width: 25px; height: 25px; }
+      .cbw-ic[data-key^="popo"] svg { width: 29px; height: 29px; }
       .cbw-launcher[data-variant="pill"] .cbw-label { display: none; }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -420,7 +429,7 @@
   btn.setAttribute("data-generating", "false");
   btn.innerHTML =
     '<span class="cbw-slot">' +
-    '<span class="cbw-ic" data-icon="open">' + ICONS[config.buttonIcon] + "</span>" +
+    '<span class="cbw-ic" data-icon="open" data-key="' + config.buttonIcon + '">' + ICONS[config.buttonIcon] + "</span>" +
     '<span class="cbw-ic" data-icon="close">' + ICONS.close + "</span>" +
     "</span>" +
     '<span class="cbw-label"></span>';
