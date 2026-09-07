@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "node --test tests/*.test.js",
+    "icons:extract": "node scripts/extract-launcher-icons.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
