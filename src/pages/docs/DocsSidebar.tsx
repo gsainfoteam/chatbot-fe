@@ -23,6 +23,10 @@ const navItems: NavItem[] = [
     path: "/docs/installation",
   },
   {
+    title: "React 연동",
+    path: "/docs/react",
+  },
+  {
     title: "Flutter",
     path: "/docs/flutter/quick-start",
     children: [

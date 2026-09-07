@@ -299,6 +299,15 @@ export default function ChatWidget({
     }
   }, [isInIframe]);
 
+  // 답변 생성(스트리밍) 중 여부를 부모(loader.js)에 알려 런처 버튼이 상태를 표현할 수 있게 한다
+  useEffect(() => {
+    if (!isInIframe) return;
+    window.parent?.postMessage(
+      { type: "WM_GENERATING", active: loading },
+      "*",
+    );
+  }, [loading, isInIframe]);
+
   // 메시지 본문/로딩 변화에만 하단 스크롤.
   // feedback 등 메타 갱신 시 스크롤하면 이전 답변 피드백 클릭 때 화면이 튀는 버그가 난다.
   const scrollSignal = useMemo(
