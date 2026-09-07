@@ -125,6 +125,27 @@ test("data-launcher=pill renders the label variant", () => {
   assert.equal(launcher.querySelector(".cbw-label").textContent, "질문하기");
 });
 
+test("hiding and showing the launcher restores the configured variant", () => {
+  const { window, launcher, launcherHost } = loadWidget({ launcher: "pill" });
+  const api = window.ChatbotWidget;
+
+  api.hideLauncher();
+  assert.equal(launcherHost.style.display, "none");
+  assert.equal(api.getConfig().launcher, "none");
+  assert.equal(api.getConfig().hideButton, true);
+
+  api.showLauncher();
+  assert.equal(launcherHost.style.display, "flex");
+  assert.equal(api.getConfig().launcher, "pill");
+  assert.equal(launcher.getAttribute("data-variant"), "pill");
+
+  // none 으로 시작한 경우 표시하면 icon
+  const hidden = loadWidget({ launcher: "none" });
+  hidden.window.ChatbotWidget.showLauncher();
+  assert.equal(hidden.window.ChatbotWidget.getConfig().launcher, "icon");
+  assert.equal(hidden.launcher.getAttribute("data-variant"), "icon");
+});
+
 test("resizes within the documented desktop bounds", () => {
   const { window, panel } = loadWidget({ resizable: "true" });
 

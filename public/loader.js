@@ -689,10 +689,13 @@
     return { width: config.width, height: config.height };
   }
 
+  // 숨김 전의 런처 형태를 기억해 두었다가 다시 표시할 때 복원한다 (pill 로 시작했으면 pill 로)
+  const launcherVariant = config.launcher === "pill" ? "pill" : "icon";
+
   function setLauncherVisible(visible) {
     config.hideButton = !visible;
-    if (visible && config.launcher === "none") config.launcher = "icon";
-    if (!visible) config.launcher = "none";
+    config.launcher = visible ? launcherVariant : "none";
+    btn.setAttribute("data-variant", launcherVariant);
     launcherHost.style.display = visible ? "flex" : "none";
     applyResponsive();
   }
