@@ -50,10 +50,12 @@ export default function FAQ() {
 
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                3. 도메인 등록 확인
+                3. 도메인/앱 ID 등록 확인
               </h3>
               <p className="text-gray-700 mb-2">
                 대시보드에서 현재 도메인이 허용 도메인 목록에 등록되어 있는지
+                확인하세요. Flutter 앱의 경우 앱 ID(Android applicationId /
+                iOS Bundle Identifier)가 허용 앱 ID 목록에 등록되어 있는지
                 확인하세요.
               </p>
             </div>

@@ -8,6 +8,29 @@ export default function QuickStart() {
         챗봇 위젯을 웹사이트에 통합하는 가장 빠른 방법을 알아보세요.
       </p>
 
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8 space-y-2">
+        <p className="text-sm text-blue-900">
+          ⚛️ <strong>React / Next.js 앱인가요?</strong>{" "}
+          <a
+            href="/docs/react"
+            className="text-[#df3326] hover:underline font-medium"
+          >
+            React 연동
+          </a>{" "}
+          가이드에 index.html, next/script, 훅 예시가 있습니다.
+        </p>
+        <p className="text-sm text-blue-900">
+          📱 <strong>Flutter 앱에서 사용하시나요?</strong>{" "}
+          <a
+            href="/docs/flutter/quick-start"
+            className="text-[#df3326] hover:underline font-medium"
+          >
+            Flutter 시작하기
+          </a>{" "}
+          가이드를 확인하세요.
+        </p>
+      </div>
+
       <div className="space-y-8">
         {/* Step 1 */}
         <section>
@@ -51,8 +74,8 @@ export default function QuickStart() {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-900">
               💡 <strong>Widget Key란?</strong> 위젯을 설치한 서비스를 식별하기
-              위한 고유 키입니다. 이를 통해 도메인 제한, 사용량 관리 등이
-              가능합니다.
+              위한 고유 키입니다. 이를 통해 도메인/앱 ID 제한, 사용량 관리
+              등이 가능합니다.
             </p>
           </div>
         </section>
@@ -66,12 +89,24 @@ export default function QuickStart() {
             완료!
           </h2>
           <p className="text-gray-700 mb-4">
-            스크립트를 추가하면 즉시 화면 우하단에 챗봇 런처 버튼이 표시됩니다.
+            스크립트를 추가하면 즉시 화면 우하단에 챗봇 런처 버튼이 표시되고,
+            누르면 채팅 패널이 열립니다. 사이트에 이미 있는 버튼으로 열고 싶다면{" "}
+            <code className="bg-gray-100 px-2 py-1 rounded text-sm">
+              data-launcher="none"
+            </code>
+            으로 기본 런처를 끄고 그 버튼에{" "}
+            <code className="bg-gray-100 px-2 py-1 rounded text-sm">
+              data-chatbot-toggle
+            </code>
+            만 붙이면 됩니다.
           </p>
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <p className="text-sm text-green-900">
-              ✅ 위젯이 정상적으로 로드되었는지 확인하려면 브라우저 개발자
-              도구의 콘솔을 확인하세요.
+              ✅ 정상적으로 로드되면 브라우저 콘솔에서{" "}
+              <code className="bg-green-100 px-1 rounded">window.ChatbotWidget</code>
+              을 확인할 수 있습니다. 동작 로그가 필요하면{" "}
+              <code className="bg-green-100 px-1 rounded">data-debug="true"</code>
+              를 붙이세요.
             </p>
           </div>
         </section>
@@ -116,6 +151,15 @@ export default function QuickStart() {
                 Installation 가이드
               </a>{" "}
               에서 더 자세한 설치 방법을 확인하세요
+            </li>
+            <li>
+              <a
+                href="/docs/react"
+                className="text-[#df3326] hover:underline font-medium"
+              >
+                React 연동
+              </a>{" "}
+              에서 React / Next.js 앱에 붙이는 방법을 확인하세요
             </li>
             <li>
               <a

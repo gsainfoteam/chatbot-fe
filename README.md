@@ -16,6 +16,8 @@
 
 Chatbot Widget은 웹사이트에 **간단하게 통합할 수 있는 임베디드 챗봇 위젯**입니다. iframe 기반의 격리된 구조로 호스트 페이지와 CSS/JS 충돌 없이 안정적으로 동작하며, 다양한 커스터마이징 옵션을 제공합니다.
 
+Flutter 앱에서는 [gist_chatbot_flutter](https://pub.dev/packages/gist_chatbot_flutter) 패키지로 동일한 챗봇 경험을 제공할 수 있습니다.
+
 ### 주요 특징
 
 - 🚀 **원라이너 설치**: 스크립트 태그 하나로 즉시 사용 가능
@@ -41,6 +43,8 @@ Chatbot Widget은 웹사이트에 **간단하게 통합할 수 있는 임베디�
 ```
 
 설치 즉시 화면 우하단에 챗봇 런처 버튼이 표시됩니다.
+
+- React / Next.js 앱은 `index.html` 또는 `next/script`에 같은 스크립트를 넣으면 됩니다. 사이트에 이미 있는 버튼으로 열려면 `data-launcher="none"`으로 기본 런처를 끄고, 그 버튼에 `data-chatbot-toggle` 속성만 붙이세요.
 
 ### 기본 예제
 

@@ -56,6 +56,26 @@ export const ClipboardIcon = createIcon(
   "w-4 h-4 sm:w-5 sm:h-5",
 );
 
+export const CopyIcon = createIcon(
+  "0 0 24 24",
+  [
+    "M4 9h9a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2v-9a2 2 0 012-2z",
+    "M19 15h1a2 2 0 002-2V4a2 2 0 00-2-2h-9a2 2 0 00-2 2v1",
+  ],
+  "w-4 h-4",
+);
+
+export const CheckIcon = ({ className = "w-3.5 h-3.5" }: IconProps) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={3}
+      d="M4.5 12.75l6 6 9-13.5"
+    />
+  </svg>
+);
+
 export const AcademicIcon = createIcon(
   "0 0 24 24",
   [
