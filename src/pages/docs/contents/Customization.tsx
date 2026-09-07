@@ -1,4 +1,5 @@
 import CodeBlock from "../../../components/CodeBlock";
+import LauncherIconGallery from "../LauncherIconGallery";
 
 export default function Customization() {
   return (
@@ -80,18 +81,47 @@ export default function Customization() {
                     data-button-icon
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">
-                    런처 버튼 아이콘. chat-sparkle(말풍선+스파클) / chat(말풍선+점) / chat-text /
-                    chats / chat-search / chat-question / sparkle / search / question / robot /
-                    headset / logo(G 로고)
+                    런처 버튼 아이콘. 아래 "런처 아이콘" 섹션의 키 중 하나
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">chat-sparkle</td>
+                  <td className="px-4 py-3 text-sm text-gray-500">logo</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 text-sm font-mono text-gray-900">
+                    data-launcher
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    기본 런처 형태. icon(아이콘) / pill(아이콘 + 문구) / none(그리지
+                    않음, 커스텀 트리거 전용)
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">icon</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 text-sm font-mono text-gray-900">
+                    data-launcher-label
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    pill 런처에 표시할 문구 (모바일과 열림 상태에서는 숨김)
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    무엇이든 물어보세요
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 text-sm font-mono text-gray-900">
+                    data-mode
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-700">
+                    패널 위치. corner(런처 위 카드) / center(화면 중앙 모달). 모바일은
+                    항상 하단 시트
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">corner</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-3 text-sm font-mono text-gray-900">
                     data-hide-button
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">
-                    커스텀 버튼을 사용할 때 기본 런처 숨김 (true / false)
+                    (하위 호환) true면 data-launcher="none"과 동일
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">false</td>
                 </tr>
@@ -107,6 +137,30 @@ export default function Customization() {
               </tbody>
             </table>
           </div>
+        </section>
+
+        {/* 런처 아이콘 */}
+        <section>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            런처 아이콘
+          </h2>
+          <p className="text-gray-700 mb-4">
+            <code className="bg-gray-100 px-2 py-1 rounded text-sm">
+              data-button-icon
+            </code>
+            에 넣을 수 있는 값입니다. 마스코트 아이콘은 색이 고정되고, 나머지는
+            흰색 실루엣에 버튼색으로 디테일을 파낸 구조라 버튼색을 바꿔도 함께
+            따라갑니다. 말풍선 꼬리는 런처가 놓인 쪽 모서리를 향합니다.
+          </p>
+          <LauncherIconGallery />
+          <CodeBlock
+            code={`<script
+  src="https://chatbot.gistory.me/loader.js"
+  data-widget-key="YOUR_WIDGET_KEY"
+  data-button-icon="chat-sparkle"
+></script>`}
+            language="html"
+          />
         </section>
 
         {/* 색상 커스터마이징 */}

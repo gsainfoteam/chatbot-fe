@@ -44,6 +44,8 @@ Flutter 앱에서는 [gist_chatbot_flutter](https://pub.dev/packages/gist_chatbo
 
 설치 즉시 화면 우하단에 챗봇 런처 버튼이 표시됩니다.
 
+- React / Next.js 앱은 `index.html` 또는 `next/script`에 같은 스크립트를 넣으면 됩니다. 사이트에 이미 있는 버튼으로 열려면 `data-launcher="none"`으로 기본 런처를 끄고, 그 버튼에 `data-chatbot-toggle` 속성만 붙이세요.
+
 ### 기본 예제
 
 ```html
