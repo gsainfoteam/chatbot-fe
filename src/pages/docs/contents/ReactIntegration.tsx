@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import CodeBlock from "../../../components/CodeBlock";
 
 const Step = ({ n }: { n: number }) => (
@@ -379,9 +380,9 @@ export function ChatbotLoader({ widgetKey, launcher = "icon", position = "right"
           />
           <p className="text-sm text-gray-600 mt-4">
             전체 이벤트 목록은{" "}
-            <a href="/docs/api/javascript" className="text-[#df3326] hover:underline">
+            <Link to="/docs/api/javascript" className="text-[#df3326] hover:underline">
               JavaScript API
-            </a>
+            </Link>
             를 참고하세요.
           </p>
         </section>

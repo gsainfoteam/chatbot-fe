@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import CodeBlock from "../../../components/CodeBlock";
 
 const Code = ({ children }: { children: string }) => (
@@ -9,10 +10,11 @@ const TipCode = ({ children }: { children: string }) => (
   <code className="bg-blue-100 px-1.5 py-0.5 rounded text-xs">{children}</code>
 );
 
+// 문서 내부 이동은 전체 페이지 로드 없이 라우터로 처리한다
 const DocLink = ({ to, children }: { to: string; children: string }) => (
-  <a href={to} className="text-[#df3326] hover:underline font-medium">
+  <Link to={to} className="text-[#df3326] hover:underline font-medium">
     {children}
-  </a>
+  </Link>
 );
 
 export default function Installation() {
