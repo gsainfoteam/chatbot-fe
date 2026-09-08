@@ -13,11 +13,13 @@ import {
   Dialog,
   Select,
 } from "../../../components/ui";
+import { buildBulkErrorMessage } from "../utils";
+import type { BulkFailure } from "../utils";
 
 type Mode = "share" | "unshare" | "transfer";
 
 interface ShareTransferModalProps {
-  document: DocumentItem;
+  documents: DocumentItem[];
   organizations: Organization[];
   mode: Mode;
   onClose: () => void;
@@ -47,25 +49,61 @@ function modeDescription(mode: Mode): string {
   }
 }
 
+function modeActionLabel(mode: Mode): string {
+  switch (mode) {
+    case "share":
+      return "공유";
+    case "unshare":
+      return "공유 해제";
+    case "transfer":
+      return "소유권 이양";
+  }
+}
+
+function modeFallbackMessage(mode: Mode): string {
+  switch (mode) {
+    case "share":
+      return "문서 공유에 실패했습니다.";
+    case "unshare":
+      return "공유 해제에 실패했습니다.";
+    case "transfer":
+      return "소유권 이양에 실패했습니다.";
+  }
+}
+
+function isSharedWith(document: DocumentItem, organizationId: string): boolean {
+  return (document.sharedOrganizations ?? []).some(
+    (org) => org.id === organizationId,
+  );
+}
+
 export default function ShareTransferModal({
-  document,
+  documents,
   organizations,
   mode,
   onClose,
   onUpdated,
   onTransferred,
 }: ShareTransferModalProps) {
-  const ownerId = document.ownerOrganization?.id;
-  const sharedIds = new Set(
-    (document.sharedOrganizations ?? []).map((org) => org.id),
+  const singleDocument = documents.length === 1 ? documents[0] : null;
+  const ownerIds = new Set(
+    documents
+      .map((document) => document.ownerOrganization?.id)
+      .filter((id): id is string => id != null),
   );
 
+  // 공유 해제는 단건에서만 열리므로 첫 문서의 공유 조직만 후보로 사용
   const candidates =
     mode === "unshare"
-      ? (document.sharedOrganizations ?? [])
+      ? (singleDocument?.sharedOrganizations ?? [])
       : organizations.filter((org) => {
-          if (org.id === ownerId) return false;
-          if (mode === "share" && sharedIds.has(org.id)) return false;
+          if (ownerIds.has(org.id)) return false;
+          if (
+            mode === "share" &&
+            documents.every((document) => isSharedWith(document, org.id))
+          ) {
+            return false;
+          }
           if (mode === "transfer" && !canManageOrg(org.effectiveRole)) {
             return false;
           }
@@ -78,32 +116,63 @@ export default function ShareTransferModal({
   const [transferConfirmOpen, setTransferConfirmOpen] = useState(false);
   const targetName =
     candidates.find((org) => org.id === targetId)?.name ?? "선택한 조직";
+  const documentsLabel = singleDocument
+    ? `"${singleDocument.title}" 문서`
+    : `선택한 ${documents.length}개 문서`;
 
   const executeAction = async () => {
     setLoading(true);
     setError(null);
     try {
-      if (mode === "share") {
-        const doc = await shareUpload(document.id, targetId);
-        onUpdated(doc);
-      } else if (mode === "unshare") {
-        await unshareUpload(document.id, targetId);
-        const refreshed = await getUploadById(document.id);
-        onUpdated(refreshed);
-      } else {
-        const doc = await transferUpload(document.id, targetId);
-        onTransferred(doc);
+      const targets =
+        mode === "share"
+          ? documents.filter((document) => !isSharedWith(document, targetId))
+          : documents;
+      const results = await Promise.allSettled(
+        targets.map(async (document) => {
+          if (mode === "share") {
+            return shareUpload(document.id, targetId);
+          }
+          if (mode === "unshare") {
+            await unshareUpload(document.id, targetId);
+            return getUploadById(document.id);
+          }
+          return transferUpload(document.id, targetId);
+        }),
+      );
+
+      const failures: BulkFailure[] = [];
+      results.forEach((result, index) => {
+        const document = targets[index];
+        if (result.status === "fulfilled") {
+          if (mode === "transfer") {
+            onTransferred(result.value);
+          } else {
+            onUpdated(result.value);
+          }
+          return;
+        }
+        failures.push({
+          document,
+          message:
+            result.reason instanceof Error
+              ? result.reason.message
+              : modeFallbackMessage(mode),
+        });
+      });
+
+      if (failures.length === 0) {
+        onClose();
+        return;
       }
-      onClose();
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : mode === "transfer"
-            ? "소유권 이양에 실패했습니다."
-            : mode === "share"
-              ? "문서 공유에 실패했습니다."
-              : "공유 해제에 실패했습니다.";
+
+      const message = singleDocument
+        ? failures[0].message
+        : buildBulkErrorMessage(
+            modeActionLabel(mode),
+            targets.length - failures.length,
+            failures,
+          );
       setError(message);
       throw new Error(message);
     } finally {
@@ -153,9 +222,28 @@ export default function ShareTransferModal({
           </>
         }
       >
-        <p className="truncate text-sm font-medium text-gray-800">
-          문서: {document.title}
-        </p>
+        {singleDocument ? (
+          <p className="truncate text-sm font-medium text-gray-800">
+            문서: {singleDocument.title}
+          </p>
+        ) : (
+          <div>
+            <p className="text-sm font-medium text-gray-800">
+              선택한 {documents.length}개 문서
+            </p>
+            <ul className="mt-1.5 max-h-32 space-y-1 overflow-y-auto rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-600">
+              {documents.map((document) => (
+                <li
+                  key={document.id}
+                  className="truncate"
+                  title={document.title}
+                >
+                  {document.title}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {candidates.length === 0 ? (
           <p className="rounded-md bg-gray-50 px-3 py-2.5 text-sm text-gray-500">
@@ -179,7 +267,7 @@ export default function ShareTransferModal({
         )}
 
         {error && (
-          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="whitespace-pre-line rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
           </p>
         )}
@@ -189,7 +277,7 @@ export default function ShareTransferModal({
         open={transferConfirmOpen}
         onOpenChange={setTransferConfirmOpen}
         title="문서 소유권을 이양할까요?"
-        description={`"${document.title}" 문서의 소유권을 "${targetName}"(으)로 이양합니다.\n이양 후에는 출발 조직만 속한 사용자는 이 문서를 관리할 수 없습니다.`}
+        description={`${documentsLabel}의 소유권을 "${targetName}"(으)로 이양합니다.\n이양 후에는 출발 조직만 속한 사용자는 이 문서를 관리할 수 없습니다.`}
         confirmLabel="소유권 이양"
         loadingLabel="이양 중..."
         variant="danger"

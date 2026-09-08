@@ -99,7 +99,7 @@ export default function ConfirmDialog({
       {error && (
         <p
           role="alert"
-          className="rounded-lg border border-red-100 bg-red-50 px-3.5 py-3 text-sm text-red-700"
+          className="whitespace-pre-line rounded-lg border border-red-100 bg-red-50 px-3.5 py-3 text-sm text-red-700"
         >
           {error}
         </p>
