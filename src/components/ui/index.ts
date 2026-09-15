@@ -17,3 +17,5 @@ export type {
   SelectVariant,
   SelectWidth,
 } from "./Select";
+export { default as Tooltip, InfoTooltip } from "./Tooltip";
+export type { InfoTooltipProps, TooltipProps, TooltipSide } from "./Tooltip";

@@ -120,3 +120,32 @@ export function getDateKeysInRange(
 
   return Array.from(keys).sort();
 }
+
+/** 해결률을 표시용 문자열로 변환. 값이 없으면 "-" */
+export function formatResolutionRate(rate?: number): string {
+  if (rate == null || Number.isNaN(rate)) return "-";
+  return `${(Math.round(rate * 10) / 10).toLocaleString()}%`;
+}
+
+/**
+ * 여러 위젯 키의 해결률을 요청 수 가중 평균으로 합산.
+ * 해결률이 없는 키는 제외하며, 유효한 키가 없으면 undefined.
+ */
+export function combineResolutionRate(
+  stats: Array<{ totalRequests: number; resolutionRate?: number }>,
+): number | undefined {
+  let weightedSum = 0;
+  let weight = 0;
+  let count = 0;
+  let plainSum = 0;
+  for (const s of stats) {
+    if (s.resolutionRate == null) continue;
+    count += 1;
+    plainSum += s.resolutionRate;
+    weightedSum += s.resolutionRate * s.totalRequests;
+    weight += s.totalRequests;
+  }
+  if (count === 0) return undefined;
+  // 요청 수가 모두 0이면 단순 평균으로 대체
+  return weight > 0 ? weightedSum / weight : plainSum / count;
+}

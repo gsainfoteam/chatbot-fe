@@ -14,15 +14,18 @@ import {
 } from "recharts";
 import { getWidgetKeysUsage } from "../../api/usage";
 import { getWidgetKeys } from "../../api/widgetKeys";
-import { Select } from "../../components/ui";
+import { InfoTooltip, Select } from "../../components/ui";
 import type { UsageData, DomainStat } from "../../api/types";
 import ChartTooltip from "./components/ChartTooltip";
+import ResolutionRateTooltipContent from "./components/ResolutionRateTooltipContent";
 import {
   getDateRange,
   getDateKeysInRange,
   getGroupKeyForDate,
   getTooltipDateLabel,
   getChartDateLabel,
+  formatResolutionRate,
+  combineResolutionRate,
 } from "./utils";
 
 export default function DashboardContent() {
@@ -106,6 +109,7 @@ export default function DashboardContent() {
       widgetKeyName: "위젯 키 없음",
       totalTokens: 0,
       totalRequests: 0,
+      resolutionRate: undefined as number | undefined,
       usageData: [] as UsageData[],
       domainStats: [] as DomainStat[],
     };
@@ -151,6 +155,7 @@ export default function DashboardContent() {
         widgetKeyName: "모든 위젯 키",
         totalTokens: usageData.reduce((sum, d) => sum + d.tokens, 0),
         totalRequests: usageData.reduce((sum, d) => sum + d.requests, 0),
+        resolutionRate: combineResolutionRate(allStats),
         usageData,
         domainStats: Array.from(combinedDomainStats.entries()).map(
           ([domain, stats]) => ({
@@ -524,6 +529,18 @@ export default function DashboardContent() {
                       </p>
                     </div>
                     <div>
+                      <p className="flex items-center gap-1 text-[11px] uppercase tracking-wider text-gray-400 font-medium">
+                        해결률
+                        <InfoTooltip
+                          content={<ResolutionRateTooltipContent />}
+                          label="해결률 설명"
+                        />
+                      </p>
+                      <p className="text-lg font-semibold text-gray-900 tabular-nums mt-0.5">
+                        {formatResolutionRate(filteredStats.resolutionRate)}
+                      </p>
+                    </div>
+                    <div>
                       <p className="text-[11px] uppercase tracking-wider text-gray-400 font-medium">
                         평균 토큰/건
                       </p>
@@ -669,7 +686,20 @@ export default function DashboardContent() {
                               </span>
                             </div>
                             <div className="flex justify-between text-xs text-gray-500 mb-1 ml-7">
-                              <span>{stat.totalRequests} 건</span>
+                              <span className="flex items-center gap-2">
+                                <span>{stat.totalRequests} 건</span>
+                                <span className="inline-flex items-center gap-1">
+                                  해결률{" "}
+                                  <span className="font-medium text-gray-700 tabular-nums">
+                                    {formatResolutionRate(stat.resolutionRate)}
+                                  </span>
+                                  <InfoTooltip
+                                    content={<ResolutionRateTooltipContent />}
+                                    label="해결률 설명"
+                                    iconClassName="w-3 h-3"
+                                  />
+                                </span>
+                              </span>
                               <span>{pct}%</span>
                             </div>
                             <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden ml-7">
