@@ -78,7 +78,7 @@ export function InfoTooltip({
         type="button"
         aria-label={label}
         onClick={(e) => e.stopPropagation()}
-        className="inline-flex shrink-0 cursor-default items-center justify-center rounded-full text-gray-400 transition-colors hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1"
+        className="-m-1 inline-flex shrink-0 cursor-default items-center justify-center rounded-md p-1 text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 data-[state=delayed-open]:bg-black/5 data-[state=delayed-open]:text-gray-600 data-[state=instant-open]:bg-black/5 data-[state=instant-open]:text-gray-600"
       >
         <InfoIcon className={iconClassName} />
       </button>
