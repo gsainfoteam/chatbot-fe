@@ -1,5 +1,5 @@
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { InfoIcon } from "../Icons";
 
 export type TooltipSide = "top" | "right" | "bottom" | "left";
@@ -7,8 +7,12 @@ export type TooltipSide = "top" | "right" | "bottom" | "left";
 export interface TooltipProps {
   /** 툴팁에 표시할 내용 */
   content: ReactNode;
-  /** 호버/포커스 대상. 반드시 단일 엘리먼트여야 합니다. */
-  children: ReactNode;
+  /**
+   * 호버/포커스 대상. 정확히 하나의 엘리먼트여야 합니다.
+   * 커스텀 컴포넌트를 넘길 경우 전달받은 props와 ref를
+   * 내부 DOM 엘리먼트로 그대로 넘겨야 툴팁이 동작합니다.
+   */
+  children: ReactElement;
   side?: TooltipSide;
   align?: "start" | "center" | "end";
   /** 표시 지연 (ms) */
