@@ -304,6 +304,8 @@ export interface WidgetKeyStats {
   widgetKey: string;
   totalTokens: number;
   totalRequests: number;
+  /** 문제 해결률 (%) */
+  resolutionRate?: number;
   usageData: UsageData[];
   domainStats: DomainStat[];
 }
