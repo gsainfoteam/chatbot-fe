@@ -896,7 +896,7 @@ export default function ChatWidget({
                 }`}
                 style={{
                   backgroundColor:
-                    "color-mix(in srgb, var(--color-primary, #df3326) 8%, #ffffff)",
+                    "color-mix(in srgb, var(--color-primary, #df3326) 8%, var(--color-background, #ffffff))",
                   borderColor:
                     "color-mix(in srgb, var(--color-primary, #df3326) 20%, transparent)",
                   color: "var(--color-text, #1e293b)",
