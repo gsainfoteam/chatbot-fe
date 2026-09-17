@@ -77,6 +77,14 @@ function isSharedWith(document: DocumentItem, organizationId: string): boolean {
   );
 }
 
+/** 대상 조직이 소유하지 않았고 아직 공유되지 않은 문서만 공유 가능 */
+function canShareWith(document: DocumentItem, organizationId: string): boolean {
+  return (
+    document.ownerOrganization?.id !== organizationId &&
+    !isSharedWith(document, organizationId)
+  );
+}
+
 export default function ShareTransferModal({
   documents,
   organizations,
@@ -97,17 +105,11 @@ export default function ShareTransferModal({
     mode === "unshare"
       ? (singleDocument?.sharedOrganizations ?? [])
       : organizations.filter((org) => {
+          if (mode === "share") {
+            return documents.some((document) => canShareWith(document, org.id));
+          }
           if (ownerIds.has(org.id)) return false;
-          if (
-            mode === "share" &&
-            documents.every((document) => isSharedWith(document, org.id))
-          ) {
-            return false;
-          }
-          if (mode === "transfer" && !canManageOrg(org.effectiveRole)) {
-            return false;
-          }
-          return true;
+          return canManageOrg(org.effectiveRole);
         });
 
   const [targetId, setTargetId] = useState(candidates[0]?.id ?? "");
@@ -126,7 +128,7 @@ export default function ShareTransferModal({
     try {
       const targets =
         mode === "share"
-          ? documents.filter((document) => !isSharedWith(document, targetId))
+          ? documents.filter((document) => canShareWith(document, targetId))
           : documents;
       const results = await Promise.allSettled(
         targets.map(async (document) => {
