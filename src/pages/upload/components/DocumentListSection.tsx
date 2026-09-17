@@ -33,11 +33,13 @@ import {
 } from "../../../components/ui";
 import ShareTransferModal from "./ShareTransferModal";
 import {
+  buildBulkErrorMessage,
   formatKoreanDate,
   getResourceLink,
   parseFutureExpiresAt,
   toDateInputValue,
 } from "../utils";
+import type { BulkFailure } from "../utils";
 
 interface DocumentListSectionProps {
   documents: DocumentItem[];
@@ -64,7 +66,7 @@ interface DocumentListSectionProps {
 }
 
 interface ExpiryEditState {
-  id: string;
+  ids: string[];
   mode: "date" | "indefinite";
   value: string;
   error: string | null;
@@ -88,7 +90,24 @@ const SORT_OPTIONS = [
 
 type PendingDocumentAction =
   | { type: "delete"; document: DocumentItem }
-  | { type: "reprocess"; document: DocumentItem };
+  | { type: "reprocess"; document: DocumentItem }
+  | { type: "bulk-delete"; documents: DocumentItem[] }
+  | { type: "bulk-reprocess"; documents: DocumentItem[] };
+
+const DELETED_DOCUMENT_MESSAGE = "이미 삭제되었거나 존재하지 않는 파일입니다.";
+const BULK_UNAVAILABLE_TITLE =
+  "여러 문서를 선택한 상태에서는 사용할 수 없습니다.";
+
+function canRequestDocumentReprocess(item: DocumentItem): boolean {
+  return (
+    item.canManage === true &&
+    (item.status === "failed" || item.status === "ready")
+  );
+}
+
+function withoutIds(ids: Set<string>, removedIds: Set<string>): Set<string> {
+  return new Set([...ids].filter((id) => !removedIds.has(id)));
+}
 
 function getCooldownLabel(
   reprocessAvailableAt: string | null,
@@ -205,7 +224,7 @@ export default function DocumentListSection({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [reprocessingId, setReprocessingId] = useState<string | null>(null);
   const [expiryEdit, setExpiryEdit] = useState<ExpiryEditState | null>(null);
-  const [updatingExpiryId, setUpdatingExpiryId] = useState<string | null>(null);
+  const [updatingExpiry, setUpdatingExpiry] = useState(false);
   const [pendingAction, setPendingAction] =
     useState<PendingDocumentAction | null>(null);
   const [openDocumentMenuId, setOpenDocumentMenuId] = useState<string | null>(
@@ -213,15 +232,107 @@ export default function DocumentListSection({
   );
   const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [shareModal, setShareModal] = useState<{
-    document: DocumentItem;
+    documents: DocumentItem[];
     mode: ShareMode;
   } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [bulkActionInProgress, setBulkActionInProgress] = useState(false);
   const documentMenuRef = useRef<HTMLDivElement>(null);
+  const selectAllRef = useRef<HTMLInputElement>(null);
   const todayDateValue = useMemo(() => toDateInputValue(new Date()), []);
 
-  const expiryDocument = expiryEdit
-    ? (documents.find((item) => item.id === expiryEdit.id) ?? null)
-    : null;
+  const expiryDocument =
+    expiryEdit && expiryEdit.ids.length === 1
+      ? (documents.find((item) => item.id === expiryEdit.ids[0]) ?? null)
+      : null;
+
+  const selectableDocuments = useMemo(
+    () => documents.filter((item) => item.canManage === true),
+    [documents],
+  );
+  const selectedDocuments = useMemo(
+    () => documents.filter((item) => selectedIds.has(item.id)),
+    [documents, selectedIds],
+  );
+  const reprocessableSelectedDocuments = useMemo(
+    () =>
+      selectedDocuments.filter(
+        (item) => canRequestDocumentReprocess(item) && item.canReprocess,
+      ),
+    [selectedDocuments],
+  );
+  const allSelectedShareable =
+    selectedDocuments.length > 0 &&
+    selectedDocuments.every((item) => item.canShare === true);
+  const allSelectableSelected =
+    selectableDocuments.length > 0 &&
+    selectableDocuments.every((item) => selectedIds.has(item.id));
+  const isPartiallySelected = selectedIds.size > 0 && !allSelectableSelected;
+  const showBulkBar =
+    !listLoading &&
+    !listError &&
+    !organizationEmptyMessage &&
+    selectableDocuments.length > 0;
+
+  // showBulkBar가 바뀌면 체크박스가 다시 마운트되므로 indeterminate를 다시 적용
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = isPartiallySelected;
+    }
+  }, [isPartiallySelected, showBulkBar]);
+
+  // 페이지 이동, 필터 변경, 삭제 등으로 목록에서 사라진 문서는 선택에서 제외
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const visibleIds = new Set(documents.map((item) => item.id));
+      const next = new Set([...prev].filter((id) => visibleIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [documents]);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds(
+      allSelectableSelected
+        ? new Set()
+        : new Set(selectableDocuments.map((item) => item.id)),
+    );
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleShareModalUpdated = (doc: DocumentItem) => {
+    const previousDocument =
+      shareModal?.documents.find((item) => item.id === doc.id) ?? doc;
+    onDocumentsChange((prev) => {
+      if (!isDocumentVisibleForFilter(doc, filterOrganizationId)) {
+        return prev.filter((item) => item.id !== doc.id);
+      }
+      return upsertDocument(prev, doc);
+    });
+    setSelectedIds((prev) => withoutIds(prev, new Set([doc.id])));
+    setShareModal((prev) =>
+      prev
+        ? {
+            ...prev,
+            documents: prev.documents.filter((item) => item.id !== doc.id),
+          }
+        : prev,
+    );
+    onDocumentMutation(previousDocument, doc);
+  };
 
   const cooldownKey = useMemo(
     () =>
@@ -318,14 +429,14 @@ export default function DocumentListSection({
       await deleteUpload(id);
       onDocumentsChange((prev) => prev.filter((item) => item.id !== id));
       onDocumentMutation(document, null);
-      if (expiryEdit?.id === id) setExpiryEdit(null);
+      if (expiryEdit?.ids.includes(id)) setExpiryEdit(null);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "삭제에 실패했습니다.";
-      if (message === "이미 삭제되었거나 존재하지 않는 파일입니다.") {
+      if (message === DELETED_DOCUMENT_MESSAGE) {
         onDocumentsChange((prev) => prev.filter((item) => item.id !== id));
         onDocumentMutation(document, null);
-        if (expiryEdit?.id === id) setExpiryEdit(null);
+        if (expiryEdit?.ids.includes(id)) setExpiryEdit(null);
         return;
       }
       throw new Error(message);
@@ -365,11 +476,127 @@ export default function DocumentListSection({
     }
   };
 
-  const openExpiryEdit = (item: DocumentItem) => {
+  const handleBulkDelete = async (targets: DocumentItem[]) => {
+    try {
+      setBulkActionInProgress(true);
+      const results = await Promise.allSettled(
+        targets.map((document) => deleteUpload(document.id)),
+      );
+
+      const removedIds = new Set<string>();
+      const failures: BulkFailure[] = [];
+      results.forEach((result, index) => {
+        const document = targets[index];
+        if (result.status === "fulfilled") {
+          removedIds.add(document.id);
+          return;
+        }
+        const message =
+          result.reason instanceof Error
+            ? result.reason.message
+            : "삭제에 실패했습니다.";
+        if (message === DELETED_DOCUMENT_MESSAGE) {
+          removedIds.add(document.id);
+          return;
+        }
+        failures.push({ document, message });
+      });
+
+      if (removedIds.size > 0) {
+        onDocumentsChange((prev) =>
+          prev.filter((item) => !removedIds.has(item.id)),
+        );
+        setSelectedIds((prev) => withoutIds(prev, removedIds));
+        if (expiryEdit?.ids.some((id) => removedIds.has(id))) {
+          setExpiryEdit(null);
+        }
+        targets
+          .filter((document) => removedIds.has(document.id))
+          .forEach((document) => onDocumentMutation(document, null));
+      }
+
+      if (failures.length > 0) {
+        throw new Error(
+          buildBulkErrorMessage("삭제", removedIds.size, failures),
+        );
+      }
+    } finally {
+      setBulkActionInProgress(false);
+    }
+  };
+
+  const handleBulkReprocess = async (targets: DocumentItem[]) => {
+    try {
+      setBulkActionInProgress(true);
+      const results = await Promise.allSettled(
+        targets.map((document) => reprocessUpload(document.id)),
+      );
+
+      const updates = new Map<string, DocumentItem>();
+      const cooldowns = new Map<string, string>();
+      const failures: BulkFailure[] = [];
+      results.forEach((result, index) => {
+        const document = targets[index];
+        if (result.status === "fulfilled") {
+          updates.set(document.id, result.value);
+          return;
+        }
+        const err = result.reason;
+        if (
+          err instanceof AdminUploadApiError &&
+          err.status === 429 &&
+          err.retryAt
+        ) {
+          cooldowns.set(document.id, err.retryAt);
+        }
+        failures.push({
+          document,
+          message:
+            err instanceof Error ? err.message : "재처리 요청에 실패했습니다.",
+        });
+      });
+
+      if (updates.size > 0 || cooldowns.size > 0) {
+        onDocumentsChange((prev) =>
+          prev.map((item) => {
+            const update = updates.get(item.id);
+            if (update) return update;
+            const retryAt = cooldowns.get(item.id);
+            if (retryAt) {
+              return {
+                ...item,
+                canReprocess: false,
+                reprocessAvailableAt: retryAt,
+              };
+            }
+            return item;
+          }),
+        );
+      }
+      if (updates.size > 0) {
+        setSelectedIds((prev) => withoutIds(prev, new Set(updates.keys())));
+      }
+
+      if (failures.length > 0) {
+        throw new Error(
+          buildBulkErrorMessage("재처리 요청", updates.size, failures),
+        );
+      }
+    } finally {
+      setBulkActionInProgress(false);
+    }
+  };
+
+  const openExpiryEdit = (items: DocumentItem[]) => {
+    const single = items.length === 1 ? items[0] : null;
     setExpiryEdit({
-      id: item.id,
-      mode: item.expiresAt === null ? "indefinite" : "date",
-      value: item.expiresAt ? toDateInputValue(new Date(item.expiresAt)) : "",
+      ids: items.map((item) => item.id),
+      mode: single?.expiresAt === null ? "indefinite" : "date",
+      value: single
+        ? single.expiresAt
+          ? toDateInputValue(new Date(single.expiresAt))
+          : ""
+        : todayDateValue,
       error: null,
     });
   };
@@ -394,8 +621,10 @@ export default function DocumentListSection({
       nextExpiresAt = parsed.expiresAt;
     }
 
-    const document = documents.find((item) => item.id === expiryEdit.id);
-    if (!document) {
+    const targets = documents.filter((item) =>
+      expiryEdit.ids.includes(item.id),
+    );
+    if (targets.length === 0) {
       setExpiryEdit((prev) =>
         prev ? { ...prev, error: "문서를 찾을 수 없습니다." } : prev,
       );
@@ -403,16 +632,57 @@ export default function DocumentListSection({
     }
 
     try {
-      setUpdatingExpiryId(document.id);
-      const doc = await updateUploadExpiry(document.id, nextExpiresAt);
-      onDocumentsChange((prev) => upsertDocument(prev, doc));
-      setExpiryEdit(null);
-    } catch (err) {
+      setUpdatingExpiry(true);
+      const results = await Promise.allSettled(
+        targets.map((document) =>
+          updateUploadExpiry(document.id, nextExpiresAt),
+        ),
+      );
+
+      const updates = new Map<string, DocumentItem>();
+      const failures: BulkFailure[] = [];
+      results.forEach((result, index) => {
+        const document = targets[index];
+        if (result.status === "fulfilled") {
+          updates.set(document.id, result.value);
+          return;
+        }
+        failures.push({
+          document,
+          message:
+            result.reason instanceof Error
+              ? result.reason.message
+              : "유효기간 변경에 실패했습니다.",
+        });
+      });
+
+      if (updates.size > 0) {
+        onDocumentsChange((prev) =>
+          prev.map((item) => updates.get(item.id) ?? item),
+        );
+        setSelectedIds((prev) => withoutIds(prev, new Set(updates.keys())));
+      }
+
+      if (failures.length === 0) {
+        setExpiryEdit(null);
+        return;
+      }
+
       const message =
-        err instanceof Error ? err.message : "유효기간 변경에 실패했습니다.";
-      setExpiryEdit((prev) => (prev ? { ...prev, error: message } : prev));
+        targets.length === 1
+          ? failures[0].message
+          : buildBulkErrorMessage("유효기간 변경", updates.size, failures);
+      setExpiryEdit((prev) =>
+        prev
+          ? {
+              ...prev,
+              ids: failures.map((failure) => failure.document.id),
+              error: message,
+            }
+          : prev,
+      );
     } finally {
-      setUpdatingExpiryId(null);
+      setUpdatingExpiry(false);
     }
   };
 
@@ -461,6 +731,40 @@ export default function DocumentListSection({
         </div>
       </div>
 
+      {showBulkBar && (
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5">
+          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700">
+            <input
+              ref={selectAllRef}
+              type="checkbox"
+              checked={allSelectableSelected}
+              onChange={toggleSelectAll}
+              disabled={bulkActionInProgress}
+              className="h-4 w-4 cursor-pointer rounded border-gray-300 accent-[var(--color-primary)] disabled:cursor-not-allowed"
+            />
+            전체 선택
+          </label>
+          <span className="text-sm text-gray-500">
+            {selectedIds.size > 1
+              ? `${selectedIds.size}개 선택됨 · 선택한 문서의 작업 메뉴에서 함께 처리합니다.`
+              : selectedIds.size === 1
+                ? "1개 선택됨 · 2개 이상 선택하면 함께 처리할 수 있습니다."
+                : "문서를 선택하면 여러 문서를 함께 처리할 수 있습니다."}
+          </span>
+          {selectedIds.size > 0 && (
+            <Button
+              variant="link"
+              size="inline"
+              onClick={clearSelection}
+              disabled={bulkActionInProgress}
+              className="ml-auto"
+            >
+              선택 해제
+            </Button>
+          )}
+        </div>
+      )}
+
       <div className="document-list-scroll mt-5 flex-1">
         {pollingError && (
           <div className="mb-3 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -497,14 +801,15 @@ export default function DocumentListSection({
           <div className="space-y-4">
             {documents.map((item) => {
               const isMenuOpen = openDocumentMenuId === item.id;
+              const isSelected = selectedIds.has(item.id);
+              const isBulkMenu = isSelected && selectedDocuments.length > 1;
+              const bulkTargets = isBulkMenu ? selectedDocuments : [item];
               const canView =
                 item.status === "ready" && item.gcsPdfPath != null;
               const canManage = item.canManage === true;
               const canShare = item.canShare === true;
               const canTransfer = item.canTransfer === true;
-              const canRequestReprocess =
-                canManage &&
-                (item.status === "failed" || item.status === "ready");
+              const canRequestReprocess = canRequestDocumentReprocess(item);
               const expiryLabel = item.expiresAt
                 ? formatKoreanDate(item.expiresAt)
                 : "무기한";
@@ -514,9 +819,41 @@ export default function DocumentListSection({
               return (
                 <article
                   key={item.id}
-                  className="rounded-lg border border-gray-200 bg-white p-4"
+                  onClick={(event) => {
+                    if (!canManage || bulkActionInProgress) return;
+                    if (!(event.target instanceof Element)) return;
+                    // 버튼, 링크, 메뉴, 체크박스 클릭은 각자의 동작만 수행
+                    if (
+                      event.target.closest("button, a, input, [role='menu']")
+                    ) {
+                      return;
+                    }
+                    // 텍스트를 드래그해 선택한 경우는 무시
+                    if (window.getSelection()?.toString()) return;
+                    toggleSelected(item.id);
+                  }}
+                  className={`rounded-lg border bg-white p-4 transition-colors ${
+                    canManage ? "cursor-pointer" : ""
+                  } ${
+                    isSelected
+                      ? "border-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/30"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
                 >
                   <div className="flex min-w-0 items-start gap-3">
+                    <input
+                      type="checkbox"
+                      aria-label={`${item.title} 선택`}
+                      checked={isSelected}
+                      onChange={() => toggleSelected(item.id)}
+                      disabled={!canManage || bulkActionInProgress}
+                      title={
+                        canManage
+                          ? undefined
+                          : "관리 권한이 있는 문서만 선택할 수 있습니다."
+                      }
+                      className="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded border-gray-300 accent-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-40"
+                    />
                     <div className="min-w-0 flex-1">
                       <h3
                         className="block truncate font-semibold text-gray-900"
@@ -592,7 +929,8 @@ export default function DocumentListSection({
                             currentId === item.id ? null : item.id,
                           )
                         }
-                        className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors ${
+                        disabled={bulkActionInProgress}
+                        className={`flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                           isMenuOpen
                             ? "bg-gray-100 text-gray-900"
                             : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
@@ -608,7 +946,15 @@ export default function DocumentListSection({
                           aria-label={`${item.title} 문서 작업`}
                           className="absolute right-0 top-full z-30 mt-1.5 flex w-52 flex-col gap-0.5 rounded-lg border border-gray-200 bg-white p-1.5 shadow-lg"
                         >
-                          {canView ? (
+                          {isBulkMenu && (
+                            <>
+                              <p className="px-3 py-1.5 text-xs font-medium text-gray-500">
+                                선택한 {selectedDocuments.length}개 문서에 적용
+                              </p>
+                              <div className="mx-1.5 my-0.5 border-t border-gray-200" />
+                            </>
+                          )}
+                          {canView && !isBulkMenu ? (
                             <a
                               href={getResourceLink(
                                 item.gcsPdfPath as string,
@@ -627,7 +973,11 @@ export default function DocumentListSection({
                               type="button"
                               role="menuitem"
                               disabled
-                              title="처리 완료 후 문서를 볼 수 있습니다."
+                              title={
+                                isBulkMenu
+                                  ? BULK_UNAVAILABLE_TITLE
+                                  : "처리 완료 후 문서를 볼 수 있습니다."
+                              }
                               className="flex w-full cursor-not-allowed items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-gray-400"
                             >
                               <EyeIcon className="h-[18px] w-[18px] shrink-0" />
@@ -640,9 +990,9 @@ export default function DocumentListSection({
                               role="menuitem"
                               onClick={() => {
                                 setOpenDocumentMenuId(null);
-                                openExpiryEdit(item);
+                                openExpiryEdit(bulkTargets);
                               }}
-                              disabled={updatingExpiryId != null}
+                              disabled={updatingExpiry || bulkActionInProgress}
                               className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
                             >
                               <CalendarIcon className="h-[18px] w-[18px] shrink-0" />
@@ -655,25 +1005,40 @@ export default function DocumentListSection({
                               role="menuitem"
                               onClick={() => {
                                 setOpenDocumentMenuId(null);
-                                setPendingAction({
-                                  type: "reprocess",
-                                  document: item,
-                                });
+                                setPendingAction(
+                                  isBulkMenu
+                                    ? {
+                                        type: "bulk-reprocess",
+                                        documents:
+                                          reprocessableSelectedDocuments,
+                                      }
+                                    : { type: "reprocess", document: item },
+                                );
                               }}
                               disabled={
-                                !canRequestReprocess ||
-                                !item.canReprocess ||
-                                reprocessingId != null
+                                isBulkMenu
+                                  ? reprocessableSelectedDocuments.length ===
+                                      0 || bulkActionInProgress
+                                  : !canRequestReprocess ||
+                                    !item.canReprocess ||
+                                    reprocessingId != null
                               }
                               title={
-                                !canRequestReprocess
-                                  ? "처리 완료 또는 실패 후 재처리할 수 있습니다."
-                                  : item.canReprocess
-                                    ? "문서 재처리"
-                                    : (getCooldownLabel(
-                                        item.reprocessAvailableAt,
-                                        currentTime,
-                                      ) ?? "현재 재처리할 수 없습니다.")
+                                isBulkMenu
+                                  ? reprocessableSelectedDocuments.length === 0
+                                    ? "선택한 문서 중 재처리할 수 있는 문서가 없습니다."
+                                    : reprocessableSelectedDocuments.length <
+                                        selectedDocuments.length
+                                      ? `재처리 가능한 ${reprocessableSelectedDocuments.length}개 문서만 재처리합니다.`
+                                      : "선택한 문서 재처리"
+                                  : !canRequestReprocess
+                                    ? "처리 완료 또는 실패 후 재처리할 수 있습니다."
+                                    : item.canReprocess
+                                      ? "문서 재처리"
+                                      : (getCooldownLabel(
+                                          item.reprocessAvailableAt,
+                                          currentTime,
+                                        ) ?? "현재 재처리할 수 없습니다.")
                               }
                               className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
                             >
@@ -695,9 +1060,21 @@ export default function DocumentListSection({
                               role="menuitem"
                               onClick={() => {
                                 setOpenDocumentMenuId(null);
-                                setShareModal({ document: item, mode: "share" });
+                                setShareModal({
+                                  documents: bulkTargets,
+                                  mode: "share",
+                                });
                               }}
-                              className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                              disabled={
+                                bulkActionInProgress ||
+                                (isBulkMenu && !allSelectedShareable)
+                              }
+                              title={
+                                isBulkMenu && !allSelectedShareable
+                                  ? "선택한 문서 중 공유 권한이 없는 문서가 있습니다."
+                                  : undefined
+                              }
+                              className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
                             >
                               <ShareIcon className="h-[18px] w-[18px] shrink-0" />
                               다른 조직에 공유
@@ -710,11 +1087,15 @@ export default function DocumentListSection({
                               onClick={() => {
                                 setOpenDocumentMenuId(null);
                                 setShareModal({
-                                  document: item,
+                                  documents: [item],
                                   mode: "unshare",
                                 });
                               }}
-                              className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                              disabled={isBulkMenu || bulkActionInProgress}
+                              title={
+                                isBulkMenu ? BULK_UNAVAILABLE_TITLE : undefined
+                              }
+                              className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
                             >
                               <UnlinkIcon className="h-[18px] w-[18px] shrink-0" />
                               공유 해제
@@ -727,11 +1108,15 @@ export default function DocumentListSection({
                               onClick={() => {
                                 setOpenDocumentMenuId(null);
                                 setShareModal({
-                                  document: item,
+                                  documents: [item],
                                   mode: "transfer",
                                 });
                               }}
-                              className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                              disabled={isBulkMenu || bulkActionInProgress}
+                              title={
+                                isBulkMenu ? BULK_UNAVAILABLE_TITLE : undefined
+                              }
+                              className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
                             >
                               <TransferIcon className="h-[18px] w-[18px] shrink-0" />
                               소유권 이양
@@ -745,12 +1130,18 @@ export default function DocumentListSection({
                                 role="menuitem"
                                 onClick={() => {
                                   setOpenDocumentMenuId(null);
-                                  setPendingAction({
-                                    type: "delete",
-                                    document: item,
-                                  });
+                                  setPendingAction(
+                                    isBulkMenu
+                                      ? {
+                                          type: "bulk-delete",
+                                          documents: selectedDocuments,
+                                        }
+                                      : { type: "delete", document: item },
+                                  );
                                 }}
-                                disabled={deletingId === item.id}
+                                disabled={
+                                  deletingId === item.id || bulkActionInProgress
+                                }
                                 className="flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 <TrashIcon className="h-[18px] w-[18px] shrink-0" />
@@ -805,55 +1196,37 @@ export default function DocumentListSection({
 
       {shareModal && (
         <ShareTransferModal
-          document={shareModal.document}
+          documents={shareModal.documents}
           organizations={organizations}
           mode={shareModal.mode}
           onClose={() => setShareModal(null)}
-          onUpdated={(doc) => {
-            const previousDocument = shareModal.document;
-            onDocumentsChange((prev) => {
-              if (!isDocumentVisibleForFilter(doc, filterOrganizationId)) {
-                return prev.filter((item) => item.id !== doc.id);
-              }
-              return upsertDocument(prev, doc);
-            });
-            onDocumentMutation(previousDocument, doc);
-          }}
-          onTransferred={(doc) => {
-            const previousDocument = shareModal.document;
-            onDocumentsChange((prev) => {
-              if (!isDocumentVisibleForFilter(doc, filterOrganizationId)) {
-                return prev.filter((item) => item.id !== doc.id);
-              }
-              return upsertDocument(prev, doc);
-            });
-            onDocumentMutation(previousDocument, doc);
-          }}
+          onUpdated={handleShareModalUpdated}
+          onTransferred={handleShareModalUpdated}
         />
       )}
 
       <Dialog
         open={expiryEdit !== null}
         onOpenChange={(nextOpen) => {
-          if (!nextOpen && updatingExpiryId === null) setExpiryEdit(null);
+          if (!nextOpen && !updatingExpiry) setExpiryEdit(null);
         }}
         title="유효기간 변경"
         description="문서가 활성화될 기간을 설정합니다."
         size="md"
-        closeDisabled={updatingExpiryId !== null}
+        closeDisabled={updatingExpiry}
         bodyClassName="space-y-4"
         footer={
           <>
             <Button
               variant="secondary"
               onClick={() => setExpiryEdit(null)}
-              disabled={updatingExpiryId !== null}
+              disabled={updatingExpiry}
             >
               취소
             </Button>
             <Button
               onClick={() => void handleSaveExpiry()}
-              loading={updatingExpiryId !== null}
+              loading={updatingExpiry}
               loadingText="변경 중..."
             >
               변경 저장
@@ -863,20 +1236,27 @@ export default function DocumentListSection({
       >
         {expiryEdit && (
           <>
-            {expiryDocument && (
+            {expiryDocument ? (
               <p className="truncate text-sm font-medium text-gray-800">
                 문서: {expiryDocument.title}
               </p>
+            ) : (
+              <p className="text-sm font-medium text-gray-800">
+                선택한 {expiryEdit.ids.length}개 문서의 유효기간을 함께
+                변경합니다.
+              </p>
             )}
 
-            <p className="flex items-center justify-between gap-3 rounded-md bg-gray-50 px-3 py-2.5 text-sm text-gray-600">
-              <span>현재 유효기간</span>
-              <strong className="shrink-0 font-medium text-gray-900">
-                {expiryDocument?.expiresAt
-                  ? `~${formatKoreanDate(expiryDocument.expiresAt)}`
-                  : "무기한"}
-              </strong>
-            </p>
+            {expiryDocument && (
+              <p className="flex items-center justify-between gap-3 rounded-md bg-gray-50 px-3 py-2.5 text-sm text-gray-600">
+                <span>현재 유효기간</span>
+                <strong className="shrink-0 font-medium text-gray-900">
+                  {expiryDocument.expiresAt
+                    ? `~${formatKoreanDate(expiryDocument.expiresAt)}`
+                    : "무기한"}
+                </strong>
+              </p>
+            )}
 
             <Select
               label="변경할 기간"
@@ -905,7 +1285,7 @@ export default function DocumentListSection({
                 { value: "indefinite", label: "무기한" },
               ]}
               variant="form"
-              disabled={updatingExpiryId !== null}
+              disabled={updatingExpiry}
             />
 
             {expiryEdit.mode === "date" && (
@@ -920,7 +1300,7 @@ export default function DocumentListSection({
                   id="document-expiry-date"
                   value={expiryEdit.value}
                   min={todayDateValue}
-                  disabled={updatingExpiryId !== null}
+                  disabled={updatingExpiry}
                   ariaLabel="문서 만료일 선택"
                   onChange={(value) =>
                     setExpiryEdit((prev) =>
@@ -943,7 +1323,7 @@ export default function DocumentListSection({
             {expiryEdit.error && (
               <p
                 role="alert"
-                className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700"
+                className="whitespace-pre-line rounded-md bg-red-50 px-3 py-2 text-sm text-red-700"
               >
                 {expiryEdit.error}
               </p>
@@ -984,6 +1364,37 @@ export default function DocumentListSection({
         />
       )}
 
+      {pendingAction?.type === "bulk-delete" && (
+        <ConfirmDialog
+          open
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) setPendingAction(null);
+          }}
+          title="선택한 문서를 삭제할까요?"
+          description={`선택한 ${pendingAction.documents.length}개 문서를 삭제합니다.\n삭제한 문서는 복구할 수 없습니다.`}
+          confirmLabel="문서 삭제"
+          loadingLabel="삭제 중..."
+          variant="danger"
+          fallbackErrorMessage="문서 삭제에 실패했습니다."
+          onConfirm={() => handleBulkDelete(pendingAction.documents)}
+        />
+      )}
+
+      {pendingAction?.type === "bulk-reprocess" && (
+        <ConfirmDialog
+          open
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) setPendingAction(null);
+          }}
+          title="선택한 문서를 재처리할까요?"
+          description={`선택한 ${pendingAction.documents.length}개 문서의 PDF 전체를 다시 처리합니다.\n재처리 과정에서 API 비용이 발생합니다.`}
+          confirmLabel="재처리"
+          loadingLabel="재처리 중..."
+          size="md"
+          fallbackErrorMessage="문서 재처리 요청에 실패했습니다."
+          onConfirm={() => handleBulkReprocess(pendingAction.documents)}
+        />
+      )}
     </section>
   );
 }

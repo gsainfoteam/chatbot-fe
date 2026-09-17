@@ -1,3 +1,5 @@
+import type { DocumentItem } from "../../api/types";
+
 /**
  * gcs path를 문서 링크로 변환
  */
@@ -141,4 +143,22 @@ export function parseFutureExpiresAt(
 export function formatExpiresAtLabel(expiresAt: string | null): string {
   if (expiresAt === null) return "무기한";
   return new Date(expiresAt).toLocaleString("ko-KR");
+}
+
+export interface BulkFailure {
+  document: DocumentItem;
+  message: string;
+}
+
+/** 일괄 작업 결과를 "N개 성공, M개 실패" 요약과 실패 문서 목록으로 정리 */
+export function buildBulkErrorMessage(
+  actionLabel: string,
+  successCount: number,
+  failures: BulkFailure[],
+): string {
+  const summary = `${successCount}개 ${actionLabel} 성공, ${failures.length}개 실패`;
+  const details = failures.map(
+    (failure) => `· ${failure.document.title}: ${failure.message}`,
+  );
+  return [summary, ...details].join("\n");
 }
