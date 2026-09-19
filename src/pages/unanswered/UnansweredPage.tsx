@@ -14,13 +14,15 @@ import type {
 } from "../../features/unanswered-questions";
 
 const SEARCH_DEBOUNCE_MS = 300;
+const EMPTY_QUESTIONS: UnansweredQuestion[] = [];
 
 export default function UnansweredPage() {
   const [searchInput, setSearchInput] = useState("");
   const [documentQuery, setDocumentQuery] = useState("");
   const [statusFilter, setStatusFilter] =
     useState<UnansweredQuestionStatusFilter>("open");
-  const [selectedQuestion, setSelectedQuestion] =
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedSnapshot, setSelectedSnapshot] =
     useState<UnansweredQuestion | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [resolveConfirmOpen, setResolveConfirmOpen] = useState(false);
@@ -33,17 +35,18 @@ export default function UnansweredPage() {
   }, [searchInput]);
 
   useEffect(() => {
-    if (!selectedQuestion) return;
+    if (!selectedId) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setSelectedQuestion(null);
+        setSelectedId(null);
+        setSelectedSnapshot(null);
         setSuccessMessage(null);
         setResolveConfirmOpen(false);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedQuestion]);
+  }, [selectedId]);
 
   const listQuery = useUnansweredQuestions({
     query: documentQuery || undefined,
@@ -53,24 +56,23 @@ export default function UnansweredPage() {
   const injectPdf = useInjectPdfKnowledge();
   const resolveQuestion = useResolveUnansweredQuestion();
 
-  const questions = listQuery.data ?? [];
+  const questions = listQuery.data ?? EMPTY_QUESTIONS;
+  const selectedQuestion =
+    (selectedId
+      ? questions.find((item) => item.id === selectedId)
+      : null) ?? selectedSnapshot;
   const injecting = injectText.isPending || injectPdf.isPending;
 
-  useEffect(() => {
-    setSelectedQuestion((current) => {
-      if (!current) return current;
-      return questions.find((item) => item.id === current.id) ?? current;
-    });
-  }, [questions]);
-
   const closeDetail = () => {
-    setSelectedQuestion(null);
+    setSelectedId(null);
+    setSelectedSnapshot(null);
     setSuccessMessage(null);
     setResolveConfirmOpen(false);
   };
 
   const handleInjected = (question: UnansweredQuestion, message: string) => {
-    setSelectedQuestion(question);
+    setSelectedId(question.id);
+    setSelectedSnapshot(question);
     setSuccessMessage(message);
   };
 
@@ -142,7 +144,8 @@ export default function UnansweredPage() {
               setSuccessMessage(null);
             }}
             onSelect={(question) => {
-              setSelectedQuestion(question);
+              setSelectedId(question.id);
+              setSelectedSnapshot(question);
               setSuccessMessage(null);
             }}
             onRetryFetch={() => {
