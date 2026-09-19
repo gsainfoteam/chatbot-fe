@@ -38,7 +38,7 @@ function cloneQuestions(questions: UnansweredQuestion[]): UnansweredQuestion[] {
 
 function delay(ms: number = MOCK_DELAY_MS): Promise<void> {
   return new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
+    globalThis.setTimeout(resolve, ms);
   });
 }
 
