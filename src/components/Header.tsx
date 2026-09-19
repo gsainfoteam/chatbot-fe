@@ -10,6 +10,7 @@ import {
   KeyIcon,
   ChartBarIcon,
   MenuIcon,
+  QuestionCircleIcon,
   XIcon,
 } from "./Icons";
 
@@ -81,6 +82,15 @@ export default function Header() {
               <ChartBarIcon className="w-4 h-4" />
               대시보드
             </Link>
+            {isAuthenticated && (
+              <Link
+                to="/unanswered"
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200 inline-flex items-center gap-1.5"
+              >
+                <QuestionCircleIcon className="w-4 h-4" />
+                미답변 질문
+              </Link>
+            )}
             {documentManagementAccess.canAccess && (
               <DocumentManagementNavItem variant="desktop" />
             )}
@@ -136,6 +146,16 @@ export default function Header() {
               <ChartBarIcon className="w-4 h-4" />
               대시보드
             </Link>
+            {isAuthenticated && (
+              <Link
+                to="/unanswered"
+                onClick={closeMobileMenu}
+                className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
+              >
+                <QuestionCircleIcon className="w-4 h-4" />
+                미답변 질문
+              </Link>
+            )}
             <Link
               to="/keys"
               onClick={closeMobileMenu}
