@@ -6,7 +6,6 @@ import LoginPage from "./pages/login/LoginPage.tsx";
 import DashboardPage from "./pages/dashboard/DashboardPage.tsx";
 import KeysPage from "./pages/keys/KeysPage.tsx";
 import UploadPage from "./pages/upload/UploadPage.tsx";
-import UnansweredPage from "./pages/unanswered/UnansweredPage.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import LandingPage from "./pages/landing/LandingPage.tsx";
 import DocsPage from "./pages/docs/DocsPage.tsx";
@@ -54,14 +53,6 @@ export default function App() {
           element={
             <ProtectedRoute>
               <UploadPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/unanswered"
-          element={
-            <ProtectedRoute>
-              <UnansweredPage />
             </ProtectedRoute>
           }
         />
