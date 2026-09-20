@@ -1,6 +1,7 @@
 export { default as KnowledgeInjectForm } from "./components/KnowledgeInjectForm";
 export { default as UnansweredQuestionDetail } from "./components/UnansweredQuestionDetail";
 export { default as UnansweredQuestionList } from "./components/UnansweredQuestionList";
+export { default as UnansweredQuestionsSection } from "./components/UnansweredQuestionsSection";
 export {
   getUnansweredQuestion,
   injectPdfKnowledge,

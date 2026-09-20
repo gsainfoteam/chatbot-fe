@@ -16,6 +16,7 @@ import { getWidgetKeysUsage } from "../../api/usage";
 import { getWidgetKeys } from "../../api/widgetKeys";
 import { InfoTooltip, Select } from "../../components/ui";
 import type { UsageData, DomainStat } from "../../api/types";
+import { UnansweredQuestionsSection } from "../../features/unanswered-questions";
 import ChartTooltip from "./components/ChartTooltip";
 import ResolutionRateTooltipContent from "./components/ResolutionRateTooltipContent";
 import {
@@ -224,23 +225,6 @@ export default function DashboardContent() {
 
   const hasError = error || keysError;
 
-  if (hasError) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 font-medium">
-            사용량 데이터를 불러오는데 실패했습니다.
-          </p>
-          <p className="text-sm text-gray-500 mt-1">
-            {(error ?? keysError) instanceof Error
-              ? (error ?? keysError)!.message
-              : "알 수 없는 오류"}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -252,6 +236,21 @@ export default function DashboardContent() {
           </p>
         </div>
 
+        {hasError && (
+          <div className="mb-4 rounded-lg border border-red-100 bg-red-50 px-4 py-6 text-center">
+            <p className="font-medium text-red-600">
+              사용량 데이터를 불러오는데 실패했습니다.
+            </p>
+            <p className="mt-1 text-sm text-gray-500">
+              {(error ?? keysError) instanceof Error
+                ? (error ?? keysError)!.message
+                : "알 수 없는 오류"}
+            </p>
+          </div>
+        )}
+
+        {!hasError && (
+          <>
         {/* Filters */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
           <div className="flex flex-wrap gap-4 items-end">
@@ -717,6 +716,10 @@ export default function DashboardContent() {
             )}
           </div>
         </div>
+          </>
+        )}
+
+        <UnansweredQuestionsSection />
       </div>
     </div>
   );
