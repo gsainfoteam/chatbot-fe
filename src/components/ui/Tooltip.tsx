@@ -20,6 +20,35 @@ export interface TooltipProps {
   className?: string;
 }
 
+export interface TooltipProviderProps {
+  children: ReactNode;
+  delayDuration?: number;
+  skipDelayDuration?: number;
+  disableHoverableContent?: boolean;
+}
+
+/**
+ * Radix Tooltip 컨텍스트. 앱 루트(main.tsx)에서 한 번만 감쌉니다.
+ * 각 Tooltip 안에 Provider를 두면 Vite HMR / React Strict Mode에서
+ * `Tooltip must be used within TooltipProvider`가 납니다.
+ */
+export function TooltipProvider({
+  children,
+  delayDuration = 150,
+  skipDelayDuration = 300,
+  disableHoverableContent,
+}: TooltipProviderProps) {
+  return (
+    <TooltipPrimitive.Provider
+      delayDuration={delayDuration}
+      skipDelayDuration={skipDelayDuration}
+      disableHoverableContent={disableHoverableContent}
+    >
+      {children}
+    </TooltipPrimitive.Provider>
+  );
+}
+
 /**
  * 호버 또는 키보드 포커스 시 설명을 띄우는 툴팁.
  *
@@ -37,27 +66,25 @@ export default function Tooltip({
   className = "",
 }: TooltipProps) {
   return (
-    <TooltipPrimitive.Provider delayDuration={delayDuration}>
-      <TooltipPrimitive.Root>
-        <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
-        <TooltipPrimitive.Portal>
-          <TooltipPrimitive.Content
-            side={side}
-            align={align}
-            sideOffset={6}
-            collisionPadding={8}
-            className={[
-              "tooltip-content z-[80] max-w-72 rounded-lg border px-3.5 py-2.5 text-xs leading-relaxed shadow-md",
-              className,
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            {content}
-          </TooltipPrimitive.Content>
-        </TooltipPrimitive.Portal>
-      </TooltipPrimitive.Root>
-    </TooltipPrimitive.Provider>
+    <TooltipPrimitive.Root delayDuration={delayDuration}>
+      <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
+      <TooltipPrimitive.Portal>
+        <TooltipPrimitive.Content
+          side={side}
+          align={align}
+          sideOffset={6}
+          collisionPadding={8}
+          className={[
+            "tooltip-content z-[80] max-w-72 rounded-lg border px-3.5 py-2.5 text-xs leading-relaxed shadow-md",
+            className,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          {content}
+        </TooltipPrimitive.Content>
+      </TooltipPrimitive.Portal>
+    </TooltipPrimitive.Root>
   );
 }
 
