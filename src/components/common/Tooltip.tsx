@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import {
   Tooltip as TooltipRoot,
   TooltipContent,
+  TooltipProvider as UiTooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
@@ -23,6 +24,29 @@ export interface TooltipProps {
   /** 표시 지연 (ms) */
   delayDuration?: number;
   className?: string;
+}
+
+export interface TooltipProviderProps {
+  children: ReactNode;
+  /** 표시 지연 (ms) */
+  delayDuration?: number;
+  /** 툴팁 사이를 빠르게 이동할 때 지연을 건너뛰는 시간 창 (ms) */
+  skipDelayDuration?: number;
+}
+
+/**
+ * Tooltip 컨텍스트. 앱 루트(main.tsx)에서 한 번만 감쌉니다.
+ */
+export function TooltipProvider({
+  children,
+  delayDuration = 150,
+  skipDelayDuration = 300,
+}: TooltipProviderProps) {
+  return (
+    <UiTooltipProvider delay={delayDuration} timeout={skipDelayDuration}>
+      {children}
+    </UiTooltipProvider>
+  );
 }
 
 /**
