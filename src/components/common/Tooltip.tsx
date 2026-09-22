@@ -1,6 +1,11 @@
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import type { ReactElement, ReactNode } from "react";
-import { InfoIcon } from "../Icons";
+import { InfoIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Tooltip as TooltipRoot,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export type TooltipSide = "top" | "right" | "bottom" | "left";
 
@@ -21,7 +26,8 @@ export interface TooltipProps {
 }
 
 /**
- * 호버 또는 키보드 포커스 시 설명을 띄우는 툴팁.
+ * 호버 또는 키보드 포커스 시 설명을 띄우는 툴팁. shadcn Tooltip(Base UI) 기반.
+ * 앱 루트의 TooltipProvider(main.tsx)가 필요합니다.
  *
  * @example
  * <Tooltip content="설명 텍스트">
@@ -34,30 +40,23 @@ export default function Tooltip({
   side = "top",
   align = "center",
   delayDuration = 150,
-  className = "",
+  className,
 }: TooltipProps) {
   return (
-    <TooltipPrimitive.Provider delayDuration={delayDuration}>
-      <TooltipPrimitive.Root>
-        <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
-        <TooltipPrimitive.Portal>
-          <TooltipPrimitive.Content
-            side={side}
-            align={align}
-            sideOffset={6}
-            collisionPadding={8}
-            className={[
-              "tooltip-content z-[80] max-w-72 rounded-lg border px-3.5 py-2.5 text-xs leading-relaxed shadow-md",
-              className,
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            {content}
-          </TooltipPrimitive.Content>
-        </TooltipPrimitive.Portal>
-      </TooltipPrimitive.Root>
-    </TooltipPrimitive.Provider>
+    <TooltipRoot>
+      <TooltipTrigger delay={delayDuration} render={children} />
+      <TooltipContent
+        side={side}
+        align={align}
+        sideOffset={6}
+        className={cn(
+          "tooltip-content max-w-72 rounded-lg border px-3.5 py-2.5 text-xs leading-relaxed shadow-md [&_[data-slot=tooltip-arrow]]:hidden",
+          className,
+        )}
+      >
+        {content}
+      </TooltipContent>
+    </TooltipRoot>
   );
 }
 
@@ -82,7 +81,7 @@ export function InfoTooltip({
         type="button"
         aria-label={label}
         onClick={(e) => e.stopPropagation()}
-        className="-m-1 inline-flex shrink-0 cursor-default items-center justify-center rounded-md p-1 text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 data-[state=delayed-open]:bg-black/5 data-[state=delayed-open]:text-gray-600 data-[state=instant-open]:bg-black/5 data-[state=instant-open]:text-gray-600"
+        className="-m-1 inline-flex shrink-0 cursor-default items-center justify-center rounded-md p-1 text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 focus-visible:outline-none data-[popup-open]:bg-black/5 data-[popup-open]:text-gray-600"
       >
         <InfoIcon className={iconClassName} />
       </button>

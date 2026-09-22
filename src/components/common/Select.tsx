@@ -1,6 +1,12 @@
-import * as SelectPrimitive from "@radix-ui/react-select";
 import { useId } from "react";
-import { ChevronDownIcon } from "../Icons";
+import { cn } from "@/lib/utils";
+import {
+  Select as SelectRoot,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export interface SelectOption {
   value: string;
@@ -21,6 +27,7 @@ export interface SelectProps {
   id?: string;
   name?: string;
   placeholder?: string;
+  /** 트리거에 표시할 라벨을 옵션 라벨 대신 직접 지정 */
   selectedLabel?: string;
   helperText?: string;
   error?: string;
@@ -46,29 +53,15 @@ const triggerVariantClasses: Record<SelectVariant, string> = {
   form: "rounded-md bg-white",
 };
 
+// shadcn 트리거는 data-size로 높이를 정하므로 같은 변형 키로 덮어씁니다.
 const triggerSizeClasses: Record<SelectSize, string> = {
-  sm: "h-8 px-2.5 py-1.5",
-  md: "h-10 px-3 py-2",
+  sm: "data-[size=default]:h-8 px-2.5 py-1.5",
+  md: "data-[size=default]:h-10 px-3 py-2",
 };
 
-function joinClasses(...classes: Array<string | undefined | false>): string {
-  return classes.filter(Boolean).join(" ");
-}
-
-function CheckIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-4 w-4">
-      <path
-        d="m4.5 10.5 3.25 3.25 7.75-7.5"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
+/**
+ * `options` 배열을 받는 단일 선택 드롭다운. shadcn Select(Base UI) 기반.
+ */
 export default function Select({
   value,
   onValueChange,
@@ -96,18 +89,21 @@ export default function Select({
   const describedBy =
     [helperId, errorId].filter(Boolean).join(" ") || undefined;
 
+  const labelFor = (current: string | null) => {
+    if (current == null) return placeholder;
+    return (
+      selectedLabel ??
+      options.find((option) => option.value === current)?.label ??
+      current
+    );
+  };
+
   return (
-    <div
-      className={joinClasses(
-        widthClasses[width],
-        "min-w-0 shrink-0",
-        className,
-      )}
-    >
+    <div className={cn(widthClasses[width], "min-w-0 shrink-0", className)}>
       {label && (
         <label
           htmlFor={triggerId}
-          className={joinClasses(
+          className={cn(
             "mb-1.5 block font-medium",
             variant === "form"
               ? "text-sm text-gray-700"
@@ -123,22 +119,25 @@ export default function Select({
         </label>
       )}
 
-      <SelectPrimitive.Root
-        value={value}
-        onValueChange={onValueChange}
+      <SelectRoot
+        value={value ?? null}
+        onValueChange={(next) => {
+          if (next != null) onValueChange(next);
+        }}
+        items={options}
         disabled={disabled}
         name={name}
         required={required}
       >
-        <SelectPrimitive.Trigger
+        <SelectTrigger
           id={triggerId}
           aria-label={ariaLabel}
           aria-describedby={describedBy}
           aria-invalid={error ? true : undefined}
-          className={joinClasses(
+          className={cn(
             "flex w-full cursor-pointer items-center justify-between gap-2 border text-left text-sm text-gray-900 transition-colors",
-            "hover:border-gray-300 focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/25 data-[state=open]:border-[var(--color-primary)] data-[state=open]:ring-2 data-[state=open]:ring-[var(--color-primary)]/25",
-            "data-[placeholder]:text-gray-400 disabled:cursor-not-allowed disabled:opacity-50",
+            "hover:border-gray-300 focus-visible:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/25 data-open:border-[var(--color-primary)] data-open:ring-2 data-open:ring-[var(--color-primary)]/25",
+            "data-placeholder:text-gray-400 aria-invalid:ring-0 disabled:cursor-not-allowed disabled:opacity-50",
             triggerVariantClasses[variant],
             triggerSizeClasses[size],
             error
@@ -149,48 +148,33 @@ export default function Select({
             triggerClassName,
           )}
         >
-          <span className="block min-w-0 flex-1 overflow-hidden [&>span]:block [&>span]:min-w-0 [&>span]:overflow-hidden [&>span]:text-ellipsis [&>span]:whitespace-nowrap">
-            <SelectPrimitive.Value placeholder={placeholder}>
-              {selectedLabel}
-            </SelectPrimitive.Value>
-          </span>
-          <SelectPrimitive.Icon asChild>
-            <ChevronDownIcon className="h-4 w-4 shrink-0 text-gray-400" />
-          </SelectPrimitive.Icon>
-        </SelectPrimitive.Trigger>
+          <SelectValue className="min-w-0 flex-1 overflow-hidden">
+            {(current: string | null) => (
+              <span className="block truncate">{labelFor(current)}</span>
+            )}
+          </SelectValue>
+        </SelectTrigger>
 
-        <SelectPrimitive.Portal>
-          <SelectPrimitive.Content
-            position="popper"
-            sideOffset={4}
-            className="z-[70] w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-2rem)] max-h-[var(--radix-select-content-available-height)] min-w-0 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
-          >
-            <SelectPrimitive.Viewport className="max-h-60 overflow-y-auto p-1">
-              {options.map((option) => (
-                <SelectPrimitive.Item
-                  key={option.value}
-                  value={option.value}
-                  disabled={option.disabled}
-                  className={joinClasses(
-                    "relative flex cursor-pointer select-none items-center rounded-md py-2 pr-8 pl-3 text-sm text-gray-900 outline-none",
-                    "data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-950 data-[state=checked]:font-medium data-[state=checked]:text-[var(--color-primary)]",
-                    "data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
-                  )}
-                >
-                  <span className="w-0 min-w-0 flex-1 overflow-hidden [&>span]:block [&>span]:min-w-0 [&>span]:overflow-hidden [&>span]:text-ellipsis [&>span]:whitespace-nowrap">
-                    <SelectPrimitive.ItemText>
-                      {option.label}
-                    </SelectPrimitive.ItemText>
-                  </span>
-                  <SelectPrimitive.ItemIndicator className="absolute right-2.5 inline-flex items-center">
-                    <CheckIcon />
-                  </SelectPrimitive.ItemIndicator>
-                </SelectPrimitive.Item>
-              ))}
-            </SelectPrimitive.Viewport>
-          </SelectPrimitive.Content>
-        </SelectPrimitive.Portal>
-      </SelectPrimitive.Root>
+        <SelectContent
+          align="start"
+          sideOffset={4}
+          alignItemWithTrigger={false}
+          className="max-h-[min(15rem,var(--available-height))] max-w-[calc(100vw-2rem)] min-w-0 rounded-lg border border-gray-200 bg-white p-1 shadow-lg ring-0"
+        >
+          {options.map((option) => (
+            <SelectItem
+              key={option.value}
+              value={option.value}
+              disabled={option.disabled}
+              className="cursor-pointer rounded-md py-2 pr-8 pl-3 text-sm text-gray-900 data-[highlighted]:bg-gray-100 data-[highlighted]:text-gray-950 data-[selected]:font-medium data-[selected]:text-[var(--color-primary)] data-disabled:opacity-40"
+            >
+              <span className="block min-w-0 flex-1 truncate">
+                {option.label}
+              </span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </SelectRoot>
 
       {helperText && (
         <p id={helperId} className="mt-1.5 text-xs text-gray-500">

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./index.css";
 import "streamdown/styles.css";
 import App from "./App.tsx";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 // React Query 클라이언트 설정
 const queryClient = new QueryClient({
@@ -26,7 +27,9 @@ root.render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <App />
+        <TooltipProvider delay={150}>
+          <App />
+        </TooltipProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>
