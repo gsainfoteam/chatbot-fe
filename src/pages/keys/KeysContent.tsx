@@ -12,7 +12,7 @@ import {
   removeCollaborator,
 } from "../../api/widgetKeys";
 import type { CollaboratorResponse } from "../../api/types";
-import { ConfirmDialog } from "../../components/ui";
+import { ConfirmDialog } from "@/components/common";
 
 type WidgetKey = {
   id: string;

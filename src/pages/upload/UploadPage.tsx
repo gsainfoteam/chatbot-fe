@@ -16,7 +16,7 @@ import type {
 import type { DocumentItem, DocumentStatus, Organization } from "../../api/types";
 import { UploadIcon } from "../../components/Icons";
 import LoadingSpinner from "../../components/LoadingSpinner";
-import { Button } from "../../components/ui";
+import { Button } from "@/components/common";
 import {
   OrganizationPanel,
   useDocumentManagementAccess,

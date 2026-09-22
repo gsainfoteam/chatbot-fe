@@ -17,7 +17,7 @@ import {
   Dialog,
   Select,
   type SelectOption,
-} from "../../../components/ui";
+} from "@/components/common";
 import { organizationQueryKeys } from "../queryKeys";
 import { membershipStatusLabel } from "../utils";
 

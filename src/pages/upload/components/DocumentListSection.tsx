@@ -30,7 +30,7 @@ import {
   DatePicker,
   Dialog,
   Select,
-} from "../../../components/ui";
+} from "@/components/common";
 import ShareTransferModal from "./ShareTransferModal";
 import {
   buildBulkErrorMessage,
