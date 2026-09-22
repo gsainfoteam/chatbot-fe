@@ -7,7 +7,7 @@ import {
 } from "../../../api/organizations";
 import type { OrgInvitation } from "../../../api/types";
 import { MailIcon } from "../../../components/Icons";
-import { Button, ConfirmDialog } from "../../../components/ui";
+import { Button, ConfirmDialog } from "@/components/common";
 import { organizationQueryKeys } from "../queryKeys";
 import { organizationRoleLabel } from "../utils";
 

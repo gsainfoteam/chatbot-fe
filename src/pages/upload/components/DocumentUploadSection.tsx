@@ -7,7 +7,7 @@ import {
 } from "../../../api/upload";
 import type { DocumentItem, Organization } from "../../../api/types";
 import { UploadIcon } from "../../../components/Icons";
-import { Button, Dialog, Select } from "../../../components/ui";
+import { Button, Dialog, Select } from "@/components/common";
 import {
   formatKoreanDate,
   getOneYearLaterValue,
