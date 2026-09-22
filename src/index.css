@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
+/*
+ * shadcn init이 넣는 @import "shadcn/tailwind.css"는 일부러 뺐습니다.
+ * 그 파일은 CLI 패키지(express, ts-morph 등 200여 개 의존성)에 들어 있고,
+ * 여기서 쓰는 data-open / data-closed / data-disabled 변형은 Tailwind v4 기본 data-* 변형으로 충분합니다.
+ * 나중에 추가하는 shadcn 컴포넌트가 scroll-fade, shimmer, no-scrollbar 유틸리티를 쓰면 그 부분만 가져오세요.
+ */
 
 @custom-variant dark (&:is(.dark *));
 
