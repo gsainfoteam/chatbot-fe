@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { getWidgetKeysUsage } from "../../api/usage";
 import { getWidgetKeys } from "../../api/widgetKeys";
-import { InfoTooltip, Select } from "../../components/ui";
+import { InfoTooltip, Select } from "@/components/common";
 import type { UsageData, DomainStat } from "../../api/types";
 import ChartTooltip from "./components/ChartTooltip";
 import ResolutionRateTooltipContent from "./components/ResolutionRateTooltipContent";

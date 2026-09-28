@@ -12,7 +12,7 @@ import {
   ConfirmDialog,
   Dialog,
   Select,
-} from "../../../components/ui";
+} from "@/components/common";
 import { buildBulkErrorMessage } from "../utils";
 import type { BulkFailure } from "../utils";
 

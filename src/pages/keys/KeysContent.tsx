@@ -12,7 +12,7 @@ import {
   removeCollaborator,
 } from "../../api/widgetKeys";
 import type { CollaboratorResponse } from "../../api/types";
-import { ConfirmDialog } from "../../components/ui";
+import { ConfirmDialog, Select } from "@/components/common";
 
 type WidgetKey = {
   id: string;
@@ -1317,40 +1317,54 @@ export default function KeysContent() {
                       </label>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs text-gray-600 mb-1">
+                          <label
+                            htmlFor="layout-position"
+                            className="block text-xs text-gray-600 mb-1"
+                          >
                             Position
                           </label>
-                          <select
+                          <Select
+                            id="layout-position"
                             value={layoutSettings.position}
-                            onChange={(e) =>
+                            onValueChange={(value) =>
                               handleLayoutChange(
                                 "position",
-                                e.target.value as "right" | "left",
+                                value as "right" | "left",
                               )
                             }
-                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md"
-                          >
-                            <option value="right">Right</option>
-                            <option value="left">Left</option>
-                          </select>
+                            options={[
+                              { value: "right", label: "Right" },
+                              { value: "left", label: "Left" },
+                            ]}
+                            variant="form"
+                            size="sm"
+                            width="full"
+                          />
                         </div>
                         <div>
-                          <label className="block text-xs text-gray-600 mb-1">
+                          <label
+                            htmlFor="layout-theme"
+                            className="block text-xs text-gray-600 mb-1"
+                          >
                             Theme
                           </label>
-                          <select
+                          <Select
+                            id="layout-theme"
                             value={layoutSettings.theme}
-                            onChange={(e) =>
+                            onValueChange={(value) =>
                               handleLayoutChange(
                                 "theme",
-                                e.target.value as "light" | "dark",
+                                value as "light" | "dark",
                               )
                             }
-                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md"
-                          >
-                            <option value="light">Light</option>
-                            <option value="dark">Dark</option>
-                          </select>
+                            options={[
+                              { value: "light", label: "Light" },
+                              { value: "dark", label: "Dark" },
+                            ]}
+                            variant="form"
+                            size="sm"
+                            width="full"
+                          />
                         </div>
                         <div>
                           <label className="block text-xs text-gray-600 mb-1">
