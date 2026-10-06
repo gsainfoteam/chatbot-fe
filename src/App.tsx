@@ -10,6 +10,7 @@ import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import LandingPage from "./pages/landing/LandingPage.tsx";
 import DocsPage from "./pages/docs/DocsPage.tsx";
 import Header from "./components/Header.tsx";
+import Footer from "./components/Footer.tsx";
 
 export default function App() {
   const location = useLocation();
@@ -17,7 +18,7 @@ export default function App() {
 
   return (
     <>
-      {/* 위젯 페이지가 아닐 때만 헤더 표시 */}
+      {/* 위젯 페이지가 아닐 때만 헤더·푸터 표시 */}
       {!isWidgetPage && <Header />}
 
       <Routes>
@@ -57,6 +58,8 @@ export default function App() {
           }
         />
       </Routes>
+
+      {!isWidgetPage && <Footer />}
     </>
   );
 }
