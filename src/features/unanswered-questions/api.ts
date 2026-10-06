@@ -1,82 +1,197 @@
+import axios from "axios";
+import { apiClient } from "../../api/client";
+import type { DocumentStatus } from "../../api/types";
 import {
   isPdfFile,
   isWithinSizeLimit,
   MAX_FILE_SIZE_MB,
 } from "../../api/upload";
-import { UNANSWERED_QUESTION_SEED } from "./mockData";
 import type {
   InjectPdfKnowledgeInput,
   InjectTextKnowledgeInput,
   ListUnansweredQuestionsParams,
+  ListUnansweredQuestionsResult,
   UnansweredQuestion,
+  UnansweredQuestionAnswer,
+  UnansweredQuestionsPage,
 } from "./types";
-import { matchesUnansweredQuestionQuery } from "./utils";
 
-const MOCK_DELAY_MS = 320;
+const BASE_PATH = "/v1/admin/unanswered-questions";
+const DEFAULT_PAGE = 1;
+const DEFAULT_PAGE_SIZE = 100;
 
-/**
- * CHA2-15 목 데이터 레이어.
- * 네트워크를 호출하지 않으며, 세션 동안 메모리에서만 상태를 유지합니다.
- *
- * CHA3-12 연동 시 이 파일의 함수 본문만 실제 HTTP 클라이언트로 교체하면 됩니다.
- * 페이지/컴포넌트는 아래 public 함수 시그니처만 사용합니다.
- */
-let store: UnansweredQuestion[] = cloneQuestions(UNANSWERED_QUESTION_SEED);
+export class UnansweredQuestionApiError extends Error {
+  readonly status?: number;
 
-function cloneQuestion(question: UnansweredQuestion): UnansweredQuestion {
-  return {
-    ...question,
-    injectedKnowledge: question.injectedKnowledge
-      ? { ...question.injectedKnowledge }
-      : undefined,
-  };
-}
-
-function cloneQuestions(questions: UnansweredQuestion[]): UnansweredQuestion[] {
-  return questions.map(cloneQuestion);
-}
-
-function delay(ms: number = MOCK_DELAY_MS): Promise<void> {
-  return new Promise((resolve) => {
-    globalThis.setTimeout(resolve, ms);
-  });
-}
-
-function requireQuestion(id: string): UnansweredQuestion {
-  const found = store.find((item) => item.id === id);
-  if (!found) {
-    throw new Error("질문을 찾을 수 없습니다.");
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = "UnansweredQuestionApiError";
+    this.status = status;
   }
-  return found;
 }
 
-function matchesQuery(question: UnansweredQuestion, query?: string): boolean {
-  return matchesUnansweredQuestionQuery(question.question, query);
+interface ApiInjectedKnowledge {
+  type: "text" | "pdf";
+  injectedAt: string;
+  text?: string;
+  fileName?: string;
+  documentId: string;
+  documentTitle: string;
+  documentStatus: DocumentStatus;
+  documentActive: boolean;
 }
 
-export function resetUnansweredQuestionStore(): void {
-  store = cloneQuestions(UNANSWERED_QUESTION_SEED);
+interface ApiUnansweredQuestion {
+  id: string;
+  question: string;
+  createdAt: string;
+  status: "open" | "resolved";
+  occurrenceCount: number;
+  resolvedAt: string | null;
+  injectedKnowledge: ApiInjectedKnowledge | null;
+  lastAskedAt: string;
+  askedAgainAfterResolved: boolean;
+  widgetKeyId: string;
+  widgetKeyName: string;
+}
+
+interface ApiUnansweredQuestionDetail extends ApiUnansweredQuestion {
+  lastAnswer: {
+    messageId: string;
+    content: string;
+    createdAt: string;
+  } | null;
+}
+
+interface ApiListResponse {
+  items: ApiUnansweredQuestion[];
+  page: UnansweredQuestionsPage;
+}
+
+function readServerMessage(data: unknown): string | undefined {
+  if (typeof data === "string" && data.trim()) return data;
+  if (!data || typeof data !== "object") return undefined;
+  const message = (data as { message?: unknown }).message;
+  if (typeof message === "string" && message.trim()) return message;
+  if (Array.isArray(message)) {
+    const parts = message.filter(
+      (item): item is string => typeof item === "string" && item.trim().length > 0,
+    );
+    return parts.length > 0 ? parts.join("\n") : undefined;
+  }
+  return undefined;
+}
+
+function throwApiError(err: unknown, fallback: string): never {
+  const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+  const serverMessage = axios.isAxiosError(err)
+    ? readServerMessage(err.response?.data)
+    : undefined;
+
+  if (status === 401) {
+    throw new UnansweredQuestionApiError(
+      "인증에 실패했습니다. 다시 로그인해주세요.",
+      status,
+    );
+  }
+  if (status === 403) {
+    throw new UnansweredQuestionApiError(
+      "이 조직의 멤버만 지식을 등록할 수 있습니다. 소속 조직을 선택한 뒤 다시 시도해주세요.",
+      status,
+    );
+  }
+  if (status === 404) {
+    throw new UnansweredQuestionApiError(
+      "질문을 찾을 수 없거나 접근 권한이 없습니다.",
+      status,
+    );
+  }
+  if (status === 409) {
+    throw new UnansweredQuestionApiError(
+      "같은 제목의 문서가 이미 있습니다. 문서 관리에서 확인하거나 다른 제목으로 등록해주세요.",
+      status,
+    );
+  }
+  if (status === 503) {
+    throw new UnansweredQuestionApiError(
+      "문서 저장소에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.",
+      status,
+    );
+  }
+  throw new UnansweredQuestionApiError(serverMessage || fallback, status);
+}
+
+function toIso(value: string | null | undefined): string | undefined {
+  return value ?? undefined;
+}
+
+function toQuestion(
+  item: ApiUnansweredQuestion,
+  lastAnswer?: UnansweredQuestionAnswer | null,
+): UnansweredQuestion {
+  return {
+    id: item.id,
+    question: item.question,
+    createdAt: item.createdAt,
+    status: item.status,
+    occurrenceCount: item.occurrenceCount,
+    resolvedAt: toIso(item.resolvedAt),
+    lastAskedAt: item.lastAskedAt,
+    askedAgainAfterResolved: item.askedAgainAfterResolved,
+    widgetKeyId: item.widgetKeyId,
+    widgetKeyName: item.widgetKeyName,
+    injectedKnowledge: item.injectedKnowledge
+      ? {
+          type: item.injectedKnowledge.type,
+          injectedAt: item.injectedKnowledge.injectedAt,
+          text: item.injectedKnowledge.text,
+          fileName: item.injectedKnowledge.fileName,
+          documentId: item.injectedKnowledge.documentId,
+          documentTitle: item.injectedKnowledge.documentTitle,
+          documentStatus: item.injectedKnowledge.documentStatus,
+          documentActive: item.injectedKnowledge.documentActive,
+        }
+      : undefined,
+    ...(lastAnswer !== undefined ? { lastAnswer } : {}),
+  };
 }
 
 export async function listUnansweredQuestions(
   params: ListUnansweredQuestionsParams = {},
-): Promise<UnansweredQuestion[]> {
-  await delay();
-  const status = params.status ?? "open";
-  return cloneQuestions(store)
-    .filter((item) => (status === "all" ? true : item.status === status))
-    .filter((item) => matchesQuery(item, params.query))
-    .sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
+): Promise<ListUnansweredQuestionsResult> {
+  const query = params.query?.trim();
+  const page = Math.max(1, params.page ?? DEFAULT_PAGE);
+  const size = Math.min(100, Math.max(1, params.size ?? DEFAULT_PAGE_SIZE));
+
+  try {
+    const res = await apiClient.get<ApiListResponse>(BASE_PATH, {
+      params: {
+        page,
+        size,
+        status: params.status ?? "open",
+        ...(query ? { query } : {}),
+      },
+    });
+    return {
+      items: res.data.items.map((item) => toQuestion(item)),
+      page: res.data.page,
+    };
+  } catch (err) {
+    throwApiError(err, "미답변 질문 목록을 불러오는데 실패했습니다.");
+  }
 }
 
 export async function getUnansweredQuestion(
   id: string,
 ): Promise<UnansweredQuestion> {
-  await delay();
-  return cloneQuestion(requireQuestion(id));
+  try {
+    const res = await apiClient.get<ApiUnansweredQuestionDetail>(
+      `${BASE_PATH}/${id}`,
+    );
+    return toQuestion(res.data, res.data.lastAnswer);
+  } catch (err) {
+    throwApiError(err, "질문 상세를 불러오는데 실패했습니다.");
+  }
 }
 
 export async function injectTextKnowledge(
@@ -84,56 +199,78 @@ export async function injectTextKnowledge(
 ): Promise<UnansweredQuestion> {
   const text = input.text.trim();
   if (!text) {
-    throw new Error("지식을 입력해주세요.");
+    throw new UnansweredQuestionApiError("지식을 입력해주세요.");
   }
 
-  await delay(420);
-  const target = requireQuestion(input.questionId);
-  const injectedAt = new Date().toISOString();
-  target.status = "resolved";
-  target.resolvedAt = injectedAt;
-  target.injectedKnowledge = {
-    type: "text",
-    text,
-    injectedAt,
-  };
-  return cloneQuestion(target);
+  try {
+    const res = await apiClient.post<ApiUnansweredQuestion>(
+      `${BASE_PATH}/${input.questionId}/knowledge/text`,
+      {
+        text,
+        ...(input.title?.trim() ? { title: input.title.trim() } : {}),
+        ...(input.organizationId
+          ? { organizationId: input.organizationId }
+          : {}),
+      },
+    );
+    return toQuestion(res.data);
+  } catch (err) {
+    throwApiError(err, "텍스트 지식 등록에 실패했습니다.");
+  }
 }
 
 export async function injectPdfKnowledge(
   input: InjectPdfKnowledgeInput,
 ): Promise<UnansweredQuestion> {
   if (!isPdfFile(input.file)) {
-    throw new Error("PDF 파일만 업로드할 수 있습니다.");
+    throw new UnansweredQuestionApiError("PDF 파일만 업로드할 수 있습니다.");
   }
   if (!isWithinSizeLimit(input.file)) {
-    throw new Error(`파일 크기는 ${MAX_FILE_SIZE_MB}MB 이하여야 합니다.`);
+    throw new UnansweredQuestionApiError(
+      `파일 크기는 ${MAX_FILE_SIZE_MB}MB 이하여야 합니다.`,
+    );
   }
 
-  await delay(520);
-  const target = requireQuestion(input.questionId);
-  const injectedAt = new Date().toISOString();
-  target.status = "resolved";
-  target.resolvedAt = injectedAt;
-  target.injectedKnowledge = {
-    type: "pdf",
-    fileName: input.file.name,
-    fileSize: input.file.size,
-    injectedAt,
-  };
-  return cloneQuestion(target);
+  const pdfFile =
+    input.file.type === "application/pdf"
+      ? input.file
+      : new File([input.file], input.file.name, { type: "application/pdf" });
+  const formData = new FormData();
+  formData.append("file", pdfFile);
+  if (input.title?.trim()) {
+    formData.append("title", input.title.trim());
+  }
+  if (input.organizationId) {
+    formData.append("organizationId", input.organizationId);
+  }
+
+  try {
+    const res = await apiClient.post<ApiUnansweredQuestion>(
+      `${BASE_PATH}/${input.questionId}/knowledge/pdf`,
+      formData,
+      {
+        headers: { "Content-Type": undefined } as Record<
+          string,
+          string | undefined
+        >,
+      },
+    );
+    return toQuestion(res.data);
+  } catch (err) {
+    throwApiError(err, "PDF 지식 등록에 실패했습니다.");
+  }
 }
 
 export async function resolveUnansweredQuestion(
   id: string,
 ): Promise<UnansweredQuestion> {
-  await delay(280);
-  const target = requireQuestion(id);
-  if (target.status === "resolved") {
-    return cloneQuestion(target);
+  try {
+    const res = await apiClient.patch<ApiUnansweredQuestion>(
+      `${BASE_PATH}/${id}`,
+      { status: "resolved" },
+    );
+    return toQuestion(res.data);
+  } catch (err) {
+    throwApiError(err, "질문을 해결됨으로 표시하는데 실패했습니다.");
   }
-  const resolvedAt = new Date().toISOString();
-  target.status = "resolved";
-  target.resolvedAt = resolvedAt;
-  return cloneQuestion(target);
 }

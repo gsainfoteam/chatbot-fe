@@ -227,8 +227,7 @@ export default function KnowledgeInjectForm({
               PDF를 선택하거나 여기에 놓으세요
             </p>
             <p className="mt-1 text-xs text-gray-500">
-              파일당 최대 {MAX_FILE_SIZE_MB}MB · 네트워크 업로드 없이 검증만
-              수행합니다
+              파일당 최대 {MAX_FILE_SIZE_MB}MB
             </p>
           </div>
 

@@ -7,7 +7,6 @@ export {
   injectPdfKnowledge,
   injectTextKnowledge,
   listUnansweredQuestions,
-  resetUnansweredQuestionStore,
   resolveUnansweredQuestion,
 } from "./api";
 export { unansweredQuestionQueryKeys } from "./queryKeys";
@@ -15,6 +14,7 @@ export {
   useInjectPdfKnowledge,
   useInjectTextKnowledge,
   useResolveUnansweredQuestion,
+  useUnansweredQuestion,
   useUnansweredQuestions,
 } from "./useUnansweredQuestions";
 export type {
@@ -23,7 +23,10 @@ export type {
   InjectTextKnowledgeInput,
   KnowledgeInjectType,
   ListUnansweredQuestionsParams,
+  ListUnansweredQuestionsResult,
   UnansweredQuestion,
+  UnansweredQuestionAnswer,
+  UnansweredQuestionsPage,
   UnansweredQuestionStatus,
   UnansweredQuestionStatusFilter,
 } from "./types";

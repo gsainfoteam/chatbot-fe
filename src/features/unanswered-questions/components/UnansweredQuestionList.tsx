@@ -132,6 +132,12 @@ export default function UnansweredQuestionList({
                       {question.occurrenceCount != null && (
                         <span>발생 {question.occurrenceCount}회</span>
                       )}
+                      {question.widgetKeyName && (
+                        <span>{question.widgetKeyName}</span>
+                      )}
+                      {question.askedAgainAfterResolved && (
+                        <span className="text-amber-700">해결 후 재발</span>
+                      )}
                     </div>
                   </button>
                 </li>

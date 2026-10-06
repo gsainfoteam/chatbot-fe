@@ -1,13 +1,27 @@
+import type { DocumentStatus, Organization } from "../../../api/types";
 import { XIcon } from "../../../components/Icons";
-import { Button } from "../../../components/ui";
+import { Button, Select } from "../../../components/ui";
 import type { UnansweredQuestion } from "../types";
 import { formatFileSize, formatQuestionDateTime } from "../utils";
 import KnowledgeInjectForm from "./KnowledgeInjectForm";
+
+const DOCUMENT_STATUS_LABEL: Record<DocumentStatus, string> = {
+  uploading: "업로드 중",
+  queued: "처리 대기 중",
+  processing: "처리 중",
+  ready: "활성화",
+  failed: "처리 실패",
+};
 
 interface UnansweredQuestionDetailProps {
   question: UnansweredQuestion | null;
   injecting: boolean;
   resolving: boolean;
+  detailLoading: boolean;
+  organizations: Organization[];
+  organizationId: string;
+  organizationsLoading: boolean;
+  onOrganizationChange: (organizationId: string) => void;
   onClose: () => void;
   onInjectText: (text: string) => Promise<void>;
   onInjectPdf: (file: File) => Promise<void>;
@@ -38,6 +52,11 @@ export default function UnansweredQuestionDetail({
   question,
   injecting,
   resolving,
+  detailLoading,
+  organizations,
+  organizationId,
+  organizationsLoading,
+  onOrganizationChange,
   onClose,
   onInjectText,
   onInjectPdf,
@@ -73,6 +92,7 @@ export default function UnansweredQuestionDetail({
             {question.occurrenceCount != null
               ? ` · 발생 ${question.occurrenceCount}회`
               : ""}
+            {question.widgetKeyName ? ` · ${question.widgetKeyName}` : ""}
           </p>
         </div>
         <button
@@ -91,6 +111,32 @@ export default function UnansweredQuestionDetail({
           <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-900">
             {question.question}
           </p>
+        </div>
+
+        {question.askedAgainAfterResolved && (
+          <p className="rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            해결 이후 같은 질문이 다시 발생했습니다.
+          </p>
+        )}
+
+        <div>
+          <h3 className="text-sm font-medium text-gray-700">최근 답변</h3>
+          {detailLoading && question.lastAnswer === undefined ? (
+            <p className="mt-2 text-sm text-gray-500">최근 답변을 불러오는 중...</p>
+          ) : question.lastAnswer ? (
+            <>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-900">
+                {question.lastAnswer.content}
+              </p>
+              <p className="mt-2 text-xs text-gray-500">
+                {formatQuestionDateTime(question.lastAnswer.createdAt)}
+              </p>
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-gray-500">
+              저장된 최근 답변이 없습니다.
+            </p>
+          )}
         </div>
 
         {question.status === "resolved" ? (
@@ -116,6 +162,17 @@ export default function UnansweredQuestionDetail({
                   : ""}
               </p>
             )}
+            {knowledge?.documentTitle && (
+              <p className="mt-3 text-sm text-green-900">
+                문서: {knowledge.documentTitle}
+              </p>
+            )}
+            {knowledge?.documentStatus && (
+              <p className="mt-1 text-xs text-green-700">
+                문서 상태: {DOCUMENT_STATUS_LABEL[knowledge.documentStatus]}
+                {knowledge.documentActive === false ? " · 문서 관리에서 삭제됨" : ""}
+              </p>
+            )}
           </div>
         ) : (
           <>
@@ -123,9 +180,27 @@ export default function UnansweredQuestionDetail({
               <h3 className="mb-3 text-sm font-medium text-gray-700">
                 지식 주입
               </h3>
+              {organizations.length > 1 && (
+                <div className="mb-4">
+                  <Select
+                    label="등록 조직"
+                    ariaLabel="지식 문서를 등록할 조직"
+                    value={organizationId}
+                    onValueChange={onOrganizationChange}
+                    options={organizations.map((organization) => ({
+                      value: organization.id,
+                      label: organization.name,
+                    }))}
+                    variant="form"
+                    width="full"
+                    disabled={organizationsLoading || injecting || resolving}
+                    helperText="지식 문서는 선택한 조직에 등록됩니다."
+                  />
+                </div>
+              )}
               <KnowledgeInjectForm
                 submitting={injecting}
-                disabled={resolving}
+                disabled={resolving || organizationsLoading}
                 onSubmitText={onInjectText}
                 onSubmitPdf={onInjectPdf}
               />

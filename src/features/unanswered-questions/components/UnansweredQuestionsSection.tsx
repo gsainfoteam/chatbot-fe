@@ -1,9 +1,13 @@
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { getOrganizations } from "../../../api/organizations";
 import { ConfirmDialog } from "../../../components/ui";
+import { organizationQueryKeys } from "../../organizations/queryKeys";
 import {
   useInjectPdfKnowledge,
   useInjectTextKnowledge,
   useResolveUnansweredQuestion,
+  useUnansweredQuestion,
   useUnansweredQuestions,
 } from "../useUnansweredQuestions";
 import type {
@@ -26,6 +30,7 @@ export default function UnansweredQuestionsSection() {
     useState<UnansweredQuestion | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [resolveConfirmOpen, setResolveConfirmOpen] = useState(false);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -52,15 +57,30 @@ export default function UnansweredQuestionsSection() {
     query: documentQuery || undefined,
     status: statusFilter,
   });
+  const detailQuery = useUnansweredQuestion(selectedId);
+  const organizationsQuery = useQuery({
+    queryKey: organizationQueryKeys.list(),
+    queryFn: getOrganizations,
+    staleTime: 60_000,
+  });
   const injectText = useInjectTextKnowledge();
   const injectPdf = useInjectPdfKnowledge();
   const resolveQuestion = useResolveUnansweredQuestion();
 
-  const questions = listQuery.data ?? EMPTY_QUESTIONS;
+  const questions = listQuery.data?.items ?? EMPTY_QUESTIONS;
+  const organizations = organizationsQuery.data ?? [];
+  const effectiveOrganizationId =
+    organizationId ??
+    organizations.find((organization) => organization.isDefault)?.id ??
+    organizations[0]?.id ??
+    "";
+  const selectedFromList = selectedId
+    ? questions.find((item) => item.id === selectedId)
+    : null;
   const selectedQuestion =
-    (selectedId
-      ? questions.find((item) => item.id === selectedId)
-      : null) ?? selectedSnapshot;
+    (detailQuery.data?.id === selectedId ? detailQuery.data : null) ??
+    selectedFromList ??
+    (selectedSnapshot?.id === selectedId ? selectedSnapshot : null);
   const injecting = injectText.isPending || injectPdf.isPending;
 
   const closeDetail = () => {
@@ -81,6 +101,7 @@ export default function UnansweredQuestionsSection() {
     const updated = await injectText.mutateAsync({
       questionId: selectedQuestion.id,
       text,
+      organizationId: effectiveOrganizationId || undefined,
     });
     handleInjected(
       updated,
@@ -93,6 +114,7 @@ export default function UnansweredQuestionsSection() {
     const updated = await injectPdf.mutateAsync({
       questionId: selectedQuestion.id,
       file,
+      organizationId: effectiveOrganizationId || undefined,
     });
     handleInjected(updated, "PDF를 등록하고 질문을 해결됨으로 표시했습니다.");
   };
@@ -108,13 +130,17 @@ export default function UnansweredQuestionsSection() {
       <header className="mb-4">
         <h2 className="text-xl font-semibold text-gray-900">미답변 질문</h2>
         <p className="mt-1 text-sm text-gray-600">
-          문서가 없어 답변하지 못한 질문을 확인하고, 텍스트 또는 PDF로 지식을
+          참고 문서 없이 답변된 질문을 확인하고, 텍스트 또는 PDF로 지식을
           등록할 수 있습니다.
         </p>
-        <p className="mt-1 text-xs text-gray-400">
-          현재는 목 데이터로 동작합니다. CHA3-12 API가 준비되면 같은
-          인터페이스로 교체됩니다.
-        </p>
+        {listQuery.data?.page != null && (
+          <p className="mt-1 text-xs text-gray-500">
+            {listQuery.data.page.filteredTotal}건
+            {listQuery.data.page.hasNext
+              ? " · 한 번에 최대 100건까지 표시됩니다. 검색으로 범위를 좁혀 주세요."
+              : ""}
+          </p>
+        )}
       </header>
 
       {successMessage && (
@@ -172,6 +198,11 @@ export default function UnansweredQuestionsSection() {
             question={selectedQuestion}
             injecting={injecting}
             resolving={resolveQuestion.isPending}
+            detailLoading={detailQuery.isLoading}
+            organizations={organizations}
+            organizationId={effectiveOrganizationId}
+            organizationsLoading={organizationsQuery.isLoading}
+            onOrganizationChange={setOrganizationId}
             onClose={closeDetail}
             onInjectText={handleInjectText}
             onInjectPdf={handleInjectPdf}

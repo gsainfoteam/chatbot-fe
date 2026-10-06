@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  getUnansweredQuestion,
   injectPdfKnowledge,
   injectTextKnowledge,
   listUnansweredQuestions,
@@ -10,6 +11,7 @@ import type {
   InjectPdfKnowledgeInput,
   InjectTextKnowledgeInput,
   ListUnansweredQuestionsParams,
+  UnansweredQuestion,
 } from "./types";
 
 export function useUnansweredQuestions(params: ListUnansweredQuestionsParams) {
@@ -19,40 +21,62 @@ export function useUnansweredQuestions(params: ListUnansweredQuestionsParams) {
   });
 }
 
-function useInvalidateUnansweredQuestions() {
+export function useUnansweredQuestion(id: string | null) {
+  return useQuery({
+    queryKey: unansweredQuestionQueryKeys.detail(id ?? ""),
+    queryFn: () => getUnansweredQuestion(id ?? ""),
+    enabled: Boolean(id),
+  });
+}
+
+function useUnansweredQuestionCache() {
   const queryClient = useQueryClient();
-  return () =>
-    queryClient.invalidateQueries({
-      queryKey: unansweredQuestionQueryKeys.all,
-    });
+  return {
+    invalidate: () =>
+      queryClient.invalidateQueries({
+        queryKey: unansweredQuestionQueryKeys.all,
+      }),
+    setDetail: (question: UnansweredQuestion) => {
+      queryClient.setQueryData<UnansweredQuestion>(
+        unansweredQuestionQueryKeys.detail(question.id),
+        (current) => ({
+          ...question,
+          lastAnswer: question.lastAnswer ?? current?.lastAnswer,
+        }),
+      );
+    },
+  };
 }
 
 export function useInjectTextKnowledge() {
-  const invalidate = useInvalidateUnansweredQuestions();
+  const cache = useUnansweredQuestionCache();
   return useMutation({
     mutationFn: (input: InjectTextKnowledgeInput) => injectTextKnowledge(input),
-    onSuccess: () => {
-      void invalidate();
+    onSuccess: (question) => {
+      cache.setDetail(question);
+      void cache.invalidate();
     },
   });
 }
 
 export function useInjectPdfKnowledge() {
-  const invalidate = useInvalidateUnansweredQuestions();
+  const cache = useUnansweredQuestionCache();
   return useMutation({
     mutationFn: (input: InjectPdfKnowledgeInput) => injectPdfKnowledge(input),
-    onSuccess: () => {
-      void invalidate();
+    onSuccess: (question) => {
+      cache.setDetail(question);
+      void cache.invalidate();
     },
   });
 }
 
 export function useResolveUnansweredQuestion() {
-  const invalidate = useInvalidateUnansweredQuestions();
+  const cache = useUnansweredQuestionCache();
   return useMutation({
     mutationFn: (id: string) => resolveUnansweredQuestion(id),
-    onSuccess: () => {
-      void invalidate();
+    onSuccess: (question) => {
+      cache.setDetail(question);
+      void cache.invalidate();
     },
   });
 }
