@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getOrganizations } from "../../../api/organizations";
 import { ConfirmDialog } from "../../../components/ui";
 import { organizationQueryKeys } from "../../organizations/queryKeys";
@@ -31,6 +31,7 @@ export default function UnansweredQuestionsSection() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [resolveConfirmOpen, setResolveConfirmOpen] = useState(false);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const selectionVersion = useRef(0);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -43,6 +44,7 @@ export default function UnansweredQuestionsSection() {
     if (!selectedId) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        selectionVersion.current += 1;
         setSelectedId(null);
         setSelectedSnapshot(null);
         setSuccessMessage(null);
@@ -84,13 +86,19 @@ export default function UnansweredQuestionsSection() {
   const injecting = injectText.isPending || injectPdf.isPending;
 
   const closeDetail = () => {
+    selectionVersion.current += 1;
     setSelectedId(null);
     setSelectedSnapshot(null);
     setSuccessMessage(null);
     setResolveConfirmOpen(false);
   };
 
-  const handleInjected = (question: UnansweredQuestion, message: string) => {
+  const handleInjected = (
+    question: UnansweredQuestion,
+    message: string,
+    requestSelectionVersion: number,
+  ) => {
+    if (selectionVersion.current !== requestSelectionVersion) return;
     setSelectedId(question.id);
     setSelectedSnapshot(question);
     setSuccessMessage(message);
@@ -98,6 +106,7 @@ export default function UnansweredQuestionsSection() {
 
   const handleInjectText = async (text: string) => {
     if (!selectedQuestion) return;
+    const requestSelectionVersion = selectionVersion.current;
     const updated = await injectText.mutateAsync({
       questionId: selectedQuestion.id,
       text,
@@ -106,23 +115,34 @@ export default function UnansweredQuestionsSection() {
     handleInjected(
       updated,
       "텍스트 지식을 등록하고 질문을 해결됨으로 표시했습니다.",
+      requestSelectionVersion,
     );
   };
 
   const handleInjectPdf = async (file: File) => {
     if (!selectedQuestion) return;
+    const requestSelectionVersion = selectionVersion.current;
     const updated = await injectPdf.mutateAsync({
       questionId: selectedQuestion.id,
       file,
       organizationId: effectiveOrganizationId || undefined,
     });
-    handleInjected(updated, "PDF를 등록하고 질문을 해결됨으로 표시했습니다.");
+    handleInjected(
+      updated,
+      "PDF를 등록하고 질문을 해결됨으로 표시했습니다.",
+      requestSelectionVersion,
+    );
   };
 
   const handleResolve = async () => {
     if (!selectedQuestion) return;
+    const requestSelectionVersion = selectionVersion.current;
     const updated = await resolveQuestion.mutateAsync(selectedQuestion.id);
-    handleInjected(updated, "질문을 해결됨으로 표시했습니다.");
+    handleInjected(
+      updated,
+      "질문을 해결됨으로 표시했습니다.",
+      requestSelectionVersion,
+    );
   };
 
   return (
@@ -169,6 +189,7 @@ export default function UnansweredQuestionsSection() {
             setSuccessMessage(null);
           }}
           onSelect={(question) => {
+            selectionVersion.current += 1;
             setSelectedId(question.id);
             setSelectedSnapshot(question);
             setSuccessMessage(null);

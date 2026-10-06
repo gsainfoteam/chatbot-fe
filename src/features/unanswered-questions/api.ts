@@ -82,7 +82,14 @@ function readServerMessage(data: unknown): string | undefined {
   return undefined;
 }
 
-function throwApiError(err: unknown, fallback: string): never {
+const KNOWLEDGE_FORBIDDEN_MESSAGE =
+  "이 조직의 멤버만 지식을 등록할 수 있습니다. 소속 조직을 선택한 뒤 다시 시도해주세요.";
+
+function throwApiError(
+  err: unknown,
+  fallback: string,
+  options?: { forbiddenMessage?: string },
+): never {
   const status = axios.isAxiosError(err) ? err.response?.status : undefined;
   const serverMessage = axios.isAxiosError(err)
     ? readServerMessage(err.response?.data)
@@ -96,7 +103,9 @@ function throwApiError(err: unknown, fallback: string): never {
   }
   if (status === 403) {
     throw new UnansweredQuestionApiError(
-      "이 조직의 멤버만 지식을 등록할 수 있습니다. 소속 조직을 선택한 뒤 다시 시도해주세요.",
+      serverMessage ||
+        options?.forbiddenMessage ||
+        "이 작업을 수행할 권한이 없습니다.",
       status,
     );
   }
@@ -215,7 +224,9 @@ export async function injectTextKnowledge(
     );
     return toQuestion(res.data);
   } catch (err) {
-    throwApiError(err, "텍스트 지식 등록에 실패했습니다.");
+    throwApiError(err, "텍스트 지식 등록에 실패했습니다.", {
+      forbiddenMessage: KNOWLEDGE_FORBIDDEN_MESSAGE,
+    });
   }
 }
 
@@ -257,7 +268,9 @@ export async function injectPdfKnowledge(
     );
     return toQuestion(res.data);
   } catch (err) {
-    throwApiError(err, "PDF 지식 등록에 실패했습니다.");
+    throwApiError(err, "PDF 지식 등록에 실패했습니다.", {
+      forbiddenMessage: KNOWLEDGE_FORBIDDEN_MESSAGE,
+    });
   }
 }
 
