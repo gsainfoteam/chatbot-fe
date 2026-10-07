@@ -1,6 +1,6 @@
 import type { DocumentStatus, Organization } from "../../../api/types";
 import { XIcon } from "../../../components/Icons";
-import { Button, Select } from "../../../components/ui";
+import { Button, Select } from "@/components/common";
 import type { UnansweredQuestion } from "../types";
 import { formatFileSize, formatQuestionDateTime } from "../utils";
 import KnowledgeInjectForm from "./KnowledgeInjectForm";

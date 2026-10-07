@@ -1,5 +1,5 @@
 import { SearchIcon } from "../../../components/Icons";
-import { Button, Select } from "../../../components/ui";
+import { Button, Select } from "@/components/common";
 import type {
   UnansweredQuestion,
   UnansweredQuestionStatusFilter,

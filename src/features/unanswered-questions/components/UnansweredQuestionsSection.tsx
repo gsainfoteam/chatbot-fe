@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { getOrganizations } from "../../../api/organizations";
-import { ConfirmDialog } from "../../../components/ui";
+import { ConfirmDialog } from "@/components/common";
 import { organizationQueryKeys } from "../../organizations/queryKeys";
 import {
   useInjectPdfKnowledge,
