@@ -458,9 +458,12 @@
   wrap.setAttribute("data-chatbot-widget", "panel");
   wrap.setAttribute("role", "dialog");
   wrap.setAttribute("aria-label", "챗봇");
+  // iframe 안 카드(ChatWidget)의 border-radius 와 같아야 한다.
+  // 바깥 클립/그림자가 더 작으면 모서리에서 테두리와 흰 배경이 어긋난다.
+  const PANEL_RADIUS = "24px";
   wrap.style.cssText = `
     position:fixed;
-    border-radius:18px;
+    border-radius:${PANEL_RADIUS};
     overflow:hidden;
     z-index:${Z};
     box-shadow:0 16px 40px rgba(0,0,0,.22);
@@ -492,7 +495,7 @@
       s.width = "calc(100vw - 24px)";
       s.height = "85vh";
       s.maxHeight = "85vh";
-      s.borderRadius = "20px 20px 0 0";
+      s.borderRadius = PANEL_RADIUS + " " + PANEL_RADIUS + " 0 0";
     } else if (config.mode === "center") {
       s.left = "50%";
       s.right = "auto";
@@ -501,12 +504,12 @@
       s.width = config.width + "px";
       s.height = config.height + "px";
       s.maxHeight = "calc(100vh - 48px)";
-      s.borderRadius = "18px";
+      s.borderRadius = PANEL_RADIUS;
     } else {
       s.left = "";
       s.right = "";
       s.top = "auto";
-      s.borderRadius = "18px";
+      s.borderRadius = PANEL_RADIUS;
       s.width = config.width + "px";
       s.height = config.height + "px";
       s.maxHeight = "";
@@ -514,6 +517,8 @@
       s[config.position] = config.offset + "px";
     }
     s.transform = isOpen ? openTransform() : closedTransform();
+    // overflow:hidden 만으로는 iframe 모서리가 잘리지 않는 브라우저가 있어 같은 radius 를 준다
+    iframe.style.borderRadius = s.borderRadius;
     resizeHandle.style.display = !isMobile() && config.resizable ? "block" : "none";
   }
 

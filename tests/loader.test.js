@@ -22,6 +22,8 @@ test("keeps the default launcher and panel layout", () => {
   assert.equal(panel.style.width, "360px");
   assert.equal(panel.style.height, "520px");
   assert.equal(panel.style.bottom, "86px");
+  assert.equal(panel.style.borderRadius, "24px");
+  assert.equal(panel.children[0].style.borderRadius, "24px");
   assert.equal(config.launcher, "icon");
   assert.equal(config.mode, "corner");
   assert.equal(config.hideButton, false);
@@ -200,6 +202,8 @@ test("center mode places the panel in the middle with a dimmed overlay", () => {
   // 모바일에서는 모드와 무관하게 하단 시트
   mediaQuery.setMatches(true);
   assert.equal(panel.style.bottom, "12px");
+  assert.equal(panel.style.borderRadius, "24px 24px 0 0");
+  assert.equal(panel.children[0].style.borderRadius, "24px 24px 0 0");
   assert.equal(panel.style.transform, "translateY(0) scale(1)");
 });
 
