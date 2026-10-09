@@ -10,8 +10,8 @@ import {
   inviteCollaborator,
   getCollaborators,
   removeCollaborator,
-} from "../../api/widgetKeys";
-import type { CollaboratorResponse } from "../../api/types";
+} from "@/api/widgetKeys";
+import type { CollaboratorResponse } from "@/api/types";
 import { ConfirmDialog, Select } from "@/components/common";
 
 type WidgetKey = {
