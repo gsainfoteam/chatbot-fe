@@ -27,7 +27,7 @@ import {
   FlagIcon,
   ThumbsUpIcon,
   ThumbsDownIcon,
-} from "../components/Icons";
+} from "@/components/Icons";
 import {
   createWidgetSession,
   sendWidgetChatMessage,
@@ -38,7 +38,7 @@ import {
   getSessionToken,
   getSessionExpiresAt,
   isRateLimitError,
-} from "../api/widgetChat";
+} from "@/api/widgetChat";
 import frequentQuestions from "./frequentQuestions";
 
 // 출처 배지 컴포넌트

@@ -1,7 +1,7 @@
 // 메인 App 컴포넌트 - 라우팅 관리
 
 import { Routes, Route, useLocation } from "react-router-dom";
-import ChatWidget from "./widget/ChatWidget.tsx";
+import { ChatWidget } from "@/features/widget";
 import LoginPage from "./pages/login/LoginPage.tsx";
 import DashboardPage from "./pages/dashboard/DashboardPage.tsx";
 import KeysPage from "./pages/keys/KeysPage.tsx";
