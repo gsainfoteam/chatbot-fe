@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { PanelLeftClose, Search, SquarePen, X } from "lucide-react";
+import { PanelLeftClose, Search, SquarePen, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/common";
 import { useChatStore } from "../chatStore";
 import { filterThreads, groupThreadsByDate } from "../threadGroups";
+import type { ChatThread } from "../types";
+import DeleteThreadDialog from "./DeleteThreadDialog";
 import SettingsMenu from "./SettingsMenu";
 import UserCard from "./UserCard";
 
@@ -34,6 +36,7 @@ export default function ChatSidebar({
   const { threads } = useChatStore();
   const { threadId } = useParams<{ threadId: string }>();
   const [query, setQuery] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<ChatThread | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -140,20 +143,34 @@ export default function ChatSidebar({
               {group.threads.map((thread) => {
                 const active = thread.id === threadId;
                 return (
-                  <Link
-                    key={thread.id}
-                    to={`/c/${thread.id}`}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "block truncate rounded-chat-md text-sm leading-5 transition-colors",
-                      FOCUS_RING,
-                      active
-                        ? "border border-chat-brand-100 bg-chat-brand-50 px-[11px] py-[7px] font-semibold text-chat-ink"
-                        : "px-3 py-2 font-medium text-chat-ink-2 hover:bg-chat-hover",
-                    )}
-                  >
-                    {thread.title}
-                  </Link>
+                  // 쓰레기통은 호버·포커스 시 나타나고, 터치 기기에서는 항상 보인다
+                  <div key={thread.id} className="group relative">
+                    <Link
+                      to={`/c/${thread.id}`}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "block truncate rounded-chat-md pr-9 text-sm leading-5 transition-colors",
+                        FOCUS_RING,
+                        // 쓰레기통 위에 있거나 쓰레기통이 포커스됐을 때도 행 전체가 하이라이트되도록 group 기준으로 적용
+                        active
+                          ? "border border-chat-brand-100 bg-chat-brand-50 py-[7px] pl-[11px] font-semibold text-chat-ink"
+                          : "py-2 pl-3 font-medium text-chat-ink-2 group-hover:bg-chat-hover group-focus-within:bg-chat-hover",
+                      )}
+                    >
+                      {thread.title}
+                    </Link>
+                    <button
+                      type="button"
+                      aria-label={`"${thread.title}" 대화 삭제`}
+                      onClick={() => setPendingDelete(thread)}
+                      className={cn(
+                        "absolute top-1/2 right-1.5 flex size-7 -translate-y-1/2 items-center justify-center rounded-chat-sm text-chat-subtle opacity-0 transition-opacity hover:bg-chat-brand-100/60 hover:text-destructive group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100",
+                        ROW_FOCUS_RING,
+                      )}
+                    >
+                      <Trash2 className="size-4" strokeWidth={1.8} aria-hidden="true" />
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -168,6 +185,8 @@ export default function ChatSidebar({
 
       {/* 사용자 */}
       <UserCard />
+
+      <DeleteThreadDialog thread={pendingDelete} onClose={() => setPendingDelete(null)} />
     </aside>
   );
 }

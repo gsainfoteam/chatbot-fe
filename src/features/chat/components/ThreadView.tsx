@@ -123,7 +123,7 @@ export default function ThreadView() {
               <Share className="size-[17px]" strokeWidth={1.8} aria-hidden="true" />
               {copied ? "복사됨" : "공유"}
             </button>
-            <ThreadMenu threadId={thread.id} title={thread.title} />
+            <ThreadMenu thread={thread} />
           </>
         }
       />

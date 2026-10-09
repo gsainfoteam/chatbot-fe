@@ -1,23 +1,23 @@
 import { useState, type KeyboardEvent } from "react";
-import { useNavigate } from "react-router-dom";
 import { Menu } from "@base-ui/react/menu";
 import { Ellipsis, Pencil, Trash2 } from "lucide-react";
-import { Button, ConfirmDialog, Dialog } from "@/components/common";
+import { Button, Dialog } from "@/components/common";
 import { cn } from "@/lib/utils";
-import { deleteThread, renameThread } from "../chatStore";
+import { renameThread } from "../chatStore";
+import type { ChatThread } from "../types";
+import DeleteThreadDialog from "./DeleteThreadDialog";
 import { MENU_ITEM_CLASS, MENU_POPUP_CLASS, MENU_POSITIONER_CLASS } from "./menuStyles";
 
 interface ThreadMenuProps {
-  threadId: string;
-  title: string;
+  thread: ChatThread;
 }
 
 const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-chat-brand";
 
 /** 상단 바 "더 보기" 메뉴: 제목 바꾸기 / 대화 삭제 (항목 클릭 시 메뉴는 자동으로 닫힘) */
-export default function ThreadMenu({ threadId, title }: ThreadMenuProps) {
-  const navigate = useNavigate();
+export default function ThreadMenu({ thread }: ThreadMenuProps) {
+  const { id: threadId, title } = thread;
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [draft, setDraft] = useState(title);
@@ -42,11 +42,6 @@ export default function ThreadMenu({ threadId, title }: ThreadMenuProps) {
     if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
     e.preventDefault();
     saveTitle();
-  };
-
-  const confirmDelete = () => {
-    deleteThread(threadId);
-    navigate("/", { replace: true });
   };
 
   return (
@@ -125,15 +120,9 @@ export default function ThreadMenu({ threadId, title }: ThreadMenuProps) {
         />
       </Dialog>
 
-      <ConfirmDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        variant="danger"
-        title="대화를 삭제할까요?"
-        description="삭제한 대화는 되돌릴 수 없어요."
-        confirmLabel="삭제"
-        contentClassName="font-chat"
-        onConfirm={confirmDelete}
+      <DeleteThreadDialog
+        thread={deleteOpen ? thread : null}
+        onClose={() => setDeleteOpen(false)}
       />
     </>
   );
