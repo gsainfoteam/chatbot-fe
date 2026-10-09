@@ -1,4 +1,4 @@
-import CodeBlock from "../../../components/CodeBlock";
+import CodeBlock from "@/components/CodeBlock";
 import LauncherIconGallery from "../LauncherIconGallery";
 
 export default function Customization() {

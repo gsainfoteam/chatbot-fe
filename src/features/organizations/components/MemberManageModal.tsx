@@ -5,12 +5,12 @@ import {
   inviteOrganizationMember,
   removeOrganizationMember,
   updateOrganizationMemberRole,
-} from "../../../api/organizations";
+} from "@/api/organizations";
 import type {
   Organization,
   OrgMemberRole,
   OrgMembership,
-} from "../../../api/types";
+} from "@/api/types";
 import {
   Button,
   ConfirmDialog,

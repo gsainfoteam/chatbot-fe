@@ -1,4 +1,4 @@
-import KeysContent from "./KeysContent";
+import { KeysContent } from "@/features/keys";
 
 export default function KeysPage() {
   return (

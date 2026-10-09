@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { UploadIcon } from "../../../components/Icons";
+import { UploadIcon } from "@/components/Icons";
 
 interface DocumentManagementNavItemProps {
   variant: "desktop" | "mobile";

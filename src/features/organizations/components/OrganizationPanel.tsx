@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { createOrganization } from "../../../api/organizations";
-import { canManageOrg } from "../../../api/roles";
-import type { Organization } from "../../../api/types";
-import { PlusIcon, UsersIcon } from "../../../components/Icons";
+import { createOrganization } from "@/api/organizations";
+import { canManageOrg } from "@/api/roles";
+import type { Organization } from "@/api/types";
+import { PlusIcon, UsersIcon } from "@/components/Icons";
 import { Button, Dialog } from "@/components/common";
 import InvitationBanner from "./InvitationBanner";
 import MemberManageModal from "./MemberManageModal";

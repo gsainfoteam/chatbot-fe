@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { loaderSource, loadWidget } from "../tests/helpers/loaderStub.js";
 
 export const OUTPUT_PATH = new URL(
-  "../src/pages/docs/launcherIcons.generated.ts",
+  "../src/features/docs/launcherIcons.generated.ts",
   import.meta.url
 );
 

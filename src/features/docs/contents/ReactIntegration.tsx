@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import CodeBlock from "../../../components/CodeBlock";
+import CodeBlock from "@/components/CodeBlock";
 
 const Step = ({ n }: { n: number }) => (
   <span className="inline-flex items-center justify-center w-8 h-8 bg-[#df3326] text-white rounded-full text-sm font-bold mr-3">

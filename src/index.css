@@ -15,7 +15,7 @@
 
 /*
  * 색상 테마 기본값 (위젯 공개 테마 API)
- * --color-* 변수는 loader.js / widget/utils.ts가 런타임에 덮어쓰는 값이라 이름을 바꾸면 안 됩니다.
+ * --color-* 변수는 loader.js / features/widget/utils.ts가 런타임에 덮어쓰는 값이라 이름을 바꾸면 안 됩니다.
  * shadcn 토큰(--primary, --border 등)은 아래 별도 블록에 있고, 유틸리티(bg-primary 등)는
  * @theme inline을 통해 --primary 계열만 참조하므로 이 블록과 충돌하지 않습니다.
  */
