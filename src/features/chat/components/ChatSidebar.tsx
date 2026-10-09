@@ -95,12 +95,12 @@ export default function ChatSidebar({
         </Tooltip>
       </div>
 
-      {/* 새 채팅 · 채팅 검색: Gemini식 얇은 행 (16px 아이콘 + 14px 라벨, 36px 알약) */}
+      {/* 새 채팅 · 채팅 검색: Gemini식 얇은 행 (16px 아이콘 + 14px 라벨, 36px, 대화 기록 행과 같은 radius 10px) */}
       <div className="flex flex-col gap-1.5">
         <Link
           to="/"
           className={cn(
-            "flex h-9 items-center gap-2.5 rounded-full bg-chat-brand-50 px-3 text-sm font-medium text-chat-brand-strong transition-colors hover:bg-chat-brand-100/70",
+            "flex h-9 items-center gap-2.5 rounded-chat-md bg-chat-brand-50 px-3 text-sm font-medium text-chat-brand-strong transition-colors hover:bg-chat-brand-100/70",
             ROW_FOCUS_RING,
           )}
         >
@@ -110,7 +110,7 @@ export default function ChatSidebar({
 
         <label
           className={cn(
-            "flex h-9 items-center gap-2.5 rounded-full px-3 text-chat-ink-2 transition-colors hover:bg-chat-hover focus-within:bg-chat-hover",
+            "flex h-9 items-center gap-2.5 rounded-chat-md px-3 text-chat-ink-2 transition-colors hover:bg-chat-hover focus-within:bg-chat-hover",
             "focus-within:outline-1 focus-within:outline-offset-1 focus-within:outline-chat-brand",
           )}
         >
@@ -153,7 +153,7 @@ export default function ChatSidebar({
                         FOCUS_RING,
                         // 쓰레기통 위에 있거나 쓰레기통이 포커스됐을 때도 행 전체가 하이라이트되도록 group 기준으로 적용
                         active
-                          ? "border border-chat-brand-100 bg-chat-brand-50 py-[7px] pl-[11px] font-semibold text-chat-ink"
+                          ? "border border-chat-brand-100 py-[7px] pl-[11px] font-semibold text-chat-ink"
                           : "py-2 pl-3 font-medium text-chat-ink-2 group-hover:bg-chat-hover group-focus-within:bg-chat-hover",
                       )}
                     >
