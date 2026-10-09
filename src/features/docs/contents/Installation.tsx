@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import CodeBlock from "../../../components/CodeBlock";
+import CodeBlock from "@/components/CodeBlock";
 
 const Code = ({ children }: { children: string }) => (
   <code className="bg-gray-100 px-2 py-1 rounded text-sm">{children}</code>

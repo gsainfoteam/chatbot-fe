@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { XIcon } from "../../components/Icons";
+import { XIcon } from "@/components/Icons";
 
 interface NavItem {
   title: string;
