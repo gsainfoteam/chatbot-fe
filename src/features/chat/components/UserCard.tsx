@@ -25,8 +25,8 @@ interface UserCardProps {
   onExpand?: () => void;
 }
 
-const RAIL_BUTTON_CLASS =
-  "flex size-10 items-center justify-center rounded-full text-chat-ink-2 transition-colors hover:bg-chat-hover hover:text-chat-ink";
+/** 접힌 레일용 아바타 버튼: 펼친 카드의 아바타(36px)와 같은 크기 */
+const RAIL_AVATAR_CLASS = cn(AVATAR_CLASS, "transition-colors hover:bg-chat-brand-100/70");
 
 /**
  * 사이드바 맨 아래 사용자 카드.
@@ -56,8 +56,8 @@ export default function UserCard({ variant = "row", onExpand }: UserCardProps) {
     if (!hasToken || !user) {
       return (
         <Tooltip content="로그인" side="right" className="font-chat">
-          <Link to="/login" aria-label="로그인" className={cn(RAIL_BUTTON_CLASS, FOCUS_RING)}>
-            <LogIn className="size-5" strokeWidth={1.8} aria-hidden="true" />
+          <Link to="/login" aria-label="로그인" className={cn(RAIL_AVATAR_CLASS, FOCUS_RING)}>
+            <LogIn className="size-[18px]" strokeWidth={1.8} aria-hidden="true" />
           </Link>
         </Tooltip>
       );
@@ -69,11 +69,9 @@ export default function UserCard({ variant = "row", onExpand }: UserCardProps) {
           type="button"
           onClick={onExpand}
           aria-label={`${name} 계정 (사이드바 열기)`}
-          className={cn(RAIL_BUTTON_CLASS, FOCUS_RING)}
+          className={cn(RAIL_AVATAR_CLASS, FOCUS_RING)}
         >
-          <span className={AVATAR_CLASS} aria-hidden="true">
-            {initialOf(name)}
-          </span>
+          {initialOf(name)}
         </button>
       </Tooltip>
     );

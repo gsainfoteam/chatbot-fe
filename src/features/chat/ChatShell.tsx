@@ -25,7 +25,8 @@ function readCollapsed(): boolean {
 /**
  * 홈(새 채팅)과 스레드 화면이 공유하는 레이아웃: 좌측 사이드바(272px) + 메인 영역.
  * lg 미만에서는 사이드바가 드로어로 바뀝니다. 라우트가 바뀌어도 이 셸은 유지됩니다.
- * - 데스크톱: 접으면 폭이 272px에서 64px 레일로 줄며 사이드바가 왼쪽으로 밀려 나가고 레일이 드러난다
+ * - 데스크톱: 접으면 폭이 272px에서 64px 레일로 줄어든다. 레일과 사이드바의 아이콘 위치가 같으므로
+ *   두 층을 제자리에서 크로스페이드해 아이콘은 고정된 채 라벨만 나타나고 사라지는 것처럼 보인다
  * - 모바일: Base UI Dialog로 드로어를 띄워 슬라이드 인/아웃, 포커스 가둠, ESC·바깥 클릭 닫기를 맡긴다
  */
 export default function ChatShell() {
@@ -107,7 +108,7 @@ export default function ChatShell() {
             className={cn(
               "absolute inset-y-0 left-0 w-16 transition-opacity",
               SIDEBAR_MOTION,
-              collapsed ? "opacity-100 delay-150" : "opacity-0 delay-0",
+              collapsed ? "opacity-100" : "opacity-0",
             )}
           >
             <ChatSidebarRail onOpen={openSidebar} />
@@ -115,9 +116,9 @@ export default function ChatShell() {
           <div
             inert={collapsed}
             className={cn(
-              "absolute inset-y-0 left-0 w-[272px] transition-transform",
+              "absolute inset-y-0 left-0 w-[272px] transition-opacity",
               SIDEBAR_MOTION,
-              collapsed && "-translate-x-full",
+              collapsed ? "opacity-0" : "opacity-100",
             )}
           >
             <ChatSidebar

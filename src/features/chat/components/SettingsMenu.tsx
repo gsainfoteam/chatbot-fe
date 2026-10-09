@@ -65,7 +65,7 @@ export default function SettingsMenu({ variant = "row" }: SettingsMenuProps) {
           FOCUS_RING,
         )}
       >
-        <Settings className="size-5" strokeWidth={1.8} aria-hidden="true" />
+        <Settings className="size-[18px]" strokeWidth={1.8} aria-hidden="true" />
       </Menu.Trigger>
     </Tooltip>
   ) : (

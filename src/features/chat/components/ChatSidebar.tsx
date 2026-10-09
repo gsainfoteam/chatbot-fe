@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { PanelLeftClose, Plus, Search, X } from "lucide-react";
+import { PanelLeftClose, Search, SquarePen, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/common";
 import { useChatStore } from "../chatStore";
@@ -18,6 +18,9 @@ interface ChatSidebarProps {
 
 const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-chat-brand";
+/** 새 채팅·채팅 검색처럼 촘촘히 붙은 행용 얇은 포커스 링 (옆 행을 넘지 않도록 1px, 오프셋 1px) */
+const ROW_FOCUS_RING =
+  "focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-chat-brand";
 
 /**
  * 좌측 사이드바(272px): 로고 · 새 채팅 · 검색 · 날짜별 채팅 기록 · 설정 메뉴 · 사용자 카드.
@@ -90,22 +93,22 @@ export default function ChatSidebar({
       </div>
 
       {/* 새 채팅 · 채팅 검색: Gemini식 얇은 행 (16px 아이콘 + 14px 라벨, 36px 알약) */}
-      <div className="flex flex-col gap-0.5">
+      <div className="flex flex-col gap-1.5">
         <Link
           to="/"
           className={cn(
             "flex h-9 items-center gap-2.5 rounded-full bg-chat-brand-50 px-3 text-sm font-medium text-chat-brand-strong transition-colors hover:bg-chat-brand-100/70",
-            FOCUS_RING,
+            ROW_FOCUS_RING,
           )}
         >
-          <Plus className="size-4 shrink-0" strokeWidth={2} aria-hidden="true" />
+          <SquarePen className="size-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
           새 채팅
         </Link>
 
         <label
           className={cn(
             "flex h-9 items-center gap-2.5 rounded-full px-3 text-chat-ink-2 transition-colors hover:bg-chat-hover focus-within:bg-chat-hover",
-            "focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-chat-brand",
+            "focus-within:outline-1 focus-within:outline-offset-1 focus-within:outline-chat-brand",
           )}
         >
           <Search className="size-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
