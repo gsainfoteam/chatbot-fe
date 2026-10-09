@@ -1,4 +1,4 @@
-import type { DocumentItem } from "../../api/types";
+import type { DocumentItem } from "@/api/types";
 
 /**
  * gcs path를 문서 링크로 변환

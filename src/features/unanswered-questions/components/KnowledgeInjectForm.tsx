@@ -3,8 +3,8 @@ import {
   isPdfFile,
   isWithinSizeLimit,
   MAX_FILE_SIZE_MB,
-} from "../../../api/upload";
-import { UploadIcon } from "../../../components/Icons";
+} from "@/api/upload";
+import { UploadIcon } from "@/components/Icons";
 import { Button } from "@/components/common";
 import type { KnowledgeInjectType } from "../types";
 import { formatFileSize } from "../utils";

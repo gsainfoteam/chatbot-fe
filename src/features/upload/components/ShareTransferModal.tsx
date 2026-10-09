@@ -4,9 +4,9 @@ import {
   shareUpload,
   transferUpload,
   unshareUpload,
-} from "../../../api/upload";
-import { canManageOrg } from "../../../api/roles";
-import type { DocumentItem, Organization } from "../../../api/types";
+} from "@/api/upload";
+import { canManageOrg } from "@/api/roles";
+import type { DocumentItem, Organization } from "@/api/types";
 import {
   Button,
   ConfirmDialog,
