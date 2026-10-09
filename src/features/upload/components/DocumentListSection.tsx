@@ -5,13 +5,13 @@ import {
   getUploadById,
   reprocessUpload,
   updateUploadExpiry,
-} from "../../../api/upload";
+} from "@/api/upload";
 import type {
   AccessibleUploadPage,
   AccessibleUploadSort,
   AccessibleUploadStatus,
-} from "../../../api/upload";
-import type { DocumentItem, DocumentStatus, Organization } from "../../../api/types";
+} from "@/api/upload";
+import type { DocumentItem, DocumentStatus, Organization } from "@/api/types";
 import {
   CalendarIcon,
   ClockIcon,
@@ -23,7 +23,7 @@ import {
   TrashIcon,
   TransferIcon,
   UnlinkIcon,
-} from "../../../components/Icons";
+} from "@/components/Icons";
 import {
   Button,
   ConfirmDialog,
