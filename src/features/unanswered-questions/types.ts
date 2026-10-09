@@ -1,4 +1,4 @@
-import type { DocumentStatus } from "../../api/types";
+import type { DocumentStatus } from "@/api/types";
 
 export type UnansweredQuestionStatus = "open" | "resolved";
 

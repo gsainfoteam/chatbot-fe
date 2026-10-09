@@ -1,11 +1,11 @@
 import axios from "axios";
-import { apiClient } from "../../api/client";
-import type { DocumentStatus } from "../../api/types";
+import { apiClient } from "@/api/client";
+import type { DocumentStatus } from "@/api/types";
 import {
   isPdfFile,
   isWithinSizeLimit,
   MAX_FILE_SIZE_MB,
-} from "../../api/upload";
+} from "@/api/upload";
 import type {
   InjectPdfKnowledgeInput,
   InjectTextKnowledgeInput,

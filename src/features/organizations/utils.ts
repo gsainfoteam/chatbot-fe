@@ -1,7 +1,7 @@
 import type {
   OrgEffectiveRole,
   OrgMembershipStatus,
-} from "../../api/types";
+} from "@/api/types";
 
 export function organizationRoleLabel(role: OrgEffectiveRole): string {
   switch (role) {

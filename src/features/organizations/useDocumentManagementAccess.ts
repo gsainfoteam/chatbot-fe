@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { getToken, useVerifyToken } from "../../api/auth";
+import { getToken, useVerifyToken } from "@/api/auth";
 import {
   getOrganizationInvitations,
   getOrganizations,
-} from "../../api/organizations";
-import { isSuperAdmin } from "../../api/roles";
+} from "@/api/organizations";
+import { isSuperAdmin } from "@/api/roles";
 import { organizationQueryKeys } from "./queryKeys";
 
 export interface DocumentManagementAccess {
