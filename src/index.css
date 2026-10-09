@@ -67,6 +67,104 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+/*
+ * GIST 챗봇 홈(채팅 앱) 디자인 토큰 — design/gist-chatbot-design/tokens/tokens.json 값 그대로.
+ * 위젯 테마 변수(--color-*)·shadcn 토큰(--border, --muted 등)과 이름이 겹치지 않도록 chat- 접두사를 씁니다.
+ * Tailwind 유틸리티는 아래 @theme inline 블록을 통해 bg-chat-brand, text-chat-ink, rounded-chat-lg 형태로 노출됩니다.
+ */
+:root {
+  --chat-brand: #ce4333;
+  --chat-brand-strong: #b83a2b;
+  --chat-brand-text: #ce4333;
+  --chat-brand-50: #fcf3f3;
+  --chat-brand-100: #f7dcd8;
+  --chat-bg: #fefcfc;
+  --chat-surface: #ffffff;
+  --chat-sidebar: #f9fafb;
+  --chat-hover: #f3f4f6;
+  --chat-border: #e6e7eb;
+  --chat-grid-line: #f8f0ef;
+  --chat-ink: #121827;
+  --chat-ink-2: #384151;
+  --chat-muted: #4c5564;
+  --chat-subtle: #6c7281;
+  --chat-on-brand: #ffffff;
+  --chat-code-bg: #292c33;
+  --chat-code-string: #a1c281;
+  --chat-code-keyword: #d17278;
+  --chat-shadow-sm: 0 1px 2px rgba(18, 24, 39, 0.06);
+  --chat-shadow-composer:
+    0 8px 28px rgba(206, 67, 51, 0.08), 0 1px 3px rgba(18, 24, 39, 0.06);
+  --chat-shadow-menu:
+    0 12px 32px rgba(18, 24, 39, 0.12), 0 1px 3px rgba(18, 24, 39, 0.06);
+}
+
+.dark {
+  --chat-brand: #c9483a;
+  --chat-brand-strong: #ef6b5e;
+  --chat-brand-text: #ef6b5e;
+  --chat-brand-50: #2a1d1d;
+  --chat-brand-100: #43282a;
+  --chat-bg: #15171c;
+  --chat-surface: #1d2027;
+  --chat-sidebar: #111317;
+  --chat-hover: #262a32;
+  --chat-border: #2c3038;
+  --chat-grid-line: #1c1f25;
+  --chat-ink: #f3f4f6;
+  --chat-ink-2: #d2d5db;
+  --chat-muted: #a9afba;
+  --chat-subtle: #8b919d;
+  --chat-on-brand: #ffffff;
+  --chat-code-bg: #0d0f12;
+  --chat-code-string: #a1c281;
+  --chat-code-keyword: #d17278;
+  --chat-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --chat-shadow-composer: 0 8px 28px rgba(0, 0, 0, 0.45);
+  --chat-shadow-menu: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+@theme inline {
+  --color-chat-brand: var(--chat-brand);
+  --color-chat-brand-strong: var(--chat-brand-strong);
+  --color-chat-brand-text: var(--chat-brand-text);
+  --color-chat-brand-50: var(--chat-brand-50);
+  --color-chat-brand-100: var(--chat-brand-100);
+  --color-chat-bg: var(--chat-bg);
+  --color-chat-surface: var(--chat-surface);
+  --color-chat-sidebar: var(--chat-sidebar);
+  --color-chat-hover: var(--chat-hover);
+  --color-chat-border: var(--chat-border);
+  --color-chat-grid-line: var(--chat-grid-line);
+  --color-chat-ink: var(--chat-ink);
+  --color-chat-ink-2: var(--chat-ink-2);
+  --color-chat-muted: var(--chat-muted);
+  --color-chat-subtle: var(--chat-subtle);
+  --color-chat-on-brand: var(--chat-on-brand);
+  --color-chat-code-bg: var(--chat-code-bg);
+  --color-chat-code-string: var(--chat-code-string);
+  --color-chat-code-keyword: var(--chat-code-keyword);
+  --font-chat:
+    Pretendard, "Pretendard Variable", "Apple SD Gothic Neo", "Noto Sans KR",
+    system-ui, sans-serif;
+  --radius-chat-sm: 6px;
+  --radius-chat-md: 10px;
+  --radius-chat-lg: 16px;
+  --radius-chat-xl: 26px;
+  --shadow-chat-sm: var(--chat-shadow-sm);
+  --shadow-chat-composer: var(--chat-shadow-composer);
+  --shadow-chat-menu: var(--chat-shadow-menu);
+}
+
+/* 메인 채팅 영역 배경 격자 (48px 피치, grid-line 토큰) */
+.chat-grid-bg {
+  background-color: var(--chat-bg);
+  background-image:
+    linear-gradient(var(--chat-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--chat-grid-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
 /* 툴팁 색상 (shadcn Tooltip 위에 프로젝트 테마 적용) */
 .tooltip-content {
   background-color: color-mix(
@@ -94,105 +192,9 @@
   [data-slot="dialog-content"],
   [data-slot="select-content"],
   [data-slot="popover-content"],
+  [data-slot="menu-content"],
   [data-slot="tooltip-content"] {
     animation: none !important;
-  }
-}
-
-/* Partners Marquee */
-@keyframes partners-marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-.partners-marquee-track {
-  animation: partners-marquee 32s linear infinite;
-}
-
-.partners-marquee:hover .partners-marquee-track {
-  animation-play-state: paused;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .partners-marquee-track {
-    animation: none;
-  }
-}
-
-/* Animated Background Keyframes */
-@keyframes gradientShift {
-  0% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.6;
-  }
-}
-
-@keyframes orbFloat1 {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  25% {
-    transform: translate(50px, -50px) scale(1.1);
-  }
-  50% {
-    transform: translate(100px, 0) scale(0.9);
-  }
-  75% {
-    transform: translate(50px, 50px) scale(1.05);
-  }
-}
-
-@keyframes orbFloat2 {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(-60px, 60px) scale(1.15);
-  }
-  66% {
-    transform: translate(-120px, -30px) scale(0.85);
-  }
-}
-
-@keyframes orbFloat3 {
-  0%,
-  100% {
-    transform: translate(-50%, -50%) scale(1) rotate(0deg);
-  }
-  50% {
-    transform: translate(-50%, -50%) scale(1.2) rotate(180deg);
-  }
-}
-
-@keyframes lineMove {
-  0% {
-    transform: translate(0, 0);
-  }
-  100% {
-    transform: translate(40px, 40px);
-  }
-}
-
-@keyframes pulseColor {
-  0%,
-  100% {
-    opacity: 0.7;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.08);
   }
 }
 
@@ -266,17 +268,6 @@
   }
   100% {
     background-position: -200% center;
-  }
-}
-
-/* Hero 커서 추적 글로우 - GPU 가속 */
-.hero-cursor-glow {
-  will-change: left, top;
-}
-
-@media (hover: none) {
-  .hero-cursor-glow {
-    opacity: 0.35 !important;
   }
 }
 

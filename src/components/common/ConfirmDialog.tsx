@@ -17,6 +17,8 @@ export interface ConfirmDialogProps {
   variant?: ConfirmDialogVariant;
   size?: DialogSize;
   fallbackErrorMessage?: string;
+  /** 모달 컨테이너에 추가할 클래스 (예: 포털 밖 폰트 지정) */
+  contentClassName?: string;
 }
 
 export default function ConfirmDialog({
@@ -31,6 +33,7 @@ export default function ConfirmDialog({
   variant = "primary",
   size = "sm",
   fallbackErrorMessage = "요청을 처리하지 못했습니다.",
+  contentClassName,
 }: ConfirmDialogProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +76,7 @@ export default function ConfirmDialog({
           : "bg-red-50 text-[var(--color-primary)] ring-red-100"
       }
       size={size}
+      contentClassName={contentClassName}
       closeDisabled={loading}
       bodyClassName="space-y-4 empty:hidden"
       footerClassName="peer-empty:border-t peer-empty:border-gray-100"

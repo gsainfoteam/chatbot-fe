@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>GIST 챗봇 홈</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:Pretendard,"Pretendard Variable","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;color:#121827;background:#fefcfc}
+a{color:#ce4333}a:hover{color:#b83a2b}
+.grid-bg{background-image:linear-gradient(#f8f0ef 1px,transparent 1px),linear-gradient(90deg,#f8f0ef 1px,transparent 1px);background-size:48px 48px}
+.side-item:hover{background:#f3f4f6}
+.icon-btn:hover{background:#f3f4f6}
+.btn-primary:hover{background:#b83a2b !important;color:#ffffff !important}
+.suggest:hover{border-color:#f7dcd8 !important;background:#fffafa !important}
+.dev-link:hover{background:#f3f4f6;color:#121827 !important}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #ce4333;outline-offset:2px}
+textarea::placeholder,input::placeholder{color:#6c7281}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; display: flex; overflow: hidden; background: #fefcfc">
+
+<aside style="width: 272px; height: 900px; box-sizing: border-box; flex-shrink: 0; background: #f9fafb; border-right: 1px solid #e6e7eb; display: flex; flex-direction: column; gap: 12px; padding: 14px 12px">
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 4px 6px">
+<div style="display: flex; align-items: center; gap: 10px">
+<div style="width: 30px; height: 30px; border-radius: 9px; background: #ce4333; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800">G</div>
+<span style="font-size: 18px; line-height: 28px; font-weight: 700; color: #121827">GIST 챗봇</span>
+</div>
+<button class="icon-btn" aria-label="사이드바 접기" style="width: 36px; height: 36px; border: 0; border-radius: 10px; background: transparent; color: #384151; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M9 4v16"></path></svg></button>
+</div>
+
+<a href="Main.dc.html" class="btn-primary" style="display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 10px; background: #ce4333; color: #ffffff; font-size: 15px; font-weight: 600; text-decoration: none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>새 채팅</a>
+
+<label style="display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1px solid #e6e7eb; border-radius: 10px; background: #ffffff; color: #6c7281"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><input type="search" aria-label="채팅 검색" placeholder="채팅 검색" style="flex-grow: 1; min-width: 0; border: 0; outline: none; background: transparent; font: inherit; font-size: 14px; color: #121827"></label>
+
+<nav aria-label="채팅 기록" style="flex-grow: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 18px; padding-top: 6px">
+<sc-for list="{{sections}}" as="sec" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 12px 6px; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.02em; color: #6c7281">{{sec.label}}</div>
+<sc-for list="{{sec.items}}" as="it" hint-placeholder-count="3">
+<a href="Thread.dc.html" class="side-item" style="display: block; padding: 8px 12px; border-radius: 10px; font-size: 14px; line-height: 20px; font-weight: 500; color: #384151; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{it.title}}</a>
+</sc-for>
+</div>
+</sc-for>
+</nav>
+
+<div style="position: relative; border-top: 1px solid #e6e7eb; padding-top: 10px">
+<sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+<div role="menu" style="position: absolute; left: 0; bottom: 56px; width: 248px; box-sizing: border-box; padding: 6px; background: #ffffff; border: 1px solid #e6e7eb; border-radius: 16px; box-shadow: 0 12px 32px rgba(18,24,39,0.12), 0 1px 3px rgba(18,24,39,0.06); display: flex; flex-direction: column; gap: 2px">
+<a href="#dashboard" class="dev-link" style="display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px; border-radius: 10px; font-size: 14px; font-weight: 500; color: #384151; text-decoration: none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V11M11 20V5M17 20v-6M3 20h18"></path></svg><span style="flex-grow: 1">대시보드</span><span style="padding: 1px 7px; border-radius: 999px; background: #fcf3f3; font-size: 11px; line-height: 16px; font-weight: 600; color: #b83a2b">관리자</span></a>
+<a href="#manage" class="dev-link" style="display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px; border-radius: 10px; font-size: 14px; font-weight: 500; color: #384151; text-decoration: none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"></path></svg><span style="flex-grow: 1">문서 관리</span><span style="padding: 1px 7px; border-radius: 999px; background: #fcf3f3; font-size: 11px; line-height: 16px; font-weight: 600; color: #b83a2b">관리자</span></a>
+<div style="height: 1px; margin: 4px 6px; background: #e6e7eb"></div>
+<a href="#docs" class="dev-link" style="display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px; border-radius: 10px; font-size: 14px; font-weight: 500; color: #384151; text-decoration: none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4z"></path><path d="M20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"></path></svg>문서</a>
+<a href="#keys" class="dev-link" style="display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px; border-radius: 10px; font-size: 14px; font-weight: 500; color: #384151; text-decoration: none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"></circle><path d="m11 12 9-9M17 6l3 3M15 8l2 2"></path></svg>키 발급</a>
+</div>
+</sc-if>
+<button type="button" class="dev-link" aria-haspopup="menu" onClick="{{toggleMenu}}" style="width: 100%; display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; font: inherit; font-size: 14px; line-height: 20px; font-weight: 500; color: #384151; cursor: pointer; text-align: left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>설정</button>
+</div>
+
+<div style="display: flex; align-items: center; gap: 10px; padding: 8px 6px 2px; border-top: 1px solid #e6e7eb">
+<div style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 999px; background: #fcf3f3; border: 1px solid #f7dcd8; color: #b83a2b; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700">준</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">
+<span style="font-size: 14px; line-height: 20px; font-weight: 600; color: #121827">준성</span>
+<span style="font-size: 12px; line-height: 16px; color: #6c7281">관리자</span>
+</div>
+<a href="#logout" class="icon-btn" aria-label="로그아웃" style="width: 36px; height: 36px; border-radius: 10px; color: #384151; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l5 4-5 4M20 12H9"></path></svg></a>
+</div>
+</aside>
+
+<main class="grid-bg" style="flex-grow: 1; height: 900px; display: flex; flex-direction: column; background-color: #fefcfc">
+<div style="height: 60px; flex-shrink: 0; box-sizing: border-box; padding: 0 24px; display: flex; align-items: center; justify-content: space-between">
+<span style="font-size: 14px; line-height: 20px; font-weight: 500; color: #6c7281">새 채팅</span>
+<a href="#guide" class="dev-link" style="display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 10px; font-size: 14px; font-weight: 500; color: #384151; text-decoration: none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"></path><path d="M12 17.5v.01"></path></svg>이용 안내</a>
+</div>
+
+<div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; padding: 0 48px 48px">
+<span style="padding: 6px 14px; border-radius: 999px; background: #fcf3f3; border: 1px solid #f7dcd8; font-size: 13px; line-height: 18px; font-weight: 600; color: #b83a2b">GIST 구성원을 위한 정보 챗봇</span>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 14px">
+<h1 style="margin: 0; text-align: center; font-size: 44px; line-height: 1.2; font-weight: 800; letter-spacing: -0.02em; color: #121827">준성님, 반가워요<br><span style="color: #ce4333">오늘은 무엇이 궁금하신가요?</span></h1>
+<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #4c5564">학사공지·장학·생활 정보를 공지 원문과 함께 찾아 드려요.</p>
+</div>
+
+<form style="width: 760px; box-sizing: border-box; background: #ffffff; border: 1px solid #e6e7eb; border-radius: 26px; box-shadow: 0 8px 28px rgba(206,67,51,0.08), 0 1px 3px rgba(18,24,39,0.06); padding: 18px 18px 12px 22px; display: flex; flex-direction: column; gap: 10px">
+<textarea rows="2" aria-label="질문 입력" placeholder="학사 일정, 장학금, 셔틀버스… 무엇이든 물어보세요" style="border: 0; outline: none; resize: none; background: transparent; font: inherit; font-size: 16px; line-height: 1.6; color: #121827"></textarea>
+<div style="display: flex; align-items: center; justify-content: space-between">
+<div style="display: flex; align-items: center; gap: 6px">
+<button type="button" class="icon-btn" aria-label="파일 첨부" style="width: 40px; height: 40px; border: 0; border-radius: 999px; background: transparent; color: #4c5564; display: flex; align-items: center; justify-content: center; cursor: pointer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 11-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 7"></path></svg></button>
+<button type="button" aria-pressed="true" style="display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid #f7dcd8; background: #fcf3f3; color: #b83a2b; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"></path></svg>출처 공지 함께 보기</button>
+</div>
+<a href="Thread.dc.html" class="btn-primary" aria-label="보내기" style="width: 44px; height: 44px; border-radius: 999px; background: #ce4333; color: #ffffff; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"></path></svg></a>
+</div>
+</form>
+
+<div style="width: 760px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<a href="Thread.dc.html" class="suggest" style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; background: #ffffff; border: 1px solid #e6e7eb; box-shadow: 0 1px 2px rgba(18,24,39,0.06); text-decoration: none">
+<span style="width: 38px; height: 38px; flex-shrink: 0; border-radius: 10px; background: #fcf3f3; color: #ce4333; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 600; color: #6c7281">학사</span><span style="font-size: 15px; line-height: 22px; font-weight: 600; color: #121827">이번 주 학사 일정 알려줘</span></span>
+</a>
+<a href="Thread.dc.html" class="suggest" style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; background: #ffffff; border: 1px solid #e6e7eb; box-shadow: 0 1px 2px rgba(18,24,39,0.06); text-decoration: none">
+<span style="width: 38px; height: 38px; flex-shrink: 0; border-radius: 10px; background: #fcf3f3; color: #ce4333; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="15" rx="3"></rect><path d="M4 11h16M8 21v-3M16 21v-3"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 600; color: #6c7281">교통</span><span style="font-size: 15px; line-height: 22px; font-weight: 600; color: #121827">오늘 셔틀버스 시간표 보여줘</span></span>
+</a>
+<a href="Thread.dc.html" class="suggest" style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; background: #ffffff; border: 1px solid #e6e7eb; box-shadow: 0 1px 2px rgba(18,24,39,0.06); text-decoration: none">
+<span style="width: 38px; height: 38px; flex-shrink: 0; border-radius: 10px; background: #fcf3f3; color: #ce4333; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="9" r="6"></circle><path d="m8.5 14-1.5 8 5-3 5 3-1.5-8"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 600; color: #6c7281">장학</span><span style="font-size: 15px; line-height: 22px; font-weight: 600; color: #121827">지금 신청할 수 있는 장학금 있어?</span></span>
+</a>
+<a href="Thread.dc.html" class="suggest" style="display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; background: #ffffff; border: 1px solid #e6e7eb; box-shadow: 0 1px 2px rgba(18,24,39,0.06); text-decoration: none">
+<span style="width: 38px; height: 38px; flex-shrink: 0; border-radius: 10px; background: #fcf3f3; color: #ce4333; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11 12 4l9 7"></path><path d="M5 10v10h14V10"></path><path d="M10 20v-5h4v5"></path></svg></span>
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 600; color: #6c7281">생활</span><span style="font-size: 15px; line-height: 22px; font-weight: 600; color: #121827">기숙사 최근 공지 요약해줘</span></span>
+</a>
+</div>
+</div>
+
+<p style="margin: 0; padding: 0 24px 20px; text-align: center; font-size: 12px; line-height: 18px; color: #6c7281">답변은 GIST 공지를 바탕으로 생성돼요. 마감일·제출 서류는 원문을 꼭 확인해 주세요.</p>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { menuOpen: false }; }
+  renderVals() {
+    var self = this;
+    return {
+      menuOpen: !!this.state.menuOpen,
+      toggleMenu: function () { self.setState({ menuOpen: !self.state.menuOpen }); },
+      sections: [
+        { label: '오늘', items: [{ title: '2학기 수강 정정 기간' }, { title: '셔틀버스 주말 운행 여부' }] },
+        { label: '어제', items: [{ title: '국가장학금 신청 서류' }, { title: '기숙사 퇴사 절차' }] },
+        { label: '지난 7일', items: [{ title: '졸업 학점 요건 확인' }, { title: '도서관 열람실 운영 시간' }, { title: '학생식당 이번 주 메뉴' }, { title: '학위논문 제출 일정' }] }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

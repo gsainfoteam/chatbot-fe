@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import { getToken, logoutFromOAuth2, revokeToken } from "../api/auth";
+import { getToken } from "../api/auth";
+import { performLogout } from "../features/auth";
 import {
   DocumentManagementNavItem,
   useDocumentManagementAccess,
@@ -21,24 +22,7 @@ export default function Header() {
 
   const handleLogout = async () => {
     setIsMobileMenuOpen(false);
-
-    // 1. 백엔드 로그아웃 (토큰 무효화 + 로컬 토큰 삭제)
-    await revokeToken();
-
-    // 2. OAuth Provider 로그아웃 (선택사항 - 환경 변수가 설정되어 있으면 실행)
-    const logoutUrl = import.meta.env.VITE_OAUTH2_LOGOUT_URL;
-    if (logoutUrl) {
-      try {
-        await logoutFromOAuth2();
-        // logoutFromOAuth2가 리다이렉트를 처리하므로 여기서 return
-        return;
-      } catch (error) {
-        console.error("OAuth2 로그아웃 실패:", error);
-      }
-    }
-
-    // 3. 홈으로 이동
-    window.location.replace("/");
+    await performLogout();
   };
 
   const closeMobileMenu = () => {
