@@ -50,9 +50,9 @@ export default function ChatSidebar({
   const groups = groupThreadsByDate(filtered);
   const emptyText =
     threads.length === 0
-      ? "아직 대화가 없어요. 새 채팅을 시작해 보세요."
+      ? "아직 나눈 대화가 없어요"
       : filtered.length === 0
-        ? "검색 결과가 없어요."
+        ? "검색 결과가 없어요"
         : null;
 
   return (
