@@ -5,9 +5,9 @@ export interface ChatShellContextValue {
   sidebarCollapsed: boolean;
   /** 모바일 드로어가 열려 있는지 (메뉴 버튼의 aria-expanded용) */
   drawerOpen: boolean;
-  /** 모바일: 드로어 열기 / 데스크톱: 접힌 사이드바 펼치기 */
-  openSidebar: () => void;
-  /** 상단 바 "메뉴 열기" 버튼. 드로어가 닫히면 포커스를 여기로 되돌립니다 */
+  /** 모바일: 드로어 열기 / 데스크톱: 접힌 사이드바 열기. focusSearch면 연 뒤 채팅 검색에 포커스 */
+  openSidebar: (options?: { focusSearch?: boolean }) => void;
+  /** 상단 바 "사이드바 열기" 버튼. 드로어가 닫히면 포커스를 여기로 되돌립니다 */
   menuButtonRef: RefObject<HTMLButtonElement | null>;
 }
 

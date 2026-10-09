@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { PanelLeftClose, Plus, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tooltip } from "@/components/common";
 import { useChatStore } from "../chatStore";
 import { filterThreads, groupThreadsByDate } from "../threadGroups";
 import SettingsMenu from "./SettingsMenu";
@@ -11,6 +12,8 @@ interface ChatSidebarProps {
   /** desktop: 접기 버튼 / drawer: 닫기 버튼 */
   variant: "desktop" | "drawer";
   onClose: () => void;
+  /** 값이 바뀔 때마다 채팅 검색 입력에 포커스 (레일의 검색 아이콘으로 열었을 때) */
+  focusSearchToken?: number;
 }
 
 const FOCUS_RING =
@@ -20,10 +23,19 @@ const FOCUS_RING =
  * 좌측 사이드바(272px): 로고 · 새 채팅 · 검색 · 날짜별 채팅 기록 · 설정 메뉴 · 사용자 카드.
  * drawer 변형은 ChatShell의 드로어 래퍼가 폭을 정하므로 w-full로 채웁니다.
  */
-export default function ChatSidebar({ variant, onClose }: ChatSidebarProps) {
+export default function ChatSidebar({
+  variant,
+  onClose,
+  focusSearchToken = 0,
+}: ChatSidebarProps) {
   const { threads } = useChatStore();
   const { threadId } = useParams<{ threadId: string }>();
   const [query, setQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (focusSearchToken > 0) searchInputRef.current?.focus();
+  }, [focusSearchToken]);
 
   const isDrawer = variant === "drawer";
   const CloseIcon = isDrawer ? X : PanelLeftClose;
@@ -60,50 +72,54 @@ export default function ChatSidebar({ variant, onClose }: ChatSidebarProps) {
             GIST 챗봇
           </span>
         </Link>
-        {/* 드로어로 열리면 포커스가 오버레이 뒤에 남지 않도록 닫기 버튼에 바로 포커스 */}
-        <button
-          type="button"
-          onClick={onClose}
-          autoFocus={isDrawer}
-          aria-label={isDrawer ? "메뉴 닫기" : "사이드바 접기"}
+        {/* 드로어로 열리면 ChatShell이 이 버튼(data-sidebar-close)에 먼저 포커스를 준다 */}
+        <Tooltip content="사이드바 닫기" className="font-chat">
+          <button
+            type="button"
+            onClick={onClose}
+            data-sidebar-close=""
+            aria-label="사이드바 닫기"
+            className={cn(
+              "flex size-9 shrink-0 items-center justify-center rounded-chat-md text-chat-ink-2 transition-colors hover:bg-chat-hover",
+              FOCUS_RING,
+            )}
+          >
+            <CloseIcon className="size-5" strokeWidth={1.8} aria-hidden="true" />
+          </button>
+        </Tooltip>
+      </div>
+
+      {/* 새 채팅 · 채팅 검색: Gemini식 얇은 행 (16px 아이콘 + 14px 라벨, 36px 알약) */}
+      <div className="flex flex-col gap-0.5">
+        <Link
+          to="/"
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-chat-md text-chat-ink-2 transition-colors hover:bg-chat-hover",
+            "flex h-9 items-center gap-2.5 rounded-full bg-chat-brand-50 px-3 text-sm font-medium text-chat-brand-strong transition-colors hover:bg-chat-brand-100/70",
             FOCUS_RING,
           )}
         >
-          <CloseIcon className="size-5" strokeWidth={1.8} aria-hidden="true" />
-        </button>
+          <Plus className="size-4 shrink-0" strokeWidth={2} aria-hidden="true" />
+          새 채팅
+        </Link>
+
+        <label
+          className={cn(
+            "flex h-9 items-center gap-2.5 rounded-full px-3 text-chat-ink-2 transition-colors hover:bg-chat-hover focus-within:bg-chat-hover",
+            "focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-chat-brand",
+          )}
+        >
+          <Search className="size-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+          <input
+            ref={searchInputRef}
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="채팅 검색"
+            placeholder="채팅 검색"
+            className="min-w-0 flex-1 bg-transparent text-sm font-medium text-chat-ink outline-none placeholder:font-medium placeholder:text-chat-ink-2"
+          />
+        </label>
       </div>
-
-      {/* 새 채팅 */}
-      <Link
-        to="/"
-        className={cn(
-          "flex h-11 items-center gap-2 rounded-chat-md bg-chat-brand px-3.5 text-[15px] font-semibold text-chat-on-brand transition-colors hover:bg-chat-brand-strong",
-          FOCUS_RING,
-        )}
-      >
-        <Plus className="size-[18px] shrink-0" strokeWidth={2} aria-hidden="true" />
-        새 채팅
-      </Link>
-
-      {/* 채팅 검색 */}
-      <label
-        className={cn(
-          "flex h-10 items-center gap-2 rounded-chat-md border border-chat-border bg-chat-surface px-3 text-chat-subtle",
-          "focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-chat-brand",
-        )}
-      >
-        <Search className="size-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          aria-label="채팅 검색"
-          placeholder="채팅 검색"
-          className="min-w-0 flex-1 bg-transparent text-sm text-chat-ink outline-none placeholder:text-chat-subtle"
-        />
-      </label>
 
       {/* 채팅 기록 (포커스 링이 잘리지 않도록 -mx-1 px-1로 여유를 둠) */}
       <nav

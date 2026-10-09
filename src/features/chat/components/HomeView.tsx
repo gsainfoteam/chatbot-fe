@@ -70,10 +70,7 @@ export default function HomeView() {
 
   return (
     <>
-      <TopBar
-        title={<span className="text-sm font-medium text-chat-subtle">새 채팅</span>}
-        actions={guideButton}
-      />
+      <TopBar actions={guideButton} />
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {/* 시안: padding 0 48px 48px. 좁은 화면에서만 상단 여백을 조금 둔다 */}

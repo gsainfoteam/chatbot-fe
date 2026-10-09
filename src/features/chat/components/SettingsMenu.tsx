@@ -5,6 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import { getToken } from "@/api/auth";
 import { useDocumentManagementAccess } from "@/features/organizations";
 import { cn } from "@/lib/utils";
+import { Tooltip } from "@/components/common";
 import { MENU_ITEM_CLASS, MENU_POPUP_CLASS, MENU_POSITIONER_CLASS } from "./menuStyles";
 
 const FOCUS_RING =
@@ -36,37 +37,59 @@ function MenuItem({ to, icon: Icon, label, admin = false }: MenuItemProps) {
   );
 }
 
+interface SettingsMenuProps {
+  /** row: 사이드바 하단 행 / icon: 접힌 레일의 아이콘 버튼 (메뉴가 오른쪽으로 열림) */
+  variant?: "row" | "icon";
+}
+
 /**
  * 사이드바 하단 "설정" 버튼 + 위로 열리는 메뉴(248px).
  * Base UI Menu라 방향키·Home/End·글자 입력 탐색이 role="menu" 의미에 맞게 동작합니다.
  * 로그인한 계정에만 대시보드 행을, 문서 관리 권한이 있을 때만 문서 관리 행을 보여줍니다.
  */
-export default function SettingsMenu() {
+export default function SettingsMenu({ variant = "row" }: SettingsMenuProps) {
   const hasToken = !!getToken();
   const { canAccess } = useDocumentManagementAccess();
 
   const showDashboard = hasToken;
   const showDocumentManagement = hasToken && canAccess;
   const showAdminRows = showDashboard || showDocumentManagement;
+  const isIcon = variant === "icon";
 
-  return (
-    <Menu.Root modal={false}>
+  const trigger = isIcon ? (
+    <Tooltip content="설정" side="right" className="font-chat">
       <Menu.Trigger
+        aria-label="설정"
         className={cn(
-          "flex h-10 w-full items-center gap-2.5 rounded-chat-md px-3 text-left text-sm leading-5 font-medium text-chat-ink-2 transition-colors hover:bg-chat-hover hover:text-chat-ink data-popup-open:bg-chat-hover data-popup-open:text-chat-ink",
+          "flex size-10 items-center justify-center rounded-full text-chat-ink-2 transition-colors hover:bg-chat-hover hover:text-chat-ink data-popup-open:bg-chat-hover data-popup-open:text-chat-ink",
           FOCUS_RING,
         )}
       >
-        <Settings className="size-[18px] shrink-0" strokeWidth={1.8} aria-hidden="true" />
-        설정
+        <Settings className="size-5" strokeWidth={1.8} aria-hidden="true" />
       </Menu.Trigger>
+    </Tooltip>
+  ) : (
+    <Menu.Trigger
+      className={cn(
+        "flex h-10 w-full items-center gap-2.5 rounded-chat-md px-3 text-left text-sm leading-5 font-medium text-chat-ink-2 transition-colors hover:bg-chat-hover hover:text-chat-ink data-popup-open:bg-chat-hover data-popup-open:text-chat-ink",
+        FOCUS_RING,
+      )}
+    >
+      <Settings className="size-[18px] shrink-0" strokeWidth={1.8} aria-hidden="true" />
+      설정
+    </Menu.Trigger>
+  );
+
+  return (
+    <Menu.Root modal={false}>
+      {trigger}
 
       <Menu.Portal>
-        {/* 시안: 메뉴 하단이 설정 버튼 위로 16px 떨어짐 (bottom 56px − 버튼 40px) */}
+        {/* 시안: 메뉴 하단이 설정 버튼 위로 16px 떨어짐 (bottom 56px − 버튼 40px). 레일에서는 오른쪽으로 */}
         <Menu.Positioner
-          side="top"
-          align="start"
-          sideOffset={16}
+          side={isIcon ? "right" : "top"}
+          align={isIcon ? "end" : "start"}
+          sideOffset={isIcon ? 8 : 16}
           className={MENU_POSITIONER_CLASS}
         >
           <Menu.Popup

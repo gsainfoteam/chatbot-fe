@@ -5,6 +5,7 @@ import { getToken, useVerifyToken } from "@/api/auth";
 import { isSuperAdmin } from "@/api/roles";
 import { performLogout } from "@/features/auth";
 import { cn } from "@/lib/utils";
+import { Tooltip } from "@/components/common";
 
 const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-chat-brand";
@@ -17,14 +18,26 @@ function initialOf(name: string): string {
   return Array.from(name.trim())[0] ?? "";
 }
 
+interface UserCardProps {
+  /** row: 사이드바 하단 카드 / icon: 접힌 레일의 아바타 버튼 */
+  variant?: "row" | "icon";
+  /** icon 변형에서 아바타를 누르면 호출 (사이드바를 열어 전체 카드를 보여줄 때) */
+  onExpand?: () => void;
+}
+
+const RAIL_BUTTON_CLASS =
+  "flex size-10 items-center justify-center rounded-full text-chat-ink-2 transition-colors hover:bg-chat-hover hover:text-chat-ink";
+
 /**
  * 사이드바 맨 아래 사용자 카드.
  * 로그인 상태: 아바타 · 이름 · 역할 · 로그아웃 / 미로그인: 로그인 페이지로 가는 행.
+ * icon 변형은 접힌 레일용으로 아바타(또는 로그인 아이콘)만 보여줍니다.
  */
-export default function UserCard() {
+export default function UserCard({ variant = "row", onExpand }: UserCardProps) {
   const hasToken = !!getToken();
   const { data: user, isLoading } = useVerifyToken(hasToken);
   const [loggingOut, setLoggingOut] = useState(false);
+  const isIcon = variant === "icon";
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -35,6 +48,36 @@ export default function UserCard() {
       setLoggingOut(false);
     }
   };
+
+  if (isIcon) {
+    if (hasToken && isLoading) {
+      return <div aria-busy="true" className="size-9 animate-pulse rounded-full bg-chat-hover" />;
+    }
+    if (!hasToken || !user) {
+      return (
+        <Tooltip content="로그인" side="right" className="font-chat">
+          <Link to="/login" aria-label="로그인" className={cn(RAIL_BUTTON_CLASS, FOCUS_RING)}>
+            <LogIn className="size-5" strokeWidth={1.8} aria-hidden="true" />
+          </Link>
+        </Tooltip>
+      );
+    }
+    const name = user.name || user.email;
+    return (
+      <Tooltip content={name} side="right" className="font-chat">
+        <button
+          type="button"
+          onClick={onExpand}
+          aria-label={`${name} 계정 (사이드바 열기)`}
+          className={cn(RAIL_BUTTON_CLASS, FOCUS_RING)}
+        >
+          <span className={AVATAR_CLASS} aria-hidden="true">
+            {initialOf(name)}
+          </span>
+        </button>
+      </Tooltip>
+    );
+  }
 
   // 토큰 검증 중: 중립 스켈레톤
   if (hasToken && isLoading) {
