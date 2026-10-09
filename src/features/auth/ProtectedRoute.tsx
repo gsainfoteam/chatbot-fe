@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { useVerifyToken, getToken } from "../api/auth";
-import LoadingSpinner from "./LoadingSpinner";
+import { useVerifyToken, getToken } from "@/api/auth";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
