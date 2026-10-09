@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { PanelLeftClose, Search, SquarePen, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/common";
@@ -35,6 +35,9 @@ export default function ChatSidebar({
 }: ChatSidebarProps) {
   const { threads } = useChatStore();
   const { threadId } = useParams<{ threadId: string }>();
+  const { pathname } = useLocation();
+  // 홈(새 채팅)에 있을 때만 새 채팅 행을 강조하고, 대화를 열면 그 대화 행만 강조한다
+  const onHome = pathname === "/";
   const [query, setQuery] = useState("");
   const [pendingDelete, setPendingDelete] = useState<ChatThread | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -99,8 +102,12 @@ export default function ChatSidebar({
       <div className="flex flex-col gap-1.5">
         <Link
           to="/"
+          aria-current={onHome ? "page" : undefined}
           className={cn(
-            "flex h-9 items-center gap-2.5 rounded-chat-md bg-chat-brand-50 px-3 text-sm font-medium text-chat-brand-strong transition-colors hover:bg-chat-brand-100/70",
+            "flex h-9 items-center gap-2.5 rounded-chat-md px-3 text-sm font-medium transition-colors",
+            onHome
+              ? "bg-chat-brand-50 text-chat-brand-strong hover:bg-chat-brand-100/70"
+              : "text-chat-ink-2 hover:bg-chat-hover",
             ROW_FOCUS_RING,
           )}
         >
@@ -149,12 +156,13 @@ export default function ChatSidebar({
                       to={`/c/${thread.id}`}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "block truncate rounded-chat-md pr-9 text-sm leading-5 transition-colors",
+                        "block truncate rounded-chat-md py-2 pr-9 pl-3 text-sm leading-5 font-medium transition-colors",
                         FOCUS_RING,
-                        // 쓰레기통 위에 있거나 쓰레기통이 포커스됐을 때도 행 전체가 하이라이트되도록 group 기준으로 적용
+                        // 선택된 대화는 새 채팅 행과 같은 강조(brand-50 배경). 쓰레기통 위에 있거나
+                        // 쓰레기통이 포커스됐을 때도 행 전체가 하이라이트되도록 group 기준으로 적용
                         active
-                          ? "border border-chat-brand-100 py-[7px] pl-[11px] font-semibold text-chat-ink"
-                          : "py-2 pl-3 font-medium text-chat-ink-2 group-hover:bg-chat-hover group-focus-within:bg-chat-hover",
+                          ? "bg-chat-brand-50 text-chat-brand-strong group-hover:bg-chat-brand-100/70"
+                          : "text-chat-ink-2 group-hover:bg-chat-hover group-focus-within:bg-chat-hover",
                       )}
                     >
                       {thread.title}

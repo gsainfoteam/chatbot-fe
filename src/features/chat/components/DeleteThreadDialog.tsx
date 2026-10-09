@@ -33,7 +33,7 @@ export default function DeleteThreadDialog({ thread, onClose }: DeleteThreadDial
       title="대화를 삭제할까요?"
       description={
         thread
-          ? `"${thread.title}" 대화와 메시지가 지워져요. 삭제한 대화는 되돌릴 수 없어요.`
+          ? `"${thread.title}" 대화와 메시지가 지워져요.\n삭제한 대화는 되돌릴 수 없어요.`
           : ""
       }
       confirmLabel="삭제"
