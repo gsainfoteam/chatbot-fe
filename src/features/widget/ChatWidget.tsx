@@ -213,6 +213,9 @@ export default function ChatWidget({
 
   const [ctx, setCtx] = useState<WidgetContext>({});
   const listRef = useRef<HTMLDivElement | null>(null);
+  // 사용자가 위로 스크롤하면 자동 하단 스크롤을 멈추고, 다시 하단에 닿으면 재개
+  const [autoScroll, setAutoScroll] = useState(true);
+  const lastScrollTopRef = useRef(0);
 
   // 미리보기 모드 확인 (URL 파라미터)
   const isPreviewMode =
@@ -322,11 +325,22 @@ export default function ChatWidget({
   );
 
   useEffect(() => {
+    if (!autoScroll) return;
     listRef.current?.scrollTo({
       top: listRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [scrollSignal, loading]);
+  }, [scrollSignal, loading, autoScroll]);
+
+  // 자동 스크롤은 아래로만 움직이므로, 위로 움직였다면 사용자 입력으로 본다
+  const handleListScroll = () => {
+    const el = listRef.current;
+    if (!el) return;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 16;
+    if (atBottom) setAutoScroll(true);
+    else if (el.scrollTop < lastScrollTopRef.current) setAutoScroll(false);
+    lastScrollTopRef.current = el.scrollTop;
+  };
 
   // 429 경고 시 재시도 가능 시간 카운트다운
   useEffect(() => {
@@ -580,6 +594,7 @@ export default function ChatWidget({
     const userMsg: ChatMessage = { id: uid(), role: "user", text };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
+    setAutoScroll(true);
     setLoadingMessage("자료를 찾아보는 중");
     setLoading(true);
 
@@ -936,221 +951,245 @@ export default function ChatWidget({
         </div>
 
         {/* Messages */}
-        <div
-          ref={listRef}
-          className="flex-1 overflow-auto px-3 py-3 flex flex-col"
-          style={{
-            backgroundColor: "var(--color-background, #f8fafc)",
-          }}
-        >
-          {messages.map((m, msgIdx) => (
-            <Fragment key={m.id}>
-              <div
-                className={`flex mb-2 ${
-                  m.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
+        <div className="relative flex-1 min-h-0 flex flex-col">
+          <div
+            ref={listRef}
+            onScroll={handleListScroll}
+            // 스트리밍 중 smooth 스크롤이 휠 스크롤을 덮어쓰므로 휠 방향으로 바로 판단
+            onWheel={(e) => {
+              if (e.deltaY < 0) setAutoScroll(false);
+            }}
+            className="flex-1 overflow-auto px-3 py-3 flex flex-col"
+            style={{
+              backgroundColor: "var(--color-background, #f8fafc)",
+            }}
+          >
+            {messages.map((m, msgIdx) => (
+              <Fragment key={m.id}>
                 <div
-                  className="max-w-[80%] text-[14px] leading-snug px-3 py-2 rounded-2xl border wrap-break-words"
-                  style={
-                    m.role === "user"
-                      ? {
-                          backgroundColor: `color-mix(in srgb, var(--color-user-message-bg, var(--color-primary, #ff4500)) 10%, transparent)`,
-                          borderColor: `color-mix(in srgb, var(--color-user-message-bg, var(--color-primary, #ff4500)) 25%, transparent)`,
-                          color: "var(--color-text, #1e293b)",
-                        }
-                      : {
-                          backgroundColor:
-                            "var(--color-assistant-message-bg, #ffffff)",
-                          borderColor: "var(--color-border, #e2e8f0)",
-                          color: "var(--color-text, #1e293b)",
-                        }
-                  }
+                  className={`flex mb-2 ${
+                    m.role === "user" ? "justify-end" : "justify-start"
+                  }`}
                 >
-                  {m.role === "assistant" ? (
-                    m.text ? (
-                      <Streamdown
-                        plugins={{ code }}
-                        isAnimating={
-                          loading &&
-                          msgIdx === messages.length - 1 &&
-                          m.role === "assistant"
-                        }
-                        className="text-[var(--color-text,#1e293b)] [&_a]:text-[var(--color-primary,var(--color-button,#df3326))]"
-                      >
-                        {m.text}
-                      </Streamdown>
-                    ) : (
-                      <div className="flex items-center gap-1.5">
-                        <span className="loading-text-shimmer">
-                          {loadingMessage}
-                        </span>
-                        <span
-                          className="flex items-center gap-1.5"
-                          style={{
-                            color: "var(--color-text-secondary, #64748b)",
-                          }}
-                        >
-                          <span className="thinking-dot"></span>
-                          <span className="thinking-dot"></span>
-                          <span className="thinking-dot"></span>
-                        </span>
-                      </div>
-                    )
-                  ) : (
-                    m.text
-                  )}
-
-                  {/* 출처 정보 표시 (assistant 메시지만) */}
-                  {m.role === "assistant" &&
-                    m.sources &&
-                    m.sources.length > 0 && (
-                      <div
-                        className="mt-2 pt-3 border-t flex flex-col gap-1"
-                        style={{
-                          borderTopColor: "var(--color-border, #e2e8f0)",
-                        }}
-                      >
-                        {/* 출처 배지 */}
-                        <div className="flex flex-wrap gap-1.5">
-                          {m.sources.map((source, idx) => (
-                            <SourceBadge key={idx} source={source} />
-                          ))}
-                        </div>
-
-                        {/* 이미지 출처 표시 */}
-                        {m.sources
-                          .filter((s) => s.type === "image")
-                          .map((source, idx) => (
-                            <SourceImage key={`img-${idx}`} source={source} />
-                          ))}
-                      </div>
-                    )}
-                </div>
-              </div>
-
-              {/* 답변 피드백 버튼 (서버에 저장된 assistant 답변에만 표시) */}
-              {m.role === "assistant" && m.serverId && (
-                <div className="flex items-center gap-0.5 -mt-1 mb-2 pl-1">
-                  <FeedbackButton
-                    rating="GOOD"
-                    selected={m.feedback === "GOOD"}
-                    disabled={
-                      loading || feedbackBusyId !== null || isPreviewMode
-                    }
-                    onClick={() => void handleFeedback(m, "GOOD")}
-                  />
-                  <FeedbackButton
-                    rating="BAD"
-                    selected={m.feedback === "BAD"}
-                    disabled={
-                      loading || feedbackBusyId !== null || isPreviewMode
-                    }
-                    onClick={() => void handleFeedback(m, "BAD")}
-                  />
-                  {m.regeneratedAnswer ? (
-                    <span
-                      className="ml-1 text-[10px]"
-                      style={{ color: "var(--color-text-secondary, #94a3b8)" }}
-                    >
-                      다시 생성된 답변
-                    </span>
-                  ) : (
-                    !m.feedback && (
-                      <span
-                        className="ml-1 text-[10px]"
-                        style={{
-                          color: "var(--color-text-secondary, #94a3b8)",
-                        }}
-                      >
-                        답변이 도움이 되었나요?
-                      </span>
-                    )
-                  )}
-                </div>
-              )}
-
-              {/* 첫 번째 메시지 뒤에 자주 묻는 질문 표시 */}
-              {msgIdx === 0 &&
-                showFrequentQuestions &&
-                frequentQuestions.length > 0 && (
-                  <div className="mt-1 mb-2 w-full">
-                    <div
-                      className="text-[11px] font-medium mb-1.5 px-0.5"
-                      style={{
-                        color: "var(--color-text-secondary, #94a3b8)",
-                      }}
-                    >
-                      이런 것들을 물어보세요
-                    </div>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {frequentQuestions.map((fq, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          className="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-left transition-all duration-150 active:scale-[0.98] cursor-pointer"
-                          style={{
+                  <div
+                    className="max-w-[80%] text-[14px] leading-snug px-3 py-2 rounded-2xl border wrap-break-words"
+                    style={
+                      m.role === "user"
+                        ? {
+                            backgroundColor: `color-mix(in srgb, var(--color-user-message-bg, var(--color-primary, #ff4500)) 10%, transparent)`,
+                            borderColor: `color-mix(in srgb, var(--color-user-message-bg, var(--color-primary, #ff4500)) 25%, transparent)`,
+                            color: "var(--color-text, #1e293b)",
+                          }
+                        : {
                             backgroundColor:
                               "var(--color-assistant-message-bg, #ffffff)",
                             borderColor: "var(--color-border, #e2e8f0)",
                             color: "var(--color-text, #1e293b)",
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor =
-                              "color-mix(in srgb, var(--color-primary, #df3326) 40%, var(--color-border, #e2e8f0))";
-                            e.currentTarget.style.boxShadow =
-                              "0 1px 4px rgba(0,0,0,0.06)";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor =
-                              "var(--color-border, #e2e8f0)";
-                            e.currentTarget.style.boxShadow = "none";
-                          }}
-                          onClick={() => send(fq.question || fq.label)}
+                          }
+                    }
+                  >
+                    {m.role === "assistant" ? (
+                      m.text ? (
+                        <Streamdown
+                          plugins={{ code }}
+                          isAnimating={
+                            loading &&
+                            msgIdx === messages.length - 1 &&
+                            m.role === "assistant"
+                          }
+                          className="text-[var(--color-text,#1e293b)] [&_a]:text-[var(--color-primary,var(--color-button,#df3326))]"
                         >
-                          <span className="text-base leading-none shrink-0">
-                            {fq.icon}
+                          {m.text}
+                        </Streamdown>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <span className="loading-text-shimmer">
+                            {loadingMessage}
                           </span>
-                          <span className="text-xs font-medium truncate">
-                            {fq.label}
+                          <span
+                            className="flex items-center gap-1.5"
+                            style={{
+                              color: "var(--color-text-secondary, #64748b)",
+                            }}
+                          >
+                            <span className="thinking-dot"></span>
+                            <span className="thinking-dot"></span>
+                            <span className="thinking-dot"></span>
                           </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-            </Fragment>
-          ))}
+                        </div>
+                      )
+                    ) : (
+                      m.text
+                    )}
 
-          {/* 로딩 표시는 메시지가 생성되기 전에만 표시 (텍스트가 있는 assistant 메시지가 없을 때만) */}
-          {loading &&
-            !messages.some(
-              (m) =>
-                m.role === "assistant" && m.text && m.text.trim().length > 0,
-            ) && (
-              <div className="flex mb-2 justify-start">
-                <div
-                  className="max-w-[80%] text-[14px] px-3 py-2 rounded-2xl border"
-                  style={{
-                    backgroundColor:
-                      "var(--color-assistant-message-bg, #ffffff)",
-                    borderColor: "var(--color-border, #e2e8f0)",
-                    color: "var(--color-text-secondary, #64748b)",
-                  }}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span className="loading-text-shimmer">
-                      {loadingMessage}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="thinking-dot"></span>
-                      <span className="thinking-dot"></span>
-                      <span className="thinking-dot"></span>
-                    </span>
+                    {/* 출처 정보 표시 (assistant 메시지만) */}
+                    {m.role === "assistant" &&
+                      m.sources &&
+                      m.sources.length > 0 && (
+                        <div
+                          className="mt-2 pt-3 border-t flex flex-col gap-1"
+                          style={{
+                            borderTopColor: "var(--color-border, #e2e8f0)",
+                          }}
+                        >
+                          {/* 출처 배지 */}
+                          <div className="flex flex-wrap gap-1.5">
+                            {m.sources.map((source, idx) => (
+                              <SourceBadge key={idx} source={source} />
+                            ))}
+                          </div>
+
+                          {/* 이미지 출처 표시 */}
+                          {m.sources
+                            .filter((s) => s.type === "image")
+                            .map((source, idx) => (
+                              <SourceImage key={`img-${idx}`} source={source} />
+                            ))}
+                        </div>
+                      )}
                   </div>
                 </div>
-              </div>
-            )}
+
+                {/* 답변 피드백 버튼 (서버에 저장된 assistant 답변에만 표시) */}
+                {m.role === "assistant" && m.serverId && (
+                  <div className="flex items-center gap-0.5 -mt-1 mb-2 pl-1">
+                    <FeedbackButton
+                      rating="GOOD"
+                      selected={m.feedback === "GOOD"}
+                      disabled={
+                        loading || feedbackBusyId !== null || isPreviewMode
+                      }
+                      onClick={() => void handleFeedback(m, "GOOD")}
+                    />
+                    <FeedbackButton
+                      rating="BAD"
+                      selected={m.feedback === "BAD"}
+                      disabled={
+                        loading || feedbackBusyId !== null || isPreviewMode
+                      }
+                      onClick={() => void handleFeedback(m, "BAD")}
+                    />
+                    {m.regeneratedAnswer ? (
+                      <span
+                        className="ml-1 text-[10px]"
+                        style={{ color: "var(--color-text-secondary, #94a3b8)" }}
+                      >
+                        다시 생성된 답변
+                      </span>
+                    ) : (
+                      !m.feedback && (
+                        <span
+                          className="ml-1 text-[10px]"
+                          style={{
+                            color: "var(--color-text-secondary, #94a3b8)",
+                          }}
+                        >
+                          답변이 도움이 되었나요?
+                        </span>
+                      )
+                    )}
+                  </div>
+                )}
+
+                {/* 첫 번째 메시지 뒤에 자주 묻는 질문 표시 */}
+                {msgIdx === 0 &&
+                  showFrequentQuestions &&
+                  frequentQuestions.length > 0 && (
+                    <div className="mt-1 mb-2 w-full">
+                      <div
+                        className="text-[11px] font-medium mb-1.5 px-0.5"
+                        style={{
+                          color: "var(--color-text-secondary, #94a3b8)",
+                        }}
+                      >
+                        이런 것들을 물어보세요
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {frequentQuestions.map((fq, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-left transition-all duration-150 active:scale-[0.98] cursor-pointer"
+                            style={{
+                              backgroundColor:
+                                "var(--color-assistant-message-bg, #ffffff)",
+                              borderColor: "var(--color-border, #e2e8f0)",
+                              color: "var(--color-text, #1e293b)",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor =
+                                "color-mix(in srgb, var(--color-primary, #df3326) 40%, var(--color-border, #e2e8f0))";
+                              e.currentTarget.style.boxShadow =
+                                "0 1px 4px rgba(0,0,0,0.06)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor =
+                                "var(--color-border, #e2e8f0)";
+                              e.currentTarget.style.boxShadow = "none";
+                            }}
+                            onClick={() => send(fq.question || fq.label)}
+                          >
+                            <span className="text-base leading-none shrink-0">
+                              {fq.icon}
+                            </span>
+                            <span className="text-xs font-medium truncate">
+                              {fq.label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+              </Fragment>
+            ))}
+
+            {/* 로딩 표시는 메시지가 생성되기 전에만 표시 (텍스트가 있는 assistant 메시지가 없을 때만) */}
+            {loading &&
+              !messages.some(
+                (m) =>
+                  m.role === "assistant" && m.text && m.text.trim().length > 0,
+              ) && (
+                <div className="flex mb-2 justify-start">
+                  <div
+                    className="max-w-[80%] text-[14px] px-3 py-2 rounded-2xl border"
+                    style={{
+                      backgroundColor:
+                        "var(--color-assistant-message-bg, #ffffff)",
+                      borderColor: "var(--color-border, #e2e8f0)",
+                      color: "var(--color-text-secondary, #64748b)",
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="loading-text-shimmer">
+                        {loadingMessage}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="thinking-dot"></span>
+                        <span className="thinking-dot"></span>
+                        <span className="thinking-dot"></span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+          </div>
+
+          {!autoScroll && (
+            <button
+              type="button"
+              onClick={() => setAutoScroll(true)}
+              className="absolute bottom-3 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full border flex items-center justify-center shadow-md transition hover:opacity-80"
+              style={{
+                backgroundColor: "var(--color-assistant-message-bg, #ffffff)",
+                borderColor: "var(--color-border, #e2e8f0)",
+                color: "var(--color-text, #1e293b)",
+              }}
+              aria-label="맨 아래로 이동"
+              title="맨 아래로 이동"
+            >
+              <ArrowUpIcon className="w-4 h-4 rotate-180" />
+            </button>
+          )}
         </div>
 
         {/* 429 경고 */}
