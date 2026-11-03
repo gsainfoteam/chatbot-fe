@@ -822,9 +822,26 @@ export default function ChatWidget({
           </div>
         )}
         {limitReached && !notice && (
-          <p className="px-3 py-2 text-xs">
-            이 세션의 질문 5회를 모두 사용했습니다.
-          </p>
+          <div
+            role="status"
+            className="px-3 pb-2"
+            style={{
+              backgroundColor: "var(--color-background, #ffffff)",
+            }}
+          >
+            <div
+              className="w-full text-xs sm:text-sm rounded-xl px-3 py-2"
+              style={{
+                backgroundColor: "#fee2e2",
+                color: "#7f1d1d",
+                border: "1px solid #fecaca",
+              }}
+            >
+              <div className="font-semibold">
+                한 번에 최대 5번까지만 질문할 수 있습니다.
+              </div>
+            </div>
+          </div>
         )}
         {questionLength > 4000 && (
           <p role="alert" className="px-3 py-2 text-xs">
