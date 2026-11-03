@@ -11,6 +11,12 @@ import type {
   SendChatResponse,
   WidgetMessageResponse,
 } from "./types";
+import {
+  consumeWidgetStream,
+  parseHistoryMetadata,
+  type AgentStep,
+  type RawResource,
+} from "./widgetStreamEvents";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
@@ -34,8 +40,58 @@ widgetApiClient.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
+
+const RESOURCE_CENTER_BASE = import.meta.env.VITE_RESOURCE_CENTER_URL?.replace(
+  /\/$/,
+  "",
+);
+
+export function mapResources(
+  rawResources: RawResource[],
+): NonNullable<SendChatResponse["sources"]> {
+  return rawResources.map((resource) => ({
+    type: "url",
+    title: resource.path,
+    // 서버가 인코딩한 경로를 재인코딩하거나 확장자를 덧붙이지 않는다.
+    url: RESOURCE_CENTER_BASE
+      ? `${RESOURCE_CENTER_BASE}/resource/${resource.url}`
+      : "",
+    ...(!RESOURCE_CENTER_BASE ? { resourcePath: resource.url } : {}),
+  }));
+}
+
+export function mapWidgetHistory(message: WidgetMessageResponse) {
+  const metadata = parseHistoryMetadata(message.metadata);
+  return {
+    id: message.id,
+    serverId: message.id,
+    role: message.role,
+    text: message.content,
+    feedback: message.feedback,
+    status: "completed" as const,
+    steps: metadata.steps,
+    sources: mapResources(metadata.resources),
+    externalSources: metadata.externalSources,
+    webSources: metadata.webSources,
+    regeneratedAnswer: !!metadata.regeneratedFromMessageId,
+    regeneratedFromMessageId: metadata.regeneratedFromMessageId,
+  };
+}
+
+export async function openWidgetResource(path: string): Promise<string> {
+  const response = await widgetApiClient.get<Blob>(
+    `/v1/widget/messages/resources/${path}`,
+    { responseType: "blob" },
+  );
+  return URL.createObjectURL(response.data);
+}
+
+export interface WidgetChatStreamOptions {
+  signal?: AbortSignal; // 중지 시 사용할 AbortSignal (중지 버튼 등)
+  onStep?: (step: AgentStep) => void; // 에이전트 진행 단계 (같은 id로 상태가 갱신되어 다시 옴)
+}
 
 /**
  * 위젯 SSE 채팅 스트림 공통 처리
@@ -44,19 +100,21 @@ widgetApiClient.interceptors.request.use(
  * @param onChunk 스트림 청크를 받을 때마다 호출되는 콜백 (텍스트, 완료 여부)
  * @param onComplete 전체 응답이 완료되었을 때 호출되는 콜백 (최종 응답)
  * @param options.signal 중지 시 사용할 AbortSignal (중지 버튼 등)
+ * @param options.onStep 진행 단계(step 이벤트)를 받을 때마다 호출되는 콜백
  */
 async function streamWidgetChatResponse(
   path: string,
   body: unknown,
   onChunk?: (text: string, isComplete: boolean) => void,
   onComplete?: (response: SendChatResponse) => void,
-  options?: { signal?: AbortSignal }
+  options?: WidgetChatStreamOptions,
 ): Promise<void> {
   const sessionToken = getSessionToken();
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     headers: {
+      Accept: "text/event-stream",
       // 본문 없이 Content-Type: application/json을 보내면 Fastify가 400을 반환함
       ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
       ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
@@ -65,208 +123,42 @@ async function streamWidgetChatResponse(
     signal: options?.signal,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    if (response.status === 429) {
-      const err = new Error(
-        `HTTP error! status: ${response.status}, error: ${errorText}`
-      ) as Error & { status: number };
-      err.status = 429;
-      throw err;
-    }
-    throw new Error(
-      `HTTP error! status: ${response.status}, error: ${errorText}`
-    );
-  }
-
-  const reader = response.body?.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
   let fullText = "";
   let resources: SendChatResponse["sources"] = [];
-
-  if (!reader) {
-    throw new Error("Response body is not readable");
-  }
-
-  // 중지 시 스트림 읽기 취소 (응답 수신 중일 때 즉시 반응)
-  if (options?.signal) {
-    options.signal.addEventListener(
-      "abort",
-      () => {
-        reader.cancel().catch(() => {});
-      },
-      { once: true }
-    );
-  }
-
-  try {
-    // 타임아웃 설정 (5분)
-    const timeout = 5 * 60 * 1000;
-    const startTime = Date.now();
-
-    // EventSource 스타일로 SSE 스트림 읽기
-    while (true) {
-      // 타임아웃 체크
-      if (Date.now() - startTime > timeout) {
-        throw new Error("Stream timeout: 응답 시간이 초과되었습니다.");
+  let externalSources: SendChatResponse["externalSources"] = [];
+  let webSources: SendChatResponse["webSources"] = [];
+  await consumeWidgetStream(
+    response,
+    (event) => {
+      switch (event.type) {
+        case "done":
+          onComplete?.({
+            answer: fullText,
+            sources: resources,
+            externalSources,
+            webSources,
+          });
+          break;
+        case "content":
+          fullText += event.content;
+          onChunk?.(fullText, false);
+          break;
+        case "step":
+          options?.onStep?.(event.step);
+          break;
+        case "resources":
+          resources = mapResources(event.resources);
+          break;
+        case "sources":
+          externalSources = event.sources;
+          break;
+        case "web_sources":
+          webSources = event.sources;
+          break;
       }
-
-      const { done, value } = await reader.read();
-
-      if (done) {
-        break;
-      }
-
-      if (!value) {
-        continue;
-      }
-
-      const chunk = decoder.decode(value, { stream: true });
-      buffer += chunk;
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || ""; // 마지막 불완전한 라인은 버퍼에 보관
-
-      for (const line of lines) {
-        if (line.trim() === "") continue; // 빈 줄 무시
-
-        if (line.startsWith("data: ")) {
-          const data = line.slice(6).trim(); // "data: " 제거 및 공백 제거
-
-          // 종료 신호 처리
-          if (data === "[DONE]") {
-            const finalResponse = { answer: fullText, sources: resources };
-            if (onComplete) {
-              onComplete(finalResponse);
-            }
-            return;
-          }
-
-          try {
-            const parsed = JSON.parse(data);
-
-            // 에러 처리
-            if (parsed.error) {
-              throw new Error(parsed.error);
-            }
-
-            // 일반 콘텐츠 처리
-            if (parsed.content) {
-              fullText += parsed.content;
-              if (onChunk) {
-                onChunk(fullText, false);
-              }
-            }
-
-            // 리소스 정보 처리
-            if (parsed.type === "resources") {
-              const rawResources = parsed.resources || [];
-              const RESOURCE_CENTER_BASE = `${
-                import.meta.env.VITE_RESOURCE_CENTER_URL
-              }/resource`;
-
-              resources = rawResources.map(
-                (resource: {
-                  formats: string[];
-                  path: string;
-                  url: string;
-                }) => {
-                  const url = resource.url || "";
-
-                  let path = url;
-                  try {
-                    const urlObj = new URL(url);
-                    path = urlObj.pathname;
-                  } catch {
-                    path = url;
-                  }
-
-                  let cleanPath = path.startsWith("/") ? path.slice(1) : path;
-
-                  // formats 기반 확장자: ['pdf'] | ['png'] 만 존재
-                  const formats = (resource.formats || []).map((f) =>
-                    String(f).toLowerCase()
-                  );
-                  const hasExt =
-                    cleanPath.toLowerCase().endsWith(".pdf") ||
-                    cleanPath.toLowerCase().endsWith(".png");
-
-                  if (!hasExt) {
-                    if (formats.includes("png")) {
-                      cleanPath = `${cleanPath}.png`;
-                    } else if (formats.includes("pdf")) {
-                      cleanPath = `${cleanPath}.pdf`;
-                    } else {
-                      cleanPath = `${cleanPath}.pdf`;
-                    }
-                  }
-
-                  const finalUrl = `${RESOURCE_CENTER_BASE}/${cleanPath}`;
-                  const isImage = cleanPath.toLowerCase().endsWith(".png");
-
-                  let title = resource.path;
-                  if (!title) {
-                    const pathParts = cleanPath.split("/");
-                    let fileName =
-                      pathParts[pathParts.length - 1] || "참고자료";
-                    try {
-                      fileName = decodeURIComponent(fileName);
-                    } catch {
-                      void 0;
-                    }
-                    fileName = fileName.replace(/\.(pdf|png|jpg|jpeg)$/i, "");
-                    title =
-                      fileName.length > 20
-                        ? fileName.slice(0, 20) + "..."
-                        : fileName;
-                  }
-
-                  return {
-                    type: isImage ? ("image" as const) : ("url" as const),
-                    url: finalUrl,
-                    title: title,
-                  };
-                }
-              );
-            }
-          } catch (e) {
-            // JSON 파싱 실패 시 무시 (불완전한 데이터일 수 있음)
-            // 단, 에러 객체인 경우는 위에서 처리됨
-            if (e instanceof Error) {
-              // 스트림 에러인 경우 다시 throw
-              if (e.message && e.message.includes("Stream error")) {
-                throw e;
-              }
-              // JSON 파싱 에러인 경우 무시 (불완전한 데이터일 수 있음)
-            } else {
-              throw e;
-            }
-          }
-        }
-      }
-    }
-
-    // 스트리밍이 정상적으로 종료되지 않은 경우
-    const finalResponse = { answer: fullText, sources: resources };
-    if (onComplete) {
-      onComplete(finalResponse);
-    }
-  } catch (error) {
-    // 에러 발생 시 리더 정리
-    try {
-      reader.cancel();
-    } catch {
-      // 리더 정리 실패는 무시
-    }
-    throw error;
-  } finally {
-    // 리더 정리
-    try {
-      reader.releaseLock();
-    } catch {
-      // 리더 해제 실패는 무시
-    }
-  }
+    },
+    options?.signal,
+  );
 }
 
 /**
@@ -277,14 +169,14 @@ export async function sendWidgetChatMessage(
   request: SendChatRequest,
   onChunk?: (text: string, isComplete: boolean) => void,
   onComplete?: (response: SendChatResponse) => void,
-  options?: { signal?: AbortSignal }
+  options?: WidgetChatStreamOptions,
 ): Promise<void> {
   return streamWidgetChatResponse(
     "/v1/widget/messages/chat/stream",
     request,
     onChunk,
     onComplete,
-    options
+    options,
   );
 }
 
@@ -296,14 +188,14 @@ export async function regenerateWidgetAnswer(
   messageId: string,
   onChunk?: (text: string, isComplete: boolean) => void,
   onComplete?: (response: SendChatResponse) => void,
-  options?: { signal?: AbortSignal }
+  options?: WidgetChatStreamOptions,
 ): Promise<void> {
   return streamWidgetChatResponse(
     `/v1/widget/messages/${encodeURIComponent(messageId)}/regenerate/stream`,
     undefined,
     onChunk,
     onComplete,
-    options
+    options,
   );
 }
 
@@ -313,28 +205,31 @@ export async function regenerateWidgetAnswer(
  */
 export async function submitMessageFeedback(
   messageId: string,
-  rating: FeedbackRating
+  rating: FeedbackRating,
 ): Promise<MessageFeedbackResponse> {
   const response = await widgetApiClient.put<MessageFeedbackResponse>(
     `/v1/widget/messages/${encodeURIComponent(messageId)}/feedback`,
-    { rating }
+    { rating },
   );
   return response.data;
 }
 
-/**
- * 가장 최근에 저장된 assistant 메시지 조회
- * GET /api/v1/widget/messages?limit=1
- * 스트리밍 응답에는 메시지 ID가 포함되지 않으므로,
- * 스트림 완료 직후 이 API로 서버 메시지 ID를 얻어 피드백/재생성에 사용한다.
- */
-export async function fetchLatestAssistantMessage(): Promise<WidgetMessageResponse | null> {
-  const response = await widgetApiClient.get<PaginatedWidgetMessagesResponse>(
-    "/v1/widget/messages",
-    { params: { limit: 1 } }
-  );
-  const latest = response.data.messages?.[0];
-  return latest && latest.role === "assistant" ? latest : null;
+/** 세션 전체를 최신순으로 읽는다. 페이지는 nextCursor로만 이어간다. */
+export async function fetchWidgetHistory(): Promise<WidgetMessageResponse[]> {
+  const messages: WidgetMessageResponse[] = [];
+  const seen = new Set<string>();
+  let cursor: string | undefined;
+  do {
+    const { data } = await widgetApiClient.get<PaginatedWidgetMessagesResponse>(
+      "/v1/widget/messages",
+      { params: { limit: 20, ...(cursor ? { cursor } : {}) } },
+    );
+    messages.push(...data.messages);
+    cursor = data.nextCursor ?? undefined;
+    if (cursor && seen.has(cursor)) throw new Error("Repeated history cursor");
+    if (cursor) seen.add(cursor);
+  } while (cursor);
+  return messages;
 }
 
 /**
@@ -342,11 +237,13 @@ export async function fetchLatestAssistantMessage(): Promise<WidgetMessageRespon
  * POST /api/v1/widget/auth/session
  */
 export async function createWidgetSession(
-  request: CreateSessionRequest
+  request: CreateSessionRequest,
+  signal?: AbortSignal,
 ): Promise<CreateSessionResponse> {
   const response = await widgetApiClient.post<CreateSessionResponse>(
     "/v1/widget/auth/session",
-    request
+    request,
+    { signal },
   );
   return response.data;
 }

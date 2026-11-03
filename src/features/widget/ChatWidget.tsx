@@ -10,14 +10,18 @@ import {
 } from "react";
 import { Streamdown } from "streamdown";
 import { code } from "@streamdown/code";
+import { Globe, Megaphone } from "lucide-react";
 import type {
-  ChatMessage,
   ColorTheme,
+  ExternalSource,
+  WebSource,
   WidgetContext,
   Source,
   FeedbackRating,
 } from "./types";
-import { uid, applyColorTheme } from "./utils";
+import { applyColorTheme } from "./utils";
+import AgentSteps from "./AgentSteps";
+import { useWidgetConversation } from "./useWidgetConversation";
 import {
   LinkIcon,
   ExternalLinkIcon,
@@ -28,25 +32,50 @@ import {
   ThumbsUpIcon,
   ThumbsDownIcon,
 } from "@/components/Icons";
-import {
-  createWidgetSession,
-  sendWidgetChatMessage,
-  regenerateWidgetAnswer,
-  submitMessageFeedback,
-  fetchLatestAssistantMessage,
-  saveSessionToken,
-  getSessionToken,
-  getSessionExpiresAt,
-  isRateLimitError,
-} from "@/api/widgetChat";
+import { openWidgetResource } from "@/api/widgetChat";
 import frequentQuestions from "./frequentQuestions";
 
 // 출처 배지 컴포넌트
 function SourceBadge({ source }: { source: Source }) {
+  const [blobUrl, setBlobUrl] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  useEffect(
+    () => () => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    },
+    [blobUrl],
+  );
+  if (source.resourcePath && !blobUrl) {
+    return (
+      <button
+        type="button"
+        disabled={busy}
+        className="px-2 py-1 rounded-md text-xs border"
+        onClick={async () => {
+          setBusy(true);
+          setFailed(false);
+          try {
+            setBlobUrl(await openWidgetResource(source.resourcePath!));
+          } catch {
+            setFailed(true);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {busy
+          ? "문서 불러오는 중…"
+          : failed
+            ? "문서 불러오기 실패 · 다시 시도"
+            : `${source.title || "참고 문서"} · 불러오기`}
+      </button>
+    );
+  }
   if (source.type === "url") {
     return (
       <a
-        href={source.url}
+        href={blobUrl || source.url}
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition hover:opacity-80 max-w-full min-w-0"
@@ -58,7 +87,7 @@ function SourceBadge({ source }: { source: Source }) {
       >
         <LinkIcon className="w-3 h-3 shrink-0" />
         <span className="min-w-0 flex-1 truncate">
-          {source.title || new URL(source.url).hostname}
+          {source.title || "참고 문서"}
         </span>
         <ExternalLinkIcon className="w-3 h-3 shrink-0" />
       </a>
@@ -66,6 +95,70 @@ function SourceBadge({ source }: { source: Source }) {
   }
 
   return null;
+}
+
+// 외부 출처 배지 (Ziggle 공지, 웹 검색 출처). url은 외부 절대 URL이라 그대로 새 탭으로 연다
+function ExternalSourceBadge({
+  source,
+}: {
+  source: ExternalSource | WebSource;
+}) {
+  const Icon = source.kind === "notice" ? Megaphone : Globe;
+  const official = "official" in source ? source.official : undefined;
+  return (
+    <a
+      href={source.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={
+        official === false
+          ? `${source.title} · 학교 공식 안내가 아닐 수 있어요`
+          : official === true
+            ? `${source.title} · 학교 공식 도메인입니다. 내용의 정확성이나 승인을 보증하지 않습니다.`
+            : source.title
+      }
+      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition hover:opacity-80 max-w-full min-w-0"
+      style={{
+        backgroundColor: "var(--color-background, #f8fafc)",
+        borderColor: "var(--color-border, #e2e8f0)",
+        color: "var(--color-text, #1e293b)",
+      }}
+    >
+      <Icon className="w-3 h-3 shrink-0" />
+      <span className="min-w-0 flex-1 truncate">{source.title}</span>
+      {official !== undefined && (
+        <span
+          className="shrink-0 px-1 rounded text-[10px] leading-4 font-medium border"
+          style={
+            official
+              ? {
+                  color: "var(--color-primary, #df3326)",
+                  borderColor: "var(--color-primary, #df3326)",
+                }
+              : {
+                  color: "var(--color-text-secondary, #94a3b8)",
+                  borderColor: "var(--color-border, #e2e8f0)",
+                }
+          }
+        >
+          {official ? "학교 공식 도메인" : "외부 출처"}
+        </span>
+      )}
+      <ExternalLinkIcon className="w-3 h-3 shrink-0" />
+    </a>
+  );
+}
+
+// 출처 묶음 제목 (참고 문서 / 관련 공지 / 웹 검색 결과)
+function SourceSectionTitle({ children }: { children: string }) {
+  return (
+    <div
+      className="text-[11px] font-medium"
+      style={{ color: "var(--color-text-secondary, #94a3b8)" }}
+    >
+      {children}
+    </div>
+  );
 }
 
 // 이미지 컴포넌트 (로딩 skeleton 포함)
@@ -183,28 +276,8 @@ export default function ChatWidget({
   onClose,
   className,
 }: ChatWidgetProps = {}) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: uid(),
-      role: "assistant",
-      text: "무엇을 도와드릴까요?",
-    },
-  ]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState("자료를 찾아보는 중");
-  const [rateLimitWarning, setRateLimitWarning] = useState<{
-    retryAt: number;
-  } | null>(null);
-  const [rateLimitRemainingText, setRateLimitRemainingText] = useState("");
   const isComposingRef = useRef(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const streamingMessageIdRef = useRef<string | null>(null);
-  // 피드백 전송 중인 메시지 ID (중복 클릭 방지)
-  const [feedbackBusyId, setFeedbackBusyId] = useState<string | null>(null);
-  // 재생성 스트리밍 중 여부 (로딩 문구 구분용)
-  const regeneratingRef = useRef(false);
-
   // iframe 환경인지 확인 (React 앱 내부에서는 false)
   const isInIframe = typeof window !== "undefined" && window.parent !== window;
 
@@ -237,6 +310,43 @@ export default function ChatWidget({
       window.location.href
     );
   }, [pageUrlFromUrl, ctx.pageUrl, isInIframe]);
+
+  const {
+    messages,
+    loading,
+    feedbackBusyId,
+    notice,
+    limitReached,
+    sendQuestion,
+    regenerateAnswer,
+    handleFeedback,
+    stop,
+    refreshHistory,
+  } = useWidgetConversation({
+    widgetKey: ctx.widgetKey,
+    getPageUrl: getEffectivePageUrl,
+    preview: isPreviewMode,
+    inIframe: isInIframe,
+  });
+  const loadingMessage = "답변을 준비하고 있어요";
+  const questionLength = [...input.trim()].length;
+  const canSend =
+    questionLength > 0 &&
+    questionLength <= 4000 &&
+    !loading &&
+    !feedbackBusyId &&
+    !isPreviewMode &&
+    !limitReached;
+  const showFrequentQuestions = messages.every((m) => m.role === "assistant");
+
+  const send = async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
+    if (!text || loading || feedbackBusyId || isPreviewMode) return;
+    if ([...text].length > 4000) return;
+    setInput("");
+    const sent = await sendQuestion(text);
+    if (!sent) setInput((current) => current || text);
+  };
 
   // 툴팁 바깥 클릭 시 닫기
   useEffect(() => {
@@ -302,10 +412,7 @@ export default function ChatWidget({
   // 답변 생성(스트리밍) 중 여부를 부모(loader.js)에 알려 런처 버튼이 상태를 표현할 수 있게 한다
   useEffect(() => {
     if (!isInIframe) return;
-    window.parent?.postMessage(
-      { type: "WM_GENERATING", active: loading },
-      "*",
-    );
+    window.parent?.postMessage({ type: "WM_GENERATING", active: loading }, "*");
   }, [loading, isInIframe]);
 
   // 메시지 본문/로딩 변화에만 하단 스크롤.
@@ -315,7 +422,7 @@ export default function ChatWidget({
       messages
         .map(
           (m) =>
-            `${m.id}:${m.role}:${m.text}:${m.sources?.length ?? 0}:${m.serverId ?? ""}:${m.regeneratedAnswer ? 1 : 0}`,
+            `${m.id}:${m.role}:${m.text}:${m.sources?.length ?? 0}:${m.externalSources?.length ?? 0}:${m.webSources?.length ?? 0}:${m.steps?.map((s) => s.status).join(",") ?? ""}:${m.serverId ?? ""}:${m.regeneratedAnswer ? 1 : 0}`,
         )
         .join("|"),
     [messages],
@@ -327,457 +434,6 @@ export default function ChatWidget({
       behavior: "smooth",
     });
   }, [scrollSignal, loading]);
-
-  // 429 경고 시 재시도 가능 시간 카운트다운
-  useEffect(() => {
-    if (!rateLimitWarning) return;
-
-    function formatRemaining(retryAt: number): string {
-      const now = Date.now();
-      if (now >= retryAt) return "이제 다시 시도할 수 있습니다.";
-      const sec = Math.ceil((retryAt - now) / 1000);
-      if (sec < 60) return `${sec}초 후에 다시 시도할 수 있습니다.`;
-      const min = Math.floor(sec / 60);
-      const s = sec % 60;
-      if (s === 0) return `${min}분 후에 다시 시도할 수 있습니다.`;
-      return `${min}분 ${s}초 후에 다시 시도할 수 있습니다.`;
-    }
-
-    setRateLimitRemainingText(formatRemaining(rateLimitWarning.retryAt));
-
-    const interval = setInterval(() => {
-      const now = Date.now();
-      if (now >= rateLimitWarning.retryAt) {
-        setRateLimitWarning(null);
-        setRateLimitRemainingText("");
-        return;
-      }
-      setRateLimitRemainingText(formatRemaining(rateLimitWarning.retryAt));
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [rateLimitWarning]);
-
-  // 로딩 시간에 따라 메시지 변경
-  useEffect(() => {
-    if (!loading) {
-      return;
-    }
-    // 새 질문 시작 시 항상 첫 메시지로 초기화 (재생성 시에는 재생성 문구)
-    setLoadingMessage(
-      regeneratingRef.current
-        ? "답변을 다시 생성하는 중"
-        : "자료를 찾아보는 중",
-    );
-
-    const timeout1 = setTimeout(() => {
-      setLoadingMessage("파일을 읽어보는 중");
-    }, 3000);
-
-    const timeout2 = setTimeout(() => {
-      setLoadingMessage("조금 더 생각 중");
-    }, 6000);
-
-    return () => {
-      clearTimeout(timeout1);
-      clearTimeout(timeout2);
-    };
-  }, [loading]);
-
-  const canSend = useMemo(
-    () => input.trim().length > 0 && !loading,
-    [input, loading],
-  );
-
-  // 자주 묻는 질문이 숨겨졌는지 여부 (한 번이라도 사용자가 메시지를 보내면 숨김)
-  const showFrequentQuestions = useMemo(() => {
-    return messages.every((m) => m.role === "assistant");
-  }, [messages]);
-
-  const latestFeedbackMessageId = useMemo(() => {
-    const latestMessage = messages[messages.length - 1];
-    return latestMessage?.role === "assistant" ? latestMessage.id : null;
-  }, [messages]);
-
-  // 스트림 완료 후 서버에 저장된 assistant 메시지 ID를 로컬 메시지에 연결 (피드백/재생성 API용)
-  const attachServerId = async (
-    localId: string,
-    extra?: Partial<ChatMessage>,
-  ) => {
-    try {
-      const latest = await fetchLatestAssistantMessage();
-      if (!latest) return;
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === localId
-            ? {
-                ...msg,
-                serverId: latest.id,
-                feedback: latest.feedback,
-                ...extra,
-              }
-            : msg,
-        ),
-      );
-    } catch (error) {
-      // 실패 시 해당 답변의 피드백 버튼만 표시되지 않음 (채팅에는 영향 없음)
-      console.error("Failed to attach server message id:", error);
-    }
-  };
-
-  // BAD 피드백 답변 1회 재생성
-  const regenerateAnswer = async (originalMsg: ChatMessage) => {
-    if (!originalMsg.serverId || loading) return;
-
-    // 이전(원본) 답변을 제거하고 그 자리에서 재생성 답변을 스트리밍
-    const regenMsgId = uid();
-    setMessages((prev) =>
-      prev.map(
-        (msg): ChatMessage =>
-          msg.id === originalMsg.id
-            ? {
-                id: regenMsgId,
-                role: "assistant",
-                text: "",
-                sources: [],
-                regeneratedAnswer: true,
-              }
-            : msg,
-      ),
-    );
-    regeneratingRef.current = true;
-    setLoading(true);
-    streamingMessageIdRef.current = regenMsgId;
-
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    try {
-      await regenerateWidgetAnswer(
-        originalMsg.serverId,
-        (streamedText) => {
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === regenMsgId ? { ...msg, text: streamedText } : msg,
-            ),
-          );
-        },
-        (finalResponse) => {
-          abortControllerRef.current = null;
-          streamingMessageIdRef.current = null;
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === regenMsgId
-                ? {
-                    ...msg,
-                    text: finalResponse.answer,
-                    sources: finalResponse.sources,
-                  }
-                : msg,
-            ),
-          );
-          setLoading(false);
-          void attachServerId(regenMsgId, { regeneratedAnswer: true });
-        },
-        { signal: controller.signal },
-      );
-    } catch (error) {
-      abortControllerRef.current = null;
-      streamingMessageIdRef.current = null;
-      setLoading(false);
-
-      const isAbortError =
-        (typeof DOMException !== "undefined" &&
-          error instanceof DOMException &&
-          error.name === "AbortError") ||
-        (error instanceof Error && error.name === "AbortError");
-      if (isAbortError) {
-        return;
-      }
-
-      console.error("Failed to regenerate answer:", error);
-      // 이미 받은 텍스트가 있으면 그대로 유지,
-      // 아무것도 못 받았으면 원본 답변을 복원 (다시 👎로 재시도 가능)
-      setMessages((prev) => {
-        const regenMsg = prev.find((msg) => msg.id === regenMsgId);
-        if (regenMsg && regenMsg.text) {
-          return prev;
-        }
-        return prev.map((msg) =>
-          msg.id === regenMsgId ? { ...originalMsg } : msg,
-        );
-      });
-    } finally {
-      regeneratingRef.current = false;
-    }
-  };
-
-  // 답변 피드백 처리 (GOOD: 해결됨 / BAD: 해결 안 됨 + 1회 재생성)
-  const handleFeedback = async (msg: ChatMessage, rating: FeedbackRating) => {
-    if (!msg.serverId || loading || feedbackBusyId || isPreviewMode) {
-      return;
-    }
-
-    const canRegenerate =
-      msg.id === latestFeedbackMessageId &&
-      rating === "BAD" &&
-      !msg.regeneratedAnswer;
-    // 같은 피드백 재클릭: 재생성이 남아있는 BAD가 아니면 무시 (재생성 실패 후 재시도 허용)
-    if (msg.feedback === rating && !canRegenerate) return;
-
-    setFeedbackBusyId(msg.id);
-    try {
-      if (msg.feedback !== rating) {
-        await submitMessageFeedback(msg.serverId, rating);
-        setMessages((prev) =>
-          prev.map((m) => (m.id === msg.id ? { ...m, feedback: rating } : m)),
-        );
-      }
-      if (canRegenerate) {
-        await regenerateAnswer(msg);
-      }
-    } catch (error) {
-      console.error("Failed to submit feedback:", error);
-    } finally {
-      setFeedbackBusyId(null);
-    }
-  };
-
-  const send = async (overrideText?: string) => {
-    const text = (overrideText ?? input).trim();
-    if (!text || loading) return;
-
-    // 미리보기 모드에서는 전송 비활성화
-    if (isPreviewMode) return;
-
-    // widgetKey가 없으면 전송 불가
-    if (!ctx.widgetKey) {
-      console.error("Widget key is not available");
-      const errorMsg: ChatMessage = {
-        id: uid(),
-        role: "assistant",
-        text: "위젯 키가 설정되지 않았습니다. 위젯을 다시 로드해주세요.",
-      };
-      setMessages((prev) => [...prev, errorMsg]);
-      setLoading(false);
-      return;
-    }
-
-    // 세션 발급 시 pageUrl 필수 (origin 식별용). 없으면 잘못된 origin으로 기록될 수 있음
-    const sessionToken = getSessionToken();
-    const pageUrl = getEffectivePageUrl();
-    if (!sessionToken && !pageUrl?.trim()) {
-      const errorMsg: ChatMessage = {
-        id: uid(),
-        role: "assistant",
-        text: "페이지 정보를 확인할 수 없습니다. 위젯을 다시 열어주세요.",
-      };
-      setMessages((prev) => [...prev, errorMsg]);
-      setLoading(false);
-      return;
-    }
-
-    const userMsg: ChatMessage = { id: uid(), role: "user", text };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    setLoadingMessage("자료를 찾아보는 중");
-    setLoading(true);
-
-    // 메시지 전송 이벤트 전달 (iframe 환경에서만)
-    if (isInIframe) {
-      window.parent?.postMessage(
-        {
-          type: "WM_MESSAGE_SENT",
-          message: {
-            id: userMsg.id,
-            text: userMsg.text,
-            role: userMsg.role,
-          },
-        },
-        "*",
-      );
-    }
-
-    let assistantMsgId: string;
-    try {
-      // 스트리밍 응답을 위한 메시지 ID 생성 (catch에서 제거할 수 있도록 먼저 생성)
-      assistantMsgId = uid();
-
-      // 세션 토큰 확인 및 발급
-      let sessionToken = getSessionToken();
-      if (!sessionToken) {
-        // 세션이 없으면 발급 (pageUrl은 getEffectivePageUrl에서 이미 검증됨)
-        const pageUrl = getEffectivePageUrl();
-        const sessionResponse = await createWidgetSession({
-          widgetKey: ctx.widgetKey,
-          pageUrl: pageUrl,
-        });
-        saveSessionToken(
-          sessionResponse.sessionToken,
-          sessionResponse.expiresIn,
-        );
-        sessionToken = sessionResponse.sessionToken;
-      }
-
-      // 초기 메시지 추가 (빈 텍스트로 시작)
-      const initialMessage: ChatMessage = {
-        id: assistantMsgId,
-        role: "assistant",
-        text: "",
-        sources: [],
-      };
-      setMessages((prev) => [...prev, initialMessage]);
-      streamingMessageIdRef.current = assistantMsgId;
-
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-
-      // 채팅 메시지 전송 (스트리밍)
-      await sendWidgetChatMessage(
-        {
-          question: text,
-        },
-        // onChunk: 스트림 청크를 받을 때마다 호출
-        (streamedText) => {
-          try {
-            // 함수형 업데이트를 사용하여 최신 상태 기반으로 업데이트
-            setMessages((prev) => {
-              return prev.map((msg): ChatMessage => {
-                if (msg.id === assistantMsgId) {
-                  return {
-                    ...msg,
-                    text: streamedText,
-                  };
-                }
-                return msg;
-              });
-            });
-          } catch (error) {
-            // 렌더링 에러 발생 시 무시 (스트림 계속 진행)
-            console.error("Error updating message:", error);
-          }
-        },
-        // onComplete: 전체 응답 완료 시 호출
-        (finalResponse) => {
-          abortControllerRef.current = null;
-          streamingMessageIdRef.current = null;
-          // 함수형 업데이트를 사용하여 최종 메시지 업데이트 (sources 포함)
-          setMessages((prev) => {
-            const updatedMessage: ChatMessage = {
-              id: assistantMsgId,
-              role: "assistant",
-              text: finalResponse.answer,
-              sources: finalResponse.sources,
-            };
-            return prev.map((msg) =>
-              msg.id === assistantMsgId ? updatedMessage : msg,
-            );
-          });
-          setLoading(false);
-
-          // 서버 메시지 ID 연결 (피드백 버튼 활성화)
-          void attachServerId(assistantMsgId);
-
-          // 메시지 수신 이벤트 전달 (iframe 환경에서만)
-          if (isInIframe) {
-            setMessages((prev) => {
-              const assistantMsg = prev.find(
-                (msg) => msg.id === assistantMsgId,
-              );
-              if (assistantMsg) {
-                window.parent?.postMessage(
-                  {
-                    type: "WM_MESSAGE_RECEIVED",
-                    message: {
-                      id: assistantMsg.id,
-                      text: assistantMsg.text,
-                      role: assistantMsg.role,
-                    },
-                  },
-                  "*",
-                );
-              }
-              return prev;
-            });
-          }
-        },
-        { signal: controller.signal },
-      ).catch((error) => {
-        abortControllerRef.current = null;
-        streamingMessageIdRef.current = null;
-        // 스트림 에러 발생 시 처리
-        setLoading(false);
-        // 사용자가 중지한 경우: 받은 내용만 유지, 에러 메시지 표시 안 함 (UI는 이미 중지 버튼에서 처리됨)
-        if (
-          typeof DOMException !== "undefined" &&
-          error instanceof DOMException &&
-          error.name === "AbortError"
-        ) {
-          return;
-        }
-        if (error instanceof Error && error.name === "AbortError") {
-          return;
-        }
-        if (isRateLimitError(error)) {
-          const retryAt = getSessionExpiresAt();
-          if (retryAt) setRateLimitWarning({ retryAt });
-          setMessages((prev) =>
-            prev.filter((msg) => msg.id !== assistantMsgId),
-          );
-          return;
-        }
-        // 에러가 발생했지만 이미 일부 텍스트가 있다면 그대로 유지
-        setMessages((prev) => {
-          const existingMsg = prev.find((msg) => msg.id === assistantMsgId);
-          if (existingMsg && existingMsg.text) {
-            // 이미 받은 텍스트가 있으면 그대로 유지
-            return prev;
-          }
-          // 텍스트가 없으면 에러 메시지로 교체
-          return prev.map((msg) =>
-            msg.id === assistantMsgId
-              ? {
-                  ...msg,
-                  text: "죄송합니다. 응답을 받는 중 오류가 발생했습니다.",
-                }
-              : msg,
-          );
-        });
-        throw error; // 상위 catch로 전파
-      });
-    } catch (error) {
-      abortControllerRef.current = null;
-      streamingMessageIdRef.current = null;
-      console.error("Failed to send chat message:", error);
-      setLoading(false);
-
-      // 사용자가 중지한 경우: 에러 메시지 표시 안 함
-      const isAbortError =
-        (typeof DOMException !== "undefined" &&
-          error instanceof DOMException &&
-          (error as DOMException).name === "AbortError") ||
-        (error instanceof Error && error.name === "AbortError");
-      if (isAbortError) {
-        return;
-      }
-
-      if (isRateLimitError(error)) {
-        const retryAt = getSessionExpiresAt();
-        if (retryAt) setRateLimitWarning({ retryAt });
-        setMessages((prev) => prev.filter((msg) => msg.id !== assistantMsgId));
-      } else {
-        // 에러 메시지 표시 (말풍선)
-        const errorMsg: ChatMessage = {
-          id: uid(),
-          role: "assistant",
-          text: "죄송합니다. 메시지를 전송하는 중 오류가 발생했습니다. 다시 시도해주세요.",
-        };
-        setMessages((prev) => [...prev, errorMsg]);
-      }
-    } finally {
-      setLoadingMessage("자료를 찾아보는 중");
-    }
-  };
 
   return (
     <div className={className || "h-screen w-screen bg-transparent p-0"}>
@@ -969,18 +625,49 @@ export default function ChatWidget({
                 >
                   {m.role === "assistant" ? (
                     m.text ? (
-                      <Streamdown
-                        plugins={{ code }}
-                        isAnimating={
-                          loading &&
-                          msgIdx === messages.length - 1 &&
-                          m.role === "assistant"
+                      <>
+                        {/* 답변이 시작되면 진행 단계는 요약 한 줄로 접힘 */}
+                        {m.steps && m.steps.length > 0 && (
+                          <AgentSteps steps={m.steps} live={false} />
+                        )}
+                        <Streamdown
+                          plugins={{ code }}
+                          skipHtml
+                          rehypePlugins={[]}
+                          components={{
+                            a: ({ href, children }) => (
+                              <a
+                                href={
+                                  href && /^https?:\/\//i.test(href)
+                                    ? href
+                                    : undefined
+                                }
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {children}
+                              </a>
+                            ),
+                          }}
+                          isAnimating={m.status === "streaming"}
+                          className="text-[var(--color-text,#1e293b)] [&_a]:text-[var(--color-primary,var(--color-button,#df3326))]"
+                        >
+                          {m.text}
+                        </Streamdown>
+                      </>
+                    ) : m.steps && m.steps.length > 0 ? (
+                      // 에이전트 경로: 첫 답변 조각 전까지 실제 진행 단계를 표시
+                      <AgentSteps
+                        steps={m.steps}
+                        live={
+                          m.status === "waiting" ||
+                          m.status === "researching" ||
+                          m.status === "streaming"
                         }
-                        className="text-[var(--color-text,#1e293b)] [&_a]:text-[var(--color-primary,var(--color-button,#df3326))]"
-                      >
-                        {m.text}
-                      </Streamdown>
-                    ) : (
+                      />
+                    ) : m.status === "waiting" ||
+                      m.status === "researching" ||
+                      m.status === "streaming" ? (
                       <div className="flex items-center gap-1.5">
                         <span className="loading-text-shimmer">
                           {loadingMessage}
@@ -996,79 +683,151 @@ export default function ChatWidget({
                           <span className="thinking-dot"></span>
                         </span>
                       </div>
-                    )
+                    ) : null
                   ) : (
                     m.text
                   )}
 
+                  {m.notice && (
+                    <p
+                      role="status"
+                      className="mt-2 text-xs text-[var(--color-text-secondary,#64748b)]"
+                    >
+                      {m.notice}
+                    </p>
+                  )}
+
                   {/* 출처 정보 표시 (assistant 메시지만) */}
                   {m.role === "assistant" &&
-                    m.sources &&
-                    m.sources.length > 0 && (
+                    ((m.sources?.length ?? 0) > 0 ||
+                      (m.externalSources?.length ?? 0) > 0 ||
+                      (m.webSources?.length ?? 0) > 0) && (
                       <div
-                        className="mt-2 pt-3 border-t flex flex-col gap-1"
+                        className="mt-2 pt-3 border-t flex flex-col gap-2.5"
                         style={{
                           borderTopColor: "var(--color-border, #e2e8f0)",
                         }}
                       >
-                        {/* 출처 배지 */}
-                        <div className="flex flex-wrap gap-1.5">
-                          {m.sources.map((source, idx) => (
-                            <SourceBadge key={idx} source={source} />
-                          ))}
-                        </div>
+                        {/* 리소스 센터 문서 */}
+                        {m.sources && m.sources.length > 0 && (
+                          <div className="flex flex-col gap-1">
+                            <SourceSectionTitle>참고 문서</SourceSectionTitle>
+                            {/* 출처 배지 */}
+                            <div className="flex flex-wrap gap-1.5">
+                              {m.sources.map((source, idx) => (
+                                <SourceBadge key={idx} source={source} />
+                              ))}
+                            </div>
 
-                        {/* 이미지 출처 표시 */}
-                        {m.sources
-                          .filter((s) => s.type === "image")
-                          .map((source, idx) => (
-                            <SourceImage key={`img-${idx}`} source={source} />
-                          ))}
+                            {/* 이미지 출처 표시 */}
+                            {m.sources
+                              .filter((s) => s.type === "image")
+                              .map((source, idx) => (
+                                <SourceImage
+                                  key={`img-${idx}`}
+                                  source={source}
+                                />
+                              ))}
+                          </div>
+                        )}
+
+                        {/* Ziggle 공지 */}
+                        {m.externalSources && m.externalSources.length > 0 && (
+                          <div className="flex flex-col gap-1">
+                            <SourceSectionTitle>관련 공지</SourceSectionTitle>
+                            <div className="flex flex-wrap gap-1.5">
+                              {m.externalSources.map((source) => (
+                                <ExternalSourceBadge
+                                  key={source.url}
+                                  source={source}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 웹 검색 출처 (공식 도메인 여부를 구분) */}
+                        {m.webSources && m.webSources.length > 0 && (
+                          <div className="flex flex-col gap-1">
+                            <SourceSectionTitle>
+                              웹 검색 결과
+                            </SourceSectionTitle>
+                            <div className="flex flex-wrap gap-1.5">
+                              {m.webSources.map((source) => (
+                                <ExternalSourceBadge
+                                  key={source.url}
+                                  source={source}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                 </div>
               </div>
 
               {/* 답변 피드백 버튼 (서버에 저장된 assistant 답변에만 표시) */}
-              {m.role === "assistant" && m.serverId && (
-                <div className="flex items-center gap-0.5 -mt-1 mb-2 pl-1">
-                  <FeedbackButton
-                    rating="GOOD"
-                    selected={m.feedback === "GOOD"}
-                    disabled={
-                      loading || feedbackBusyId !== null || isPreviewMode
-                    }
-                    onClick={() => void handleFeedback(m, "GOOD")}
-                  />
-                  <FeedbackButton
-                    rating="BAD"
-                    selected={m.feedback === "BAD"}
-                    disabled={
-                      loading || feedbackBusyId !== null || isPreviewMode
-                    }
-                    onClick={() => void handleFeedback(m, "BAD")}
-                  />
-                  {m.regeneratedAnswer ? (
-                    <span
-                      className="ml-1 text-[10px]"
-                      style={{ color: "var(--color-text-secondary, #94a3b8)" }}
-                    >
-                      다시 생성된 답변
-                    </span>
-                  ) : (
-                    !m.feedback && (
+              {m.role === "assistant" &&
+                m.serverId &&
+                m.status === "completed" && (
+                  <div className="flex items-center gap-0.5 -mt-1 mb-2 pl-1">
+                    <FeedbackButton
+                      rating="GOOD"
+                      selected={m.feedback === "GOOD"}
+                      disabled={
+                        loading || feedbackBusyId !== null || isPreviewMode
+                      }
+                      onClick={() => void handleFeedback(m, "GOOD")}
+                    />
+                    <FeedbackButton
+                      rating="BAD"
+                      selected={m.feedback === "BAD"}
+                      disabled={
+                        loading || feedbackBusyId !== null || isPreviewMode
+                      }
+                      onClick={() => void handleFeedback(m, "BAD")}
+                    />
+                    {m.feedback === "BAD" &&
+                      !m.regeneratedAnswer &&
+                      !m.regenerationAttempted && (
+                        <button
+                          type="button"
+                          disabled={
+                            loading || !!feedbackBusyId || isPreviewMode
+                          }
+                          className="ml-2 text-xs underline disabled:opacity-40"
+                          onClick={() => void regenerateAnswer(m)}
+                        >
+                          답변 다시 생성
+                        </button>
+                      )}
+                    {m.regenerationAttempted && (
+                      <span className="ml-2 text-[10px]">재생성 요청됨</span>
+                    )}
+                    {m.regeneratedAnswer ? (
                       <span
                         className="ml-1 text-[10px]"
                         style={{
                           color: "var(--color-text-secondary, #94a3b8)",
                         }}
                       >
-                        답변이 도움이 되었나요?
+                        다시 생성된 답변
                       </span>
-                    )
-                  )}
-                </div>
-              )}
+                    ) : (
+                      !m.feedback && (
+                        <span
+                          className="ml-1 text-[10px]"
+                          style={{
+                            color: "var(--color-text-secondary, #94a3b8)",
+                          }}
+                        >
+                          답변이 도움이 되었나요?
+                        </span>
+                      )
+                    )}
+                  </div>
+                )}
 
               {/* 첫 번째 메시지 뒤에 자주 묻는 질문 표시 */}
               {msgIdx === 0 &&
@@ -1106,7 +865,13 @@ export default function ChatWidget({
                               "var(--color-border, #e2e8f0)";
                             e.currentTarget.style.boxShadow = "none";
                           }}
-                          onClick={() => send(fq.question || fq.label)}
+                          disabled={
+                            loading ||
+                            !!feedbackBusyId ||
+                            isPreviewMode ||
+                            limitReached
+                          }
+                          onClick={() => void send(fq.question || fq.label)}
                         >
                           <span className="text-base leading-none shrink-0">
                             {fq.icon}
@@ -1122,59 +887,45 @@ export default function ChatWidget({
             </Fragment>
           ))}
 
-          {/* 로딩 표시는 메시지가 생성되기 전에만 표시 (텍스트가 있는 assistant 메시지가 없을 때만) */}
           {loading &&
-            !messages.some(
-              (m) =>
-                m.role === "assistant" && m.text && m.text.trim().length > 0,
+            !messages.some((m) =>
+              ["waiting", "researching", "streaming"].includes(m.status ?? ""),
             ) && (
-              <div className="flex mb-2 justify-start">
-                <div
-                  className="max-w-[80%] text-[14px] px-3 py-2 rounded-2xl border"
-                  style={{
-                    backgroundColor:
-                      "var(--color-assistant-message-bg, #ffffff)",
-                    borderColor: "var(--color-border, #e2e8f0)",
-                    color: "var(--color-text-secondary, #64748b)",
-                  }}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span className="loading-text-shimmer">
-                      {loadingMessage}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="thinking-dot"></span>
-                      <span className="thinking-dot"></span>
-                      <span className="thinking-dot"></span>
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <p
+                role="status"
+                className="px-2 py-1 text-xs text-[var(--color-text-secondary,#64748b)]"
+              >
+                대화 기록을 확인하고 있어요.
+              </p>
             )}
         </div>
 
-        {/* 429 경고 */}
-        {rateLimitWarning && (
+        {notice && (
           <div
-            className="px-3 pb-2"
-            style={{
-              backgroundColor: "var(--color-background, #ffffff)",
-            }}
+            role="status"
+            className="px-3 py-2 text-xs border-t text-[var(--color-text,#1e293b)]"
           >
-            <div
-              className="w-full text-xs sm:text-sm rounded-xl px-3 py-2"
-              style={{
-                backgroundColor: "#fee2e2",
-                color: "#7f1d1d",
-                border: "1px solid #fecaca",
-              }}
+            {notice}
+            <button
+              type="button"
+              className="ml-2 underline disabled:opacity-40"
+              disabled={loading}
+              onClick={() => void refreshHistory()}
             >
-              <div className="font-semibold">
-                한 번에 최대 5번까지만 질문할 수 있습니다.
-              </div>
-              <div className="mt-0.5 opacity-90">{rateLimitRemainingText}</div>
-            </div>
+              대화 기록 다시 확인
+            </button>
           </div>
+        )}
+        {limitReached && !notice && (
+          <p className="px-3 py-2 text-xs">
+            이 세션의 질문 5회를 모두 사용했습니다.
+          </p>
+        )}
+        {questionLength > 4000 && (
+          <p role="alert" className="px-3 py-2 text-xs">
+            질문은 최대 4,000자까지 입력할 수 있습니다. (
+            {questionLength.toLocaleString()}자)
+          </p>
         )}
 
         {/* Input */}
@@ -1244,26 +995,14 @@ export default function ChatWidget({
           {loading ? (
             <button
               type="button"
-              onClick={() => {
-                const msgId = streamingMessageIdRef.current;
-                setLoading(false);
-                if (msgId) {
-                  setMessages((prev) =>
-                    prev.map((msg) =>
-                      msg.id === msgId
-                        ? {
-                            ...msg,
-                            text: msg.text.trim()
-                              ? `${msg.text}\n\n_(응답이 중지되었습니다)_`
-                              : "응답이 중지되었습니다.",
-                          }
-                        : msg,
-                    ),
-                  );
-                  streamingMessageIdRef.current = null;
-                }
-                abortControllerRef.current?.abort();
-              }}
+              onClick={stop}
+              disabled={
+                !messages.some((m) =>
+                  ["waiting", "researching", "streaming"].includes(
+                    m.status ?? "",
+                  ),
+                )
+              }
               className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white active:scale-[0.98] transition hover:opacity-90"
               style={{
                 backgroundColor: "var(--color-primary, #df3326)",
