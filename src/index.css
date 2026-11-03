@@ -404,3 +404,10 @@
     position: relative;
   }
 }
+
+/* Citation previews stay neutral and small, independently of the widget accent. */
+.tooltip-content.compact-citation-tooltip {
+  background-color: var(--color-assistant-message-bg, #fff);
+  border-color: var(--color-border, #e2e8f0);
+  color: var(--color-text, #1e293b);
+}

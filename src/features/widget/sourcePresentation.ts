@@ -44,3 +44,33 @@ export function citationSourceFor(
     (source) => externalLinkInfo(source.url)?.key === link.key,
   );
 }
+
+interface CitationNode {
+  tagName?: string;
+  properties?: Record<string, unknown>;
+  children?: CitationNode[];
+}
+
+/** Keep at most three distinct source badges per answer; preserve other links and text. */
+export function compactCitations(sources: CitationSource[]) {
+  return () => (tree: CitationNode) => {
+    const seen = new Set<string>();
+    let badges = 0;
+    const visit = (node: CitationNode) => {
+      if (node.tagName === "a" && typeof node.properties?.href === "string") {
+        const link = externalLinkInfo(node.properties.href);
+        if (
+          link &&
+          (link.isZiggleNotice || citationSourceFor(link.href, sources))
+        ) {
+          const quiet = seen.has(link.key) || badges >= 3;
+          node.properties.dataCitationQuiet = quiet;
+          if (!quiet) badges++;
+          seen.add(link.key);
+        }
+      }
+      node.children?.forEach(visit);
+    };
+    visit(tree);
+  };
+}

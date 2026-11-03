@@ -624,7 +624,7 @@ export default function ChatWidget({
                       (m.externalSources?.length ?? 0) > 0 ||
                       (m.webSources?.length ?? 0) > 0) && (
                       <div
-                        className="mt-2 pt-3 border-t flex flex-col gap-2.5"
+                        className="mt-2 pt-2 border-t flex flex-col gap-1.5"
                         style={{
                           borderTopColor: "var(--color-border, #e2e8f0)",
                         }}
