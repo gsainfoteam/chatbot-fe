@@ -34,8 +34,6 @@ function errorNotice(error: unknown): string {
   if (status === 404)
     return "해당 답변을 찾을 수 없어 대화 기록을 다시 확인했습니다.";
   if (status === 429) {
-    if (error instanceof WidgetStreamError && error.limit === 5)
-      return "이 세션의 질문 5회를 모두 사용했습니다. 재생성은 남은 기회가 있으면 이용할 수 있습니다.";
     return "요청이 많습니다. 진행 중인 답변을 기다린 후 나중에 직접 다시 시도해 주세요.";
   }
   return "응답을 완료하지 못했습니다. 대화 기록을 확인한 후 다시 질문해 주세요. 다시 전송하면 질문 횟수를 추가로 사용합니다.";
@@ -106,8 +104,11 @@ export function useWidgetConversation(options: {
       error instanceof WidgetStreamError &&
       error.status === 429 &&
       error.limit === 5
-    )
+    ) {
       setLimitReached(true);
+      setNotice(null);
+      return;
+    }
     setNotice(errorNotice(error));
   }, []);
 
@@ -145,12 +146,16 @@ export function useWidgetConversation(options: {
         clearSessionToken();
         setLimitReached(false);
         setMessages((prev) => prev.map((m) => ({ ...m, serverId: undefined })));
-        setNotice("세션이 만료되었습니다. 다음 질문은 새 대화에서 시작합니다.");
+        setNotice(
+          limitReached
+            ? null
+            : "세션이 만료되었습니다. 다음 질문은 새 대화에서 시작합니다.",
+        );
       },
       Math.min(Math.max(expiresAt - Date.now(), 0), 2_147_483_647),
     );
     return () => clearTimeout(timer);
-  }, [loading, preview]);
+  }, [loading, preview, limitReached]);
 
   const run = async (
     question?: string,

@@ -18,6 +18,7 @@ import { applyColorTheme } from "./utils";
 import AgentSteps from "./AgentSteps";
 import { AnswerContent, ExternalSourceList } from "./ChatSources";
 import { useWidgetConversation } from "./useWidgetConversation";
+import QuestionLimitNotice from "./QuestionLimitNotice";
 import {
   LinkIcon,
   ExternalLinkIcon,
@@ -28,7 +29,7 @@ import {
   ThumbsUpIcon,
   ThumbsDownIcon,
 } from "@/components/Icons";
-import { openWidgetResource } from "@/api/widgetChat";
+import { getSessionExpiresAt, openWidgetResource } from "@/api/widgetChat";
 import frequentQuestions from "./frequentQuestions";
 
 // 출처 배지 컴포넌트
@@ -821,27 +822,8 @@ export default function ChatWidget({
             </button>
           </div>
         )}
-        {limitReached && !notice && (
-          <div
-            role="status"
-            className="px-3 pb-2"
-            style={{
-              backgroundColor: "var(--color-background, #ffffff)",
-            }}
-          >
-            <div
-              className="w-full text-xs sm:text-sm rounded-xl px-3 py-2"
-              style={{
-                backgroundColor: "#fee2e2",
-                color: "#7f1d1d",
-                border: "1px solid #fecaca",
-              }}
-            >
-              <div className="font-semibold">
-                한 번에 최대 5번까지만 질문할 수 있습니다.
-              </div>
-            </div>
-          </div>
+        {limitReached && (
+          <QuestionLimitNotice retryAt={getSessionExpiresAt()} />
         )}
         {questionLength > 4000 && (
           <p role="alert" className="px-3 py-2 text-xs">
