@@ -8,19 +8,15 @@ import {
   useRef,
   useState,
 } from "react";
-import { Streamdown } from "streamdown";
-import { code } from "@streamdown/code";
-import { Globe, Megaphone } from "lucide-react";
 import type {
   ColorTheme,
-  ExternalSource,
-  WebSource,
   WidgetContext,
   Source,
   FeedbackRating,
 } from "./types";
 import { applyColorTheme } from "./utils";
 import AgentSteps from "./AgentSteps";
+import { AnswerContent, ExternalSourceList } from "./ChatSources";
 import { useWidgetConversation } from "./useWidgetConversation";
 import {
   LinkIcon,
@@ -95,58 +91,6 @@ function SourceBadge({ source }: { source: Source }) {
   }
 
   return null;
-}
-
-// 외부 출처 배지 (Ziggle 공지, 웹 검색 출처). url은 외부 절대 URL이라 그대로 새 탭으로 연다
-function ExternalSourceBadge({
-  source,
-}: {
-  source: ExternalSource | WebSource;
-}) {
-  const Icon = source.kind === "notice" ? Megaphone : Globe;
-  const official = "official" in source ? source.official : undefined;
-  return (
-    <a
-      href={source.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      title={
-        official === false
-          ? `${source.title} · 학교 공식 안내가 아닐 수 있어요`
-          : official === true
-            ? `${source.title} · 학교 공식 도메인입니다. 내용의 정확성이나 승인을 보증하지 않습니다.`
-            : source.title
-      }
-      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition hover:opacity-80 max-w-full min-w-0"
-      style={{
-        backgroundColor: "var(--color-background, #f8fafc)",
-        borderColor: "var(--color-border, #e2e8f0)",
-        color: "var(--color-text, #1e293b)",
-      }}
-    >
-      <Icon className="w-3 h-3 shrink-0" />
-      <span className="min-w-0 flex-1 truncate">{source.title}</span>
-      {official !== undefined && (
-        <span
-          className="shrink-0 px-1 rounded text-[10px] leading-4 font-medium border"
-          style={
-            official
-              ? {
-                  color: "var(--color-primary, #df3326)",
-                  borderColor: "var(--color-primary, #df3326)",
-                }
-              : {
-                  color: "var(--color-text-secondary, #94a3b8)",
-                  borderColor: "var(--color-border, #e2e8f0)",
-                }
-          }
-        >
-          {official ? "학교 공식 도메인" : "외부 출처"}
-        </span>
-      )}
-      <ExternalLinkIcon className="w-3 h-3 shrink-0" />
-    </a>
-  );
 }
 
 // 출처 묶음 제목 (참고 문서 / 관련 공지 / 웹 검색 결과)
@@ -630,30 +574,7 @@ export default function ChatWidget({
                         {m.steps && m.steps.length > 0 && (
                           <AgentSteps steps={m.steps} live={false} />
                         )}
-                        <Streamdown
-                          plugins={{ code }}
-                          skipHtml
-                          rehypePlugins={[]}
-                          components={{
-                            a: ({ href, children }) => (
-                              <a
-                                href={
-                                  href && /^https?:\/\//i.test(href)
-                                    ? href
-                                    : undefined
-                                }
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                {children}
-                              </a>
-                            ),
-                          }}
-                          isAnimating={m.status === "streaming"}
-                          className="text-[var(--color-text,#1e293b)] [&_a]:text-[var(--color-primary,var(--color-button,#df3326))]"
-                        >
-                          {m.text}
-                        </Streamdown>
+                        <AnswerContent message={m} />
                       </>
                     ) : m.steps && m.steps.length > 0 ? (
                       // 에이전트 경로: 첫 답변 조각 전까지 실제 진행 단계를 표시
@@ -735,31 +656,15 @@ export default function ChatWidget({
                         {m.externalSources && m.externalSources.length > 0 && (
                           <div className="flex flex-col gap-1">
                             <SourceSectionTitle>관련 공지</SourceSectionTitle>
-                            <div className="flex flex-wrap gap-1.5">
-                              {m.externalSources.map((source) => (
-                                <ExternalSourceBadge
-                                  key={source.url}
-                                  source={source}
-                                />
-                              ))}
-                            </div>
+                            <ExternalSourceList sources={m.externalSources} />
                           </div>
                         )}
 
                         {/* 웹 검색 출처 (공식 도메인 여부를 구분) */}
                         {m.webSources && m.webSources.length > 0 && (
                           <div className="flex flex-col gap-1">
-                            <SourceSectionTitle>
-                              웹 검색 결과
-                            </SourceSectionTitle>
-                            <div className="flex flex-wrap gap-1.5">
-                              {m.webSources.map((source) => (
-                                <ExternalSourceBadge
-                                  key={source.url}
-                                  source={source}
-                                />
-                              ))}
-                            </div>
+                            <SourceSectionTitle>웹 출처</SourceSectionTitle>
+                            <ExternalSourceList sources={m.webSources} />
                           </div>
                         )}
                       </div>
