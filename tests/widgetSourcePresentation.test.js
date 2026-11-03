@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   externalLinkInfo,
   citationSourceFor,
+  compactCitations,
 } from "../src/features/widget/sourcePresentation.ts";
 
 test("Ziggle 로고는 실제 공지 URL에만 표시한다", () => {
@@ -17,6 +18,72 @@ test("Ziggle 로고는 실제 공지 URL에만 표시한다", () => {
   ]) {
     assert.equal(externalLinkInfo(url).isZiggleNotice, false);
   }
+});
+
+test("파비콘은 검색 경로·쿼리 없이 해당 사이트 루트에서 요청한다", () => {
+  assert.equal(
+    externalLinkInfo("https://www.gist.ac.kr/news?q=private#top").faviconUrl,
+    "https://www.gist.ac.kr/favicon.ico",
+  );
+});
+
+test("반복되는 문장 끝 출처 제목만 숨기고 문장 일부나 다른 링크 텍스트는 보존한다", () => {
+  const source = {
+    kind: "notice",
+    id: "42",
+    title: "[STARTUP NIGHT] 참가 안내",
+    url: "https://ziggle.gistory.me/notice/42",
+  };
+  const anchor = (label = "STARTUP NIGHT 참가 안내") => ({
+    tagName: "a",
+    properties: { href: source.url },
+    children: [{ value: label }],
+  });
+  const first = anchor(),
+    trailing = anchor(),
+    subject = anchor(),
+    meaningful = anchor("공지 원문");
+  const tree = {
+    children: [
+      { tagName: "p", children: [{ value: "신청 안내 " }, first] },
+      { tagName: "li", children: [{ value: "대상: 대학생 " }, trailing] },
+      {
+        tagName: "p",
+        children: [subject, { value: "에 따르면 신청 가능합니다." }],
+      },
+      { tagName: "p", children: [meaningful] },
+    ],
+  };
+  compactCitations([source])()(tree);
+  assert.equal(first.properties.dataCitationHidden, false);
+  assert.equal(trailing.properties.dataCitationHidden, true);
+  assert.equal(subject.properties.dataCitationHidden, false);
+  assert.equal(meaningful.properties.dataCitationHidden, false);
+  assert.equal(trailing.children[0].value, "STARTUP NIGHT 참가 안내");
+});
+
+test("연속된 웹 인용이 한도를 넘으면 나머지 제목도 숨기고 출처 데이터는 보존한다", () => {
+  const sources = Array.from({ length: 5 }, (_, id) => ({
+    kind: "web",
+    id: String(id),
+    title: `site${id}.test`,
+    url: `https://site${id}.test/article`,
+    official: false,
+  }));
+  const links = sources.map((source) => ({
+    tagName: "a",
+    properties: { href: source.url },
+    children: [{ value: source.title }],
+  }));
+  compactCitations(sources)()({
+    tagName: "p",
+    children: [{ value: "사례입니다." }, ...links],
+  });
+  assert.deepEqual(
+    links.map((link) => link.properties.dataCitationHidden),
+    [false, false, false, true, true],
+  );
+  assert.equal(sources.length, 5);
 });
 
 test("표시용 경로만 디코딩하고 링크의 쿼리·해시는 변경하지 않는다", () => {
