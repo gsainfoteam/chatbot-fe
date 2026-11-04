@@ -1052,7 +1052,7 @@ export default function KeysContent() {
                       <div className="p-4 bg-gray-900 rounded-lg">
                         <pre className="text-xs text-gray-100 overflow-x-auto">
                           {`<script
-  src="https://chatbot.gistory.me/loader.js"
+  src="${window.location.origin}/loader.js"
   data-widget-key="${selectedKey.widgetKey}"
   data-position="${layoutSettings.position}"
   data-offset="${layoutSettings.offset}"

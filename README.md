@@ -137,6 +137,19 @@ npm run build
 
 빌드 결과물은 `dist/` 디렉토리에 생성됩니다.
 
+### Staging 위젯 테스트
+
+위젯 iframe은 `loader.js`를 불러온 서버의 `/widget/`에서 실행됩니다.
+API 주소는 해당 프런트엔드를 빌드할 때 설정한 `VITE_API_BASE_URL`을 사용합니다.
+Staging 빌드에는 `VITE_API_BASE_URL=https://api.stg.chatbot.gistory.me`를 설정하세요
+(백엔드가 경로 접두사를 사용한다면 해당 경로도 포함).
+
+외부 사이트에서 테스트할 때도 staging 프런트엔드의 `loader.js`와 staging에서
+발급한 위젯 키를 사용하세요. 키 관리 화면의 설치 코드는 현재 접속한 환경의
+로더 주소로 생성됩니다. 위젯 키의 허용 도메인에 테스트 사이트도 등록해야 합니다.
+이 앱에 기본으로 삽입된 위젯을 테스트한다면 `index.html`의 `data-widget-key`도
+staging에서 유효한 키인지 확인하세요.
+
 ---
 
 ## 🏗 프로젝트 구조

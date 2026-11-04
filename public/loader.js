@@ -53,14 +53,9 @@
 
   // ---- origin / 실행 가드 ----------------------------------------------------
   // 위젯 origin 은 스크립트가 로드된 origin 기반으로 결정 (data-* 로 조작 불가)
+  // staging / 로컬에서도 해당 배포의 iframe과 API 설정을 사용한다.
   const scriptOrigin = scriptEl.src ? new URL(scriptEl.src).origin : null;
-  const isLocalDev =
-    scriptOrigin &&
-    (scriptOrigin === "http://localhost:5173" ||
-      scriptOrigin === "http://127.0.0.1:5173");
-
-  const WIDGET_ORIGIN =
-    isLocalDev && scriptOrigin ? scriptOrigin : "https://chatbot.gistory.me";
+  const WIDGET_ORIGIN = scriptOrigin || "https://chatbot.gistory.me";
   const IFRAME_URL = WIDGET_ORIGIN + "/widget/";
 
   // iframe 내부이거나 위젯 origin 의 /widget/ 경로에서는 실행하지 않음 (무한 루프 방지)
