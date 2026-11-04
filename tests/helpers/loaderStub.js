@@ -171,11 +171,11 @@ export function createEnv({ mobile = false } = {}) {
   return { window, document, mediaQuery };
 }
 
-export function runLoader(env, dataset = {}) {
+export function runLoader(env, dataset = {}, { scriptSrc = "https://chatbot.gistory.me/loader.js" } = {}) {
   const { window, document } = env;
   const script = new ElementStub("script", document);
   script.dataset = dataset;
-  script.src = "https://chatbot.gistory.me/loader.js";
+  script.src = scriptSrc;
   document.currentScript = script;
 
   vm.runInNewContext(loaderSource, {
@@ -192,7 +192,7 @@ export function runLoader(env, dataset = {}) {
 
 export function loadWidget(dataset = {}, options = {}) {
   const env = createEnv(options);
-  runLoader(env, dataset);
+  runLoader(env, dataset, options);
   const [overlay, launcherHost, panel] = env.document.body.children;
   // launcherHost 의 shadow root 폴백: [style, wrap] → wrap.children[0] 이 버튼
   const launcher = launcherHost.children[1].children[0];

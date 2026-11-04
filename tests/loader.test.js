@@ -8,6 +8,47 @@ import {
   clickOn,
 } from "./helpers/loaderStub.js";
 
+// 로더와 iframe은 같은 배포 환경을 사용해야 한다.
+for (const origin of [
+  "https://chatbot.gistory.me",
+  "https://stg.chatbot.gistory.me",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:4173",
+]) {
+  test(`loads the widget and exchanges messages at the loader origin: ${origin}`, () => {
+    const { window, panel } = loadWidget(
+      { widgetKey: "wk_test" },
+      { scriptSrc: `${origin}/loader.js?v=test` },
+    );
+    const iframe = panel.children[0];
+    const iframeUrl = new URL(iframe.src);
+    assert.equal(iframeUrl.origin, origin);
+    assert.equal(iframeUrl.pathname, "/widget/");
+    assert.equal(iframeUrl.searchParams.get("pageUrl"), window.location.href);
+
+    const messages = [];
+    iframe.contentWindow.postMessage = (data, targetOrigin) =>
+      messages.push({ data, targetOrigin });
+    window.ChatbotWidget.open();
+
+    const postReady = (from, source = iframe.contentWindow) =>
+      window.dispatchEvent({
+        type: "message", origin: from, source, data: { type: "WM_WIDGET_READY" },
+      });
+    postReady(origin === "https://chatbot.gistory.me"
+      ? "https://stg.chatbot.gistory.me" : "https://chatbot.gistory.me");
+    assert.equal(window.ChatbotWidget.isReady(), false);
+    postReady(origin, window);
+    assert.equal(window.ChatbotWidget.isReady(), false);
+    postReady(origin);
+    assert.equal(window.ChatbotWidget.isReady(), true);
+    const init = messages.find(({ data }) => data.type === "WM_INIT");
+    assert.equal(init.targetOrigin, origin);
+    assert.equal(init.data.widgetKey, "wk_test");
+  });
+}
+
 // ---------------------------------------------------------------------------
 // 기본 레이아웃 / 기존 옵션 호환
 // ---------------------------------------------------------------------------
