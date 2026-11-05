@@ -202,6 +202,7 @@ export function useWidgetConversation(options: {
     let completed = false;
     let questionSent = false;
     try {
+      let createdSession = false;
       if (!getSessionToken()) {
         if (original)
           throw new WidgetStreamError("http", "Session expired", 401);
@@ -212,6 +213,7 @@ export function useWidgetConversation(options: {
         if (!isCurrent()) return false;
         request.controller.signal.throwIfAborted();
         saveSessionToken(response.sessionToken, response.expiresIn);
+        createdSession = true;
         session.current = response.sessionToken;
         pendingTarget.current = undefined;
         setMessages([
@@ -230,8 +232,8 @@ export function useWidgetConversation(options: {
         setLimitReached(false);
         setMessages([]);
       }
-      // 실패/취소 후 수동 재시도 전에도 저장 여부를 먼저 조회한다.
-      const history = await syncHistory();
+      // 새 세션은 기록이 없다. 기존 세션은 실패/취소 후 저장 여부도 확인한다.
+      const history = createdSession ? [] : await syncHistory();
       if (!isCurrent()) return false;
       request.controller.signal.throwIfAborted();
       if (!original && history.filter((m) => m.role === "user").length >= 5) {
