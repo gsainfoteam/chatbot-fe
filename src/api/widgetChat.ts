@@ -52,7 +52,7 @@ export function mapResources(
   rawResources: RawResource[],
 ): NonNullable<SendChatResponse["sources"]> {
   return rawResources.map((resource) => ({
-    type: "url",
+    type: resource.url.toLowerCase().endsWith(".png") ? "image" : "url",
     title: resource.path,
     // 서버가 인코딩한 경로를 재인코딩하거나 확장자를 덧붙이지 않는다.
     url: RESOURCE_CENTER_BASE
