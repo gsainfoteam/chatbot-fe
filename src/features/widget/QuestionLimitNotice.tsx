@@ -12,8 +12,12 @@ function formatRemaining(retryAt: number, now: number): string {
 
 export default function QuestionLimitNotice({
   retryAt,
+  onRestartSession,
+  restartDisabled = false,
 }: {
   retryAt: number | null;
+  onRestartSession?: () => void;
+  restartDisabled?: boolean;
 }) {
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
@@ -43,6 +47,21 @@ export default function QuestionLimitNotice({
         {retryAt && (
           <div className="mt-0.5 opacity-90">
             {formatRemaining(retryAt, now)}
+          </div>
+        )}
+        {onRestartSession && (
+          <div className="mt-2">
+            <p className="text-xs opacity-90">
+              테스트를 계속하려면 새 세션을 시작하세요. 현재 대화는 초기화됩니다.
+            </p>
+            <button
+              type="button"
+              className="mt-2 rounded-lg border border-current px-3 py-1.5 font-semibold hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={restartDisabled}
+              onClick={onRestartSession}
+            >
+              새 세션 시작
+            </button>
           </div>
         )}
       </div>

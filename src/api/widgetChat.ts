@@ -20,6 +20,15 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
+// 배포 모드 대신 실제 연결된 API로 staging 테스트 기능을 구분한다.
+export const isStagingWidgetApi = (() => {
+  try {
+    return new URL(API_BASE_URL).origin === "https://api.stg.chatbot.gistory.me";
+  } catch {
+    return false;
+  }
+})();
+
 // 위젯용 axios 인스턴스 (세션 토큰을 헤더에 추가)
 const widgetApiClient = axios.create({
   baseURL: API_BASE_URL,

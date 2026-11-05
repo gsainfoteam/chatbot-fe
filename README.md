@@ -150,6 +150,12 @@ Staging 빌드에는 `VITE_API_BASE_URL=https://api.stg.chatbot.gistory.me`를 �
 이 앱에 기본으로 삽입된 위젯을 테스트한다면 `index.html`의 `data-widget-key`도
 staging에서 유효한 키인지 확인하세요.
 
+API 주소의 origin이 `https://api.stg.chatbot.gistory.me`인 경우에만 5회 제한 안내에
+`새 세션 시작` 버튼이 표시됩니다. 버튼은 `widgetSessionToken`과
+`widgetSessionTokenExpiresAt`을 삭제하고 화면의 대화 및 제한 상태를 초기화합니다.
+다음 질문을 보내면 새 세션이 발급되어 테스트를 계속할 수 있습니다.
+답변 처리나 피드백 저장 중에는 재시작할 수 없습니다.
+
 ---
 
 ## 🏗 프로젝트 구조
