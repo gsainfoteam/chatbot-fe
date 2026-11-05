@@ -587,9 +587,7 @@ export default function ChatWidget({
                           m.status === "streaming"
                         }
                       />
-                    ) : m.status === "waiting" ||
-                      m.status === "researching" ||
-                      m.status === "streaming" ? (
+                    ) : m.status === "waiting" ? (
                       <div className="flex items-center gap-1.5">
                         <span className="loading-text-shimmer">
                           {loadingMessage}
@@ -792,18 +790,6 @@ export default function ChatWidget({
                 )}
             </Fragment>
           ))}
-
-          {loading &&
-            !messages.some((m) =>
-              ["waiting", "researching", "streaming"].includes(m.status ?? ""),
-            ) && (
-              <p
-                role="status"
-                className="px-2 py-1 text-xs text-[var(--color-text-secondary,#64748b)]"
-              >
-                대화 기록을 확인하고 있어요.
-              </p>
-            )}
         </div>
 
         {notice && (
