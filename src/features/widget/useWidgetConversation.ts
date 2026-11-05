@@ -6,6 +6,7 @@ import {
   fetchWidgetHistory,
   getSessionToken,
   getSessionExpiresAt,
+  isStagingWidgetApi,
   mapWidgetHistory,
   regenerateWidgetAnswer,
   saveSessionToken,
@@ -467,6 +468,24 @@ export function useWidgetConversation(options: {
     }
   };
 
+  const restartSession = () => {
+    if (!isStagingWidgetApi || preview || active.current || feedbackLock.current)
+      return;
+    clearSessionToken();
+    session.current = null;
+    historyReady.current = false;
+    pendingTarget.current = undefined;
+    setLimitReached(false);
+    setNotice(null);
+    setMessages([
+      {
+        id: uid(),
+        role: "assistant",
+        text: "새 대화를 시작합니다. 무엇을 도와드릴까요?",
+      },
+    ]);
+  };
+
   return {
     messages,
     loading,
@@ -480,5 +499,6 @@ export function useWidgetConversation(options: {
       feedbackLock.current ? Promise.resolve(false) : run(undefined, msg),
     stop,
     refreshHistory,
+    restartSession: isStagingWidgetApi && !preview ? restartSession : undefined,
   };
 }
