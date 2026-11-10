@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { getToken, useVerifyToken } from "@/api/auth";
 import TopBar from "./TopBar";
 import Composer from "./Composer";
+import RepelHeading from "./RepelHeading";
 import UsageGuideDialog from "./UsageGuideDialog";
 import { hasActiveStream, sendMessage, setShowSources, useChatStore } from "../chatStore";
 import { FOOTNOTE_TEXT, suggestedQuestions } from "../suggestions";
@@ -80,11 +81,14 @@ export default function HomeView() {
           </span>
 
           <div className="flex flex-col items-center gap-3.5">
-            <h1 className="text-center text-[32px] leading-[1.2] font-extrabold tracking-[-0.02em] break-keep text-chat-ink sm:text-[44px]">
-              {user?.name ? `${user.name}님, 반가워요` : "반가워요"}
-              <br />
-              <span className="text-chat-brand-text">오늘은 무엇이 궁금하신가요?</span>
-            </h1>
+            {/* 마우스를 가져가면 글자가 밀려났다 돌아오는 인사말 */}
+            <RepelHeading
+              className="text-center text-[32px] leading-[1.2] font-extrabold tracking-[-0.02em] break-keep text-chat-ink sm:text-[44px]"
+              lines={[
+                { text: user?.name ? `${user.name}님, 반가워요` : "반가워요" },
+                { text: "오늘은 무엇이 궁금하신가요?", className: "text-chat-brand-text" },
+              ]}
+            />
             <p className="text-center text-base leading-[1.6] break-keep text-chat-muted">
               학사공지·장학·생활 정보를 공지 원문과 함께 찾아 드려요.
             </p>
