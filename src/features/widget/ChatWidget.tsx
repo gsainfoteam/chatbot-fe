@@ -1185,9 +1185,18 @@ export default function ChatWidget({
                 color: "var(--color-text, #1e293b)",
               }}
               aria-label="맨 아래로 이동"
-              title="맨 아래로 이동"
+              title={loading ? "답변 작성 중 · 맨 아래로 이동" : "맨 아래로 이동"}
             >
-              <ArrowUpIcon className="w-4 h-4 rotate-180" />
+              {/* 답변 작성 중에는 점 3개로 진행 중임을 알리고, 끝나면 화살표로 돌아간다 */}
+              {loading ? (
+                <span className="flex items-center gap-[3px]" aria-hidden="true">
+                  <span className="thinking-dot" style={{ width: 4, height: 4 }} />
+                  <span className="thinking-dot" style={{ width: 4, height: 4 }} />
+                  <span className="thinking-dot" style={{ width: 4, height: 4 }} />
+                </span>
+              ) : (
+                <ArrowUpIcon className="w-4 h-4 rotate-180" />
+              )}
             </button>
           )}
         </div>
