@@ -514,7 +514,8 @@
     s.transform = isOpen ? openTransform() : closedTransform();
     // overflow:hidden 만으로는 iframe 모서리가 잘리지 않는 브라우저가 있어 같은 radius 를 준다
     iframe.style.borderRadius = s.borderRadius;
-    resizeHandle.style.display = !isMobile() && config.resizable ? "block" : "none";
+    const handleDisplay = !isMobile() && config.resizable ? "block" : "none";
+    for (const handle of resizeHandles) handle.style.display = handleDisplay;
   }
 
   const iframe = document.createElement("iframe");
@@ -525,24 +526,65 @@
   iframe.allow = "clipboard-read; clipboard-write";
   wrap.appendChild(iframe);
 
-  // 데스크톱에서 선택적으로 드래그하여 패널 크기를 조절한다 (data-resizable, 기본 켜짐)
-  const resizeHandle = document.createElement("button");
-  resizeHandle.type = "button";
-  resizeHandle.setAttribute("aria-label", "채팅창 크기 조절");
-  resizeHandle.style.cssText = `
-    position:absolute;
-    top:0;
-    ${config.position === "right" ? "left" : "right"}:0;
-    width:20px;
-    height:20px;
-    padding:0;
-    border:0;
-    background:linear-gradient(${config.position === "right" ? "135deg" : "225deg"}, rgba(100,116,139,.55) 0 2px, transparent 2px 5px, rgba(100,116,139,.35) 5px 7px, transparent 7px);
-    cursor:${config.position === "right" ? "nwse-resize" : "nesw-resize"};
-    touch-action:none;
-    z-index:1;
-  `;
-  wrap.appendChild(resizeHandle);
+  // 데스크톱에서 드래그하여 패널 크기를 조절한다 (data-resizable, 기본 켜짐).
+  // 패널이 화면에 붙어 있지 않은 쪽(빈 공간 쪽)의 변/꼭짓점마다 핸들을 둔다.
+  //   corner 모드: 위쪽 변 + 안쪽(화면 중앙 쪽) 변 + 그 사이 꼭짓점
+  //   center 모드: 네 변 + 네 꼭짓점 (중앙 기준으로 양쪽으로 커진다)
+  // dir.x: -1 왼쪽 변 / 1 오른쪽 변, dir.y: -1 위쪽 변 / 1 아래쪽 변, 0 은 해당 축 고정
+  const RESIZE_CORNER = 20;
+  const RESIZE_EDGE = 6;
+  const freeX = config.position === "right" ? -1 : 1;
+  const resizeDirs = [{ x: freeX, y: -1 }, { x: 0, y: -1 }, { x: freeX, y: 0 }];
+  if (config.mode === "center") {
+    resizeDirs.push(
+      { x: -freeX, y: -1 }, { x: -freeX, y: 0 },
+      { x: -1, y: 1 }, { x: 0, y: 1 }, { x: 1, y: 1 }
+    );
+  }
+
+  function createResizeHandle(dir, primary) {
+    // 대표 꼭짓점 핸들만 스크린리더/그립 무늬를 가진 버튼이고, 나머지는 보이지 않는 히트 영역이다
+    const el = document.createElement(primary ? "button" : "div");
+    if (primary) {
+      el.type = "button";
+      el.setAttribute("aria-label", "채팅창 크기 조절");
+    } else {
+      el.setAttribute("aria-hidden", "true");
+    }
+    el.setAttribute("data-chatbot-resize", (dir.y < 0 ? "n" : dir.y > 0 ? "s" : "") + (dir.x < 0 ? "w" : dir.x > 0 ? "e" : ""));
+
+    const isCorner = dir.x !== 0 && dir.y !== 0;
+    const inset = isCorner ? "0" : RESIZE_CORNER + "px";
+    const css = ["position:absolute", "padding:0", "border:0", "touch-action:none", "z-index:1"];
+    if (dir.y === 0) {
+      css.push("top:" + inset, "bottom:" + inset, "width:" + RESIZE_EDGE + "px");
+    } else {
+      css.push((dir.y < 0 ? "top" : "bottom") + ":0");
+      css.push("height:" + (isCorner ? RESIZE_CORNER : RESIZE_EDGE) + "px");
+    }
+    if (dir.x === 0) {
+      css.push("left:" + inset, "right:" + inset);
+    } else {
+      css.push((dir.x < 0 ? "left" : "right") + ":0");
+      if (isCorner) css.push("width:" + RESIZE_CORNER + "px");
+    }
+    css.push(
+      "cursor:" +
+        (dir.x === 0 ? "ns-resize" : dir.y === 0 ? "ew-resize" : dir.x === dir.y ? "nwse-resize" : "nesw-resize")
+    );
+    css.push(
+      "background:" +
+        (primary
+          ? `linear-gradient(${dir.x < 0 ? "135deg" : "225deg"}, rgba(100,116,139,.55) 0 2px, transparent 2px 5px, rgba(100,116,139,.35) 5px 7px, transparent 7px)`
+          : "transparent")
+    );
+    el.style.cssText = css.join(";") + ";";
+    el.addEventListener("pointerdown", (event) => onResizePointerDown(event, el, dir));
+    wrap.appendChild(el);
+    return el;
+  }
+
+  const resizeHandles = resizeDirs.map((dir, index) => createResizeHandle(dir, index === 0));
 
   // ---- 상태 ------------------------------------------------------------------
   let isOpen = false;
@@ -723,11 +765,11 @@
     applyResponsive();
   }
 
-  function onResizePointerDown(event) {
+  function onResizePointerDown(event, handle, dir) {
     if (!config.resizable || isMobile()) return;
 
     event.preventDefault();
-    resizeHandle.setPointerCapture?.(event.pointerId);
+    handle.setPointerCapture?.(event.pointerId);
     const startX = event.clientX;
     const startY = event.clientY;
     const startWidth = config.width;
@@ -738,14 +780,12 @@
       const dy = moveEvent.clientY - startY;
       // center 모드는 양쪽으로 커지므로 이동량을 2배로 반영
       const factor = config.mode === "center" ? 2 : 1;
-      resize(
-        startWidth + (config.position === "right" ? -dx : dx) * factor,
-        startHeight - dy * factor
-      );
+      // 잡은 변이 바깥으로 움직인 만큼 커진다. 잡지 않은 축(dir 0)은 그대로 둔다
+      resize(startWidth + dx * dir.x * factor, startHeight + dy * dir.y * factor);
     };
 
     const onPointerUp = (upEvent) => {
-      resizeHandle.releasePointerCapture?.(upEvent.pointerId);
+      handle.releasePointerCapture?.(upEvent.pointerId);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointercancel", onPointerUp);
@@ -825,7 +865,6 @@
   // ---- 마운트 -----------------------------------------------------------------------------
   btn.addEventListener("click", toggle);
   overlay.addEventListener("click", close);
-  resizeHandle.addEventListener("pointerdown", onResizePointerDown);
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("message", onMessage);
   document.addEventListener("click", onDocumentClick);

@@ -224,6 +224,53 @@ test("shows the resize handle only for resizable desktop layouts", () => {
   assert.equal(loadWidget({ resizable: "false" }).resizeHandle.style.display, "none");
 });
 
+// 핸들을 (dx, dy) 만큼 끌었다 놓은 뒤의 패널 크기
+function dragHandle(env, direction, dx, dy) {
+  const handle = env.resizeHandles.find((h) => h.getAttribute("data-chatbot-resize") === direction);
+  handle.dispatchEvent({ type: "pointerdown", pointerId: 1, clientX: 500, clientY: 500, preventDefault() {} });
+  env.window.dispatchEvent({ type: "pointermove", clientX: 500 + dx, clientY: 500 + dy });
+  env.window.dispatchEvent({ type: "pointerup", pointerId: 1 });
+  const { width, height } = env.window.ChatbotWidget.getConfig();
+  return { width, height };
+}
+
+const handleDirections = (env) =>
+  env.resizeHandles.map((h) => h.getAttribute("data-chatbot-resize")).sort();
+
+test("corner mode offers resize handles on the sides facing free space", () => {
+  const right = loadWidget();
+  assert.deepEqual(handleDirections(right), ["n", "nw", "w"]);
+  assert.deepEqual(dragHandle(right, "n", 50, -40), { width: 360, height: 560 });
+  assert.deepEqual(dragHandle(right, "w", -40, 50), { width: 400, height: 560 });
+  assert.deepEqual(dragHandle(right, "nw", -20, -20), { width: 420, height: 580 });
+
+  const left = loadWidget({ position: "left" });
+  assert.deepEqual(handleDirections(left), ["e", "n", "ne"]);
+  assert.deepEqual(dragHandle(left, "e", 40, 50), { width: 400, height: 520 });
+  assert.deepEqual(dragHandle(left, "ne", 20, -20), { width: 420, height: 540 });
+
+  // 끌기가 끝나면 더 이상 크기가 바뀌지 않는다
+  left.window.dispatchEvent({ type: "pointermove", clientX: 900, clientY: 0 });
+  assert.equal(left.window.ChatbotWidget.getConfig().width, 420);
+});
+
+test("center mode offers resize handles on every side", () => {
+  const env = loadWidget({ mode: "center" });
+  assert.deepEqual(handleDirections(env), ["e", "n", "ne", "nw", "s", "se", "sw", "w"]);
+  // 중앙 기준으로 양쪽으로 커지므로 이동량의 2배
+  assert.deepEqual(dragHandle(env, "e", 20, 0), { width: 400, height: 520 });
+  assert.deepEqual(dragHandle(env, "s", 0, 20), { width: 400, height: 560 });
+  assert.deepEqual(dragHandle(env, "sw", -10, 10), { width: 420, height: 580 });
+  assert.deepEqual(dragHandle(env, "n", 0, 30), { width: 420, height: 520 });
+});
+
+test("shows every resize handle only for resizable desktop layouts", () => {
+  const { resizeHandles, mediaQuery } = loadWidget({}, { mobile: true });
+  assert.ok(resizeHandles.every((h) => h.style.display === "none"));
+  mediaQuery.setMatches(false);
+  assert.ok(resizeHandles.every((h) => h.style.display === "block"));
+});
+
 // ---------------------------------------------------------------------------
 // center 모드
 // ---------------------------------------------------------------------------
