@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useVerifyToken, getToken } from "@/api/auth";
-import LoadingSpinner from "@/components/LoadingSpinner";
+import PageSkeleton from "@/components/PageSkeleton";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -34,13 +34,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   // 로딩 중
   if (isLoading) {
-    return (
-      <LoadingSpinner
-        message="로딩 중..."
-        fullScreen
-        className="bg-gray-50/55"
-      />
-    );
+    return <PageSkeleton />;
   }
 
   // 인증 실패 또는 에러 (응답에 uuid가 있으면 유효)
@@ -51,13 +45,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   // 에러가 있지만 재시도 중인 경우 로딩 표시
   if (isError && retryCount < 2) {
-    return (
-      <LoadingSpinner
-        message="인증 확인 중..."
-        fullScreen
-        className="bg-gray-50/55"
-      />
-    );
+    return <PageSkeleton label="인증 확인 중" />;
   }
 
   return <>{children}</>;

@@ -171,11 +171,11 @@ export function createEnv({ mobile = false } = {}) {
   return { window, document, mediaQuery };
 }
 
-export function runLoader(env, dataset = {}) {
+export function runLoader(env, dataset = {}, { scriptSrc = "https://chatbot.gistory.me/loader.js" } = {}) {
   const { window, document } = env;
   const script = new ElementStub("script", document);
   script.dataset = dataset;
-  script.src = "https://chatbot.gistory.me/loader.js";
+  script.src = scriptSrc;
   document.currentScript = script;
 
   vm.runInNewContext(loaderSource, {
@@ -192,12 +192,14 @@ export function runLoader(env, dataset = {}) {
 
 export function loadWidget(dataset = {}, options = {}) {
   const env = createEnv(options);
-  runLoader(env, dataset);
+  runLoader(env, dataset, options);
   const [overlay, launcherHost, panel] = env.document.body.children;
   // launcherHost 의 shadow root 폴백: [style, wrap] → wrap.children[0] 이 버튼
   const launcher = launcherHost.children[1].children[0];
-  const resizeHandle = panel.children[1];
-  return { ...env, overlay, launcherHost, launcher, panel, resizeHandle };
+  // panel.children: [iframe, 대표 꼭짓점 핸들, ...나머지 변/꼭짓점 핸들]
+  const resizeHandles = panel.children.slice(1);
+  const resizeHandle = resizeHandles[0];
+  return { ...env, overlay, launcherHost, launcher, panel, resizeHandle, resizeHandles };
 }
 
 // 페이지에 (커스텀 트리거) 요소를 하나 만들어 등록한 뒤 클릭 이벤트를 흘려보낸다
