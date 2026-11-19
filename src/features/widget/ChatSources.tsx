@@ -72,7 +72,7 @@ function CitationLink({
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-inherit decoration-current/20 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="wrap-anywhere text-inherit decoration-current/20 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         {children}
       </a>
