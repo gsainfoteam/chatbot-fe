@@ -231,6 +231,7 @@ export default function ChatWidget({
 
   const [ctx, setCtx] = useState<WidgetContext>({});
   const listRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
   // 사용자가 위로 스크롤하면 자동 스크롤을 멈추고, 하단에 닿으면 재개한다.
   const [autoScroll, setAutoScroll] = useState(true);
   const lastScrollTopRef = useRef(0);
@@ -385,6 +386,19 @@ export default function ChatWidget({
       behavior: "smooth",
     });
   }, [scrollSignal, loading, autoScroll]);
+
+  // Markdown과 이미지가 늦게 렌더되어 높이가 바뀌어도 하단을 따라간다.
+  useEffect(() => {
+    if (!autoScroll || !contentRef.current) return;
+    const observer = new ResizeObserver(() => {
+      listRef.current?.scrollTo({
+        top: listRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    });
+    observer.observe(contentRef.current);
+    return () => observer.disconnect();
+  }, [autoScroll]);
 
   // 자동 스크롤은 아래로만 움직이므로, 위로 움직였다면 사용자 입력으로 본다.
   const handleListScroll = () => {
@@ -566,252 +580,254 @@ export default function ChatWidget({
               backgroundColor: "var(--color-background, #f8fafc)",
             }}
           >
-            {messages.map((m, msgIdx) => (
-              <Fragment key={m.id}>
-                <div
-                  className={`flex mb-2 ${
-                    m.role === "user" ? "justify-end" : "justify-start"
-                  }`}
-                >
+            <div ref={contentRef} className="flex flex-col">
+              {messages.map((m, msgIdx) => (
+                <Fragment key={m.id}>
                   <div
-                    className="min-w-0 max-w-[80%] text-[14px] leading-snug px-3 py-2 rounded-2xl border wrap-anywhere"
-                    style={
-                      m.role === "user"
-                        ? {
-                            backgroundColor: `color-mix(in srgb, var(--color-user-message-bg, var(--color-primary, #ff4500)) 10%, transparent)`,
-                            borderColor: `color-mix(in srgb, var(--color-user-message-bg, var(--color-primary, #ff4500)) 25%, transparent)`,
-                            color: "var(--color-text, #1e293b)",
-                          }
-                        : {
-                            backgroundColor:
-                              "var(--color-assistant-message-bg, #ffffff)",
-                            borderColor: "var(--color-border, #e2e8f0)",
-                            color: "var(--color-text, #1e293b)",
-                          }
-                    }
+                    className={`flex mb-2 ${
+                      m.role === "user" ? "justify-end" : "justify-start"
+                    }`}
                   >
-                    {m.role === "assistant" ? (
-                      m.text ? (
-                        <>
-                          {/* 답변이 시작되면 진행 단계는 요약 한 줄로 접힘 */}
-                          {m.steps && m.steps.length > 0 && (
-                            <AgentSteps steps={m.steps} live={false} />
-                          )}
-                          <AnswerContent message={m} />
-                        </>
-                      ) : m.steps && m.steps.length > 0 ? (
-                        // 에이전트 경로: 첫 답변 조각 전까지 실제 진행 단계를 표시
-                        <AgentSteps
-                          steps={m.steps}
-                          live={
-                            m.status === "waiting" ||
-                            m.status === "researching" ||
-                            m.status === "streaming"
-                          }
-                        />
-                      ) : m.status === "waiting" ? (
-                        <div className="flex items-center gap-1.5">
-                          <span className="loading-text-shimmer">
-                            {loadingMessage}
-                          </span>
-                          <span
-                            className="flex items-center gap-1.5"
+                    <div
+                      className="min-w-0 max-w-[80%] text-[14px] leading-snug px-3 py-2 rounded-2xl border wrap-anywhere"
+                      style={
+                        m.role === "user"
+                          ? {
+                              backgroundColor: `color-mix(in srgb, var(--color-user-message-bg, var(--color-primary, #ff4500)) 10%, transparent)`,
+                              borderColor: `color-mix(in srgb, var(--color-user-message-bg, var(--color-primary, #ff4500)) 25%, transparent)`,
+                              color: "var(--color-text, #1e293b)",
+                            }
+                          : {
+                              backgroundColor:
+                                "var(--color-assistant-message-bg, #ffffff)",
+                              borderColor: "var(--color-border, #e2e8f0)",
+                              color: "var(--color-text, #1e293b)",
+                            }
+                      }
+                    >
+                      {m.role === "assistant" ? (
+                        m.text ? (
+                          <>
+                            {/* 답변이 시작되면 진행 단계는 요약 한 줄로 접힘 */}
+                            {m.steps && m.steps.length > 0 && (
+                              <AgentSteps steps={m.steps} live={false} />
+                            )}
+                            <AnswerContent message={m} />
+                          </>
+                        ) : m.steps && m.steps.length > 0 ? (
+                          // 에이전트 경로: 첫 답변 조각 전까지 실제 진행 단계를 표시
+                          <AgentSteps
+                            steps={m.steps}
+                            live={
+                              m.status === "waiting" ||
+                              m.status === "researching" ||
+                              m.status === "streaming"
+                            }
+                          />
+                        ) : m.status === "waiting" ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="loading-text-shimmer">
+                              {loadingMessage}
+                            </span>
+                            <span
+                              className="flex items-center gap-1.5"
+                              style={{
+                                color: "var(--color-text-secondary, #64748b)",
+                              }}
+                            >
+                              <span className="thinking-dot"></span>
+                              <span className="thinking-dot"></span>
+                              <span className="thinking-dot"></span>
+                            </span>
+                          </div>
+                        ) : null
+                      ) : (
+                        m.text
+                      )}
+
+                      {m.notice && (
+                        <p
+                          role="status"
+                          className="mt-2 text-xs text-[var(--color-text-secondary,#64748b)]"
+                        >
+                          {m.notice}
+                        </p>
+                      )}
+
+                      {/* 출처 정보 표시 (assistant 메시지만) */}
+                      {m.role === "assistant" &&
+                        ((m.sources?.length ?? 0) > 0 ||
+                          (m.externalSources?.length ?? 0) > 0 ||
+                          (m.webSources?.length ?? 0) > 0) && (
+                          <div
+                            className="mt-2 pt-2 border-t flex flex-col gap-1.5"
                             style={{
-                              color: "var(--color-text-secondary, #64748b)",
+                              borderTopColor: "var(--color-border, #e2e8f0)",
                             }}
                           >
-                            <span className="thinking-dot"></span>
-                            <span className="thinking-dot"></span>
-                            <span className="thinking-dot"></span>
-                          </span>
-                        </div>
-                      ) : null
-                    ) : (
-                      m.text
-                    )}
+                            {/* 리소스 센터 문서 */}
+                            {m.sources && m.sources.length > 0 && (
+                              <div className="flex flex-col gap-1">
+                                <SourceSectionTitle>참고 문서</SourceSectionTitle>
+                                {/* 출처 배지 */}
+                                <div className="flex flex-wrap gap-1.5">
+                                  {m.sources.map((source, idx) => (
+                                    <SourceBadge key={idx} source={source} />
+                                  ))}
+                                </div>
 
-                    {m.notice && (
-                      <p
-                        role="status"
-                        className="mt-2 text-xs text-[var(--color-text-secondary,#64748b)]"
-                      >
-                        {m.notice}
-                      </p>
-                    )}
-
-                    {/* 출처 정보 표시 (assistant 메시지만) */}
-                    {m.role === "assistant" &&
-                      ((m.sources?.length ?? 0) > 0 ||
-                        (m.externalSources?.length ?? 0) > 0 ||
-                        (m.webSources?.length ?? 0) > 0) && (
-                        <div
-                          className="mt-2 pt-2 border-t flex flex-col gap-1.5"
-                          style={{
-                            borderTopColor: "var(--color-border, #e2e8f0)",
-                          }}
-                        >
-                          {/* 리소스 센터 문서 */}
-                          {m.sources && m.sources.length > 0 && (
-                            <div className="flex flex-col gap-1">
-                              <SourceSectionTitle>참고 문서</SourceSectionTitle>
-                              {/* 출처 배지 */}
-                              <div className="flex flex-wrap gap-1.5">
-                                {m.sources.map((source, idx) => (
-                                  <SourceBadge key={idx} source={source} />
-                                ))}
+                                {/* 이미지 출처 표시 */}
+                                {m.sources
+                                  .filter((s) => s.type === "image")
+                                  .map((source, idx) => (
+                                    <SourceImage
+                                      key={`img-${idx}`}
+                                      source={source}
+                                    />
+                                  ))}
                               </div>
+                            )}
 
-                              {/* 이미지 출처 표시 */}
-                              {m.sources
-                                .filter((s) => s.type === "image")
-                                .map((source, idx) => (
-                                  <SourceImage
-                                    key={`img-${idx}`}
-                                    source={source}
-                                  />
-                                ))}
-                            </div>
-                          )}
+                            {/* Ziggle 공지 */}
+                            {m.externalSources && m.externalSources.length > 0 && (
+                              <div className="flex flex-col gap-1">
+                                <SourceSectionTitle>관련 공지</SourceSectionTitle>
+                                <ExternalSourceList sources={m.externalSources} />
+                              </div>
+                            )}
 
-                          {/* Ziggle 공지 */}
-                          {m.externalSources && m.externalSources.length > 0 && (
-                            <div className="flex flex-col gap-1">
-                              <SourceSectionTitle>관련 공지</SourceSectionTitle>
-                              <ExternalSourceList sources={m.externalSources} />
-                            </div>
-                          )}
-
-                          {/* 웹 검색 출처 (공식 도메인 여부를 구분) */}
-                          {m.webSources && m.webSources.length > 0 && (
-                            <div className="flex flex-col gap-1">
-                              <SourceSectionTitle>웹 출처</SourceSectionTitle>
-                              <ExternalSourceList sources={m.webSources} />
-                            </div>
-                          )}
-                        </div>
-                      )}
-                  </div>
-                </div>
-
-                {/* 답변 피드백 버튼 (서버에 저장된 assistant 답변에만 표시) */}
-                {m.role === "assistant" &&
-                  m.serverId &&
-                  m.status === "completed" && (
-                    <div className="flex items-center gap-0.5 -mt-1 mb-2 pl-1">
-                      <FeedbackButton
-                        rating="GOOD"
-                        selected={m.feedback === "GOOD"}
-                        disabled={
-                          loading || feedbackBusyId !== null || isPreviewMode
-                        }
-                        onClick={() => void handleFeedback(m, "GOOD")}
-                      />
-                      <FeedbackButton
-                        rating="BAD"
-                        selected={m.feedback === "BAD"}
-                        disabled={
-                          loading || feedbackBusyId !== null || isPreviewMode
-                        }
-                        onClick={() => void handleFeedback(m, "BAD")}
-                      />
-                      {m.feedback === "BAD" &&
-                        !m.regeneratedAnswer &&
-                        !m.regenerationAttempted && (
-                          <button
-                            type="button"
-                            disabled={
-                              loading || !!feedbackBusyId || isPreviewMode
-                            }
-                            className="ml-2 text-xs underline disabled:opacity-40"
-                            onClick={() => void regenerateAnswer(m)}
-                          >
-                            답변 다시 생성
-                          </button>
+                            {/* 웹 검색 출처 (공식 도메인 여부를 구분) */}
+                            {m.webSources && m.webSources.length > 0 && (
+                              <div className="flex flex-col gap-1">
+                                <SourceSectionTitle>웹 출처</SourceSectionTitle>
+                                <ExternalSourceList sources={m.webSources} />
+                              </div>
+                            )}
+                          </div>
                         )}
-                      {m.regenerationAttempted && (
-                        <span className="ml-2 text-[10px]">재생성 요청됨</span>
-                      )}
-                      {m.regeneratedAnswer ? (
-                        <span
-                          className="ml-1 text-[10px]"
-                          style={{
-                            color: "var(--color-text-secondary, #94a3b8)",
-                          }}
-                        >
-                          다시 생성된 답변
-                        </span>
-                      ) : (
-                        !m.feedback && (
+                    </div>
+                  </div>
+
+                  {/* 답변 피드백 버튼 (서버에 저장된 assistant 답변에만 표시) */}
+                  {m.role === "assistant" &&
+                    m.serverId &&
+                    m.status === "completed" && (
+                      <div className="flex items-center gap-0.5 -mt-1 mb-2 pl-1">
+                        <FeedbackButton
+                          rating="GOOD"
+                          selected={m.feedback === "GOOD"}
+                          disabled={
+                            loading || feedbackBusyId !== null || isPreviewMode
+                          }
+                          onClick={() => void handleFeedback(m, "GOOD")}
+                        />
+                        <FeedbackButton
+                          rating="BAD"
+                          selected={m.feedback === "BAD"}
+                          disabled={
+                            loading || feedbackBusyId !== null || isPreviewMode
+                          }
+                          onClick={() => void handleFeedback(m, "BAD")}
+                        />
+                        {m.feedback === "BAD" &&
+                          !m.regeneratedAnswer &&
+                          !m.regenerationAttempted && (
+                            <button
+                              type="button"
+                              disabled={
+                                loading || !!feedbackBusyId || isPreviewMode
+                              }
+                              className="ml-2 text-xs underline disabled:opacity-40"
+                              onClick={() => void regenerateAnswer(m)}
+                            >
+                              답변 다시 생성
+                            </button>
+                          )}
+                        {m.regenerationAttempted && (
+                          <span className="ml-2 text-[10px]">재생성 요청됨</span>
+                        )}
+                        {m.regeneratedAnswer ? (
                           <span
                             className="ml-1 text-[10px]"
                             style={{
                               color: "var(--color-text-secondary, #94a3b8)",
                             }}
                           >
-                            답변이 도움이 되었나요?
+                            다시 생성된 답변
                           </span>
-                        )
-                      )}
-                    </div>
-                  )}
+                        ) : (
+                          !m.feedback && (
+                            <span
+                              className="ml-1 text-[10px]"
+                              style={{
+                                color: "var(--color-text-secondary, #94a3b8)",
+                              }}
+                            >
+                              답변이 도움이 되었나요?
+                            </span>
+                          )
+                        )}
+                      </div>
+                    )}
 
-                {/* 첫 번째 메시지 뒤에 자주 묻는 질문 표시 */}
-                {msgIdx === 0 &&
-                  showFrequentQuestions &&
-                  frequentQuestions.length > 0 && (
-                    <div className="mt-1 mb-2 w-full">
-                      <div
-                        className="text-[11px] font-medium mb-1.5 px-0.5"
-                        style={{
-                          color: "var(--color-text-secondary, #94a3b8)",
-                        }}
-                      >
-                        이런 것들을 물어보세요
+                  {/* 첫 번째 메시지 뒤에 자주 묻는 질문 표시 */}
+                  {msgIdx === 0 &&
+                    showFrequentQuestions &&
+                    frequentQuestions.length > 0 && (
+                      <div className="mt-1 mb-2 w-full">
+                        <div
+                          className="text-[11px] font-medium mb-1.5 px-0.5"
+                          style={{
+                            color: "var(--color-text-secondary, #94a3b8)",
+                          }}
+                        >
+                          이런 것들을 물어보세요
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {frequentQuestions.map((fq, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              className="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-left transition-all duration-150 active:scale-[0.98] cursor-pointer"
+                              style={{
+                                backgroundColor:
+                                  "var(--color-assistant-message-bg, #ffffff)",
+                                borderColor: "var(--color-border, #e2e8f0)",
+                                color: "var(--color-text, #1e293b)",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor =
+                                  "color-mix(in srgb, var(--color-primary, #df3326) 40%, var(--color-border, #e2e8f0))";
+                                e.currentTarget.style.boxShadow =
+                                  "0 1px 4px rgba(0,0,0,0.06)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor =
+                                  "var(--color-border, #e2e8f0)";
+                                e.currentTarget.style.boxShadow = "none";
+                              }}
+                              disabled={
+                                loading ||
+                                !!feedbackBusyId ||
+                                isPreviewMode ||
+                                limitReached
+                              }
+                              onClick={() => void send(fq.question || fq.label)}
+                            >
+                              <span className="text-base leading-none shrink-0">
+                                {fq.icon}
+                              </span>
+                              <span className="text-xs font-medium truncate">
+                                {fq.label}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {frequentQuestions.map((fq, idx) => (
-                          <button
-                            key={idx}
-                            type="button"
-                            className="flex items-center gap-2 px-3 py-2.5 rounded-xl border text-left transition-all duration-150 active:scale-[0.98] cursor-pointer"
-                            style={{
-                              backgroundColor:
-                                "var(--color-assistant-message-bg, #ffffff)",
-                              borderColor: "var(--color-border, #e2e8f0)",
-                              color: "var(--color-text, #1e293b)",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.borderColor =
-                                "color-mix(in srgb, var(--color-primary, #df3326) 40%, var(--color-border, #e2e8f0))";
-                              e.currentTarget.style.boxShadow =
-                                "0 1px 4px rgba(0,0,0,0.06)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.borderColor =
-                                "var(--color-border, #e2e8f0)";
-                              e.currentTarget.style.boxShadow = "none";
-                            }}
-                            disabled={
-                              loading ||
-                              !!feedbackBusyId ||
-                              isPreviewMode ||
-                              limitReached
-                            }
-                            onClick={() => void send(fq.question || fq.label)}
-                          >
-                            <span className="text-base leading-none shrink-0">
-                              {fq.icon}
-                            </span>
-                            <span className="text-xs font-medium truncate">
-                              {fq.label}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-              </Fragment>
-            ))}
+                    )}
+                </Fragment>
+              ))}
+            </div>
           </div>
 
           {!autoScroll && (
