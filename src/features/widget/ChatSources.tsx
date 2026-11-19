@@ -145,7 +145,7 @@ export function AnswerContent({ message }: { message: ChatMessage }) {
         parseMarkdownIntoBlocksFn={answerBlocks}
         components={markdownComponents}
         isAnimating={message.status === "streaming"}
-        className="text-[var(--color-text,#1e293b)]"
+        className="text-[var(--color-text,#1e293b)] [&_[data-streamdown=inline-code]]:bg-[color-mix(in_srgb,var(--color-text,#1e293b)_12%,transparent)]"
       >
         {message.text}
       </Streamdown>
