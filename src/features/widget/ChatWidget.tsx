@@ -234,7 +234,25 @@ export default function ChatWidget({
   const contentRef = useRef<HTMLDivElement | null>(null);
   // 사용자가 위로 스크롤하면 자동 스크롤을 멈추고, 하단에 닿으면 재개한다.
   const [autoScroll, setAutoScroll] = useState(true);
+  const autoScrollRef = useRef(true);
   const lastScrollTopRef = useRef(0);
+
+  const resumeAutoScroll = () => {
+    autoScrollRef.current = true;
+    setAutoScroll(true);
+  };
+
+  const pauseAutoScroll = () => {
+    if (!autoScrollRef.current) return;
+    autoScrollRef.current = false;
+    setAutoScroll(false);
+    const el = listRef.current;
+    if (el) {
+      lastScrollTopRef.current = el.scrollTop;
+      // React 갱신 전에 진행 중인 smooth 스크롤도 즉시 중단한다.
+      el.scrollTo({ top: el.scrollTop, behavior: "instant" });
+    }
+  };
 
   // 미리보기 모드 확인 (URL 파라미터)
   const isPreviewMode =
@@ -294,7 +312,7 @@ export default function ChatWidget({
     if (!text || loading || feedbackBusyId || isPreviewMode) return;
     if ([...text].length > 4000) return;
     setInput("");
-    setAutoScroll(true);
+    resumeAutoScroll();
     const sent = await sendQuestion(text);
     if (!sent) setInput((current) => current || text);
   };
@@ -380,7 +398,7 @@ export default function ChatWidget({
   );
 
   useEffect(() => {
-    if (!autoScroll) return;
+    if (!autoScroll || !autoScrollRef.current) return;
     listRef.current?.scrollTo({
       top: listRef.current.scrollHeight,
       behavior: "smooth",
@@ -391,6 +409,7 @@ export default function ChatWidget({
   useEffect(() => {
     if (!autoScroll || !contentRef.current) return;
     const observer = new ResizeObserver(() => {
+      if (!autoScrollRef.current) return;
       listRef.current?.scrollTo({
         top: listRef.current.scrollHeight,
         behavior: "smooth",
@@ -404,9 +423,12 @@ export default function ChatWidget({
   const handleListScroll = () => {
     const el = listRef.current;
     if (!el) return;
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 16;
-    if (atBottom) setAutoScroll(true);
-    else if (el.scrollTop < lastScrollTopRef.current) setAutoScroll(false);
+    const previousTop = lastScrollTopRef.current;
+    // 하단 근처에서도 위로 움직인 입력을 우선한다. 아래로 돌아왔을 때만 재개한다.
+    // scrollTop의 소수점과 scrollHeight/clientHeight의 반올림 차이만 허용한다.
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= 1;
+    if (el.scrollTop < previousTop) pauseAutoScroll();
+    else if (el.scrollTop > previousTop && atBottom) resumeAutoScroll();
     lastScrollTopRef.current = el.scrollTop;
   };
 
@@ -573,7 +595,7 @@ export default function ChatWidget({
             onScroll={handleListScroll}
             // 스트리밍 중에는 휠 방향으로 사용자 스크롤을 바로 감지한다.
             onWheel={(e) => {
-              if (e.deltaY < 0) setAutoScroll(false);
+              if (e.deltaY < 0) pauseAutoScroll();
             }}
             className="flex-1 overflow-auto px-3 py-3 flex flex-col"
             style={{
@@ -833,7 +855,7 @@ export default function ChatWidget({
           {!autoScroll && (
             <button
               type="button"
-              onClick={() => setAutoScroll(true)}
+              onClick={resumeAutoScroll}
               className="absolute bottom-3 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full border flex items-center justify-center shadow-md transition hover:opacity-80"
               style={{
                 backgroundColor: "var(--color-assistant-message-bg, #ffffff)",
