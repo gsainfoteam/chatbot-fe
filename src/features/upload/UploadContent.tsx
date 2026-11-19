@@ -15,7 +15,7 @@ import type {
 } from "@/api/upload";
 import type { DocumentItem, DocumentStatus, Organization } from "@/api/types";
 import { UploadIcon } from "@/components/Icons";
-import LoadingSpinner from "@/components/LoadingSpinner";
+import PageSkeleton from "@/components/PageSkeleton";
 import { Button } from "@/components/common";
 import {
   OrganizationPanel,
@@ -301,15 +301,7 @@ export default function UploadContent() {
   }
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-white">
-        <LoadingSpinner
-          message="권한 확인 중..."
-          fullScreen
-          className="bg-white/70"
-        />
-      </div>
-    );
+    return <PageSkeleton label="권한 확인 중" />;
   }
 
   if (isError || !data?.uuid) {
@@ -317,15 +309,7 @@ export default function UploadContent() {
   }
 
   if (documentManagementAccess.isLoading) {
-    return (
-      <div className="min-h-screen bg-white">
-        <LoadingSpinner
-          message="문서 관리 권한 확인 중..."
-          fullScreen
-          className="bg-white/70"
-        />
-      </div>
-    );
+    return <PageSkeleton label="문서 관리 권한 확인 중" />;
   }
 
   if (!documentManagementAccess.canAccess) {
