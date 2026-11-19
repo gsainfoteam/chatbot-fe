@@ -196,24 +196,6 @@
   }
 }
 
-/* Loading Spinner Animations */
-@keyframes spinner-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.loading-spinner {
-  animation: spinner-spin 1s linear infinite;
-}
-
-/* Glassmorphism backdrop for loading spinner */
-.loading-overlay {
-  background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(8px) saturate(130%);
-  -webkit-backdrop-filter: blur(8px) saturate(130%);
-}
-
 /* Header sticky fix for iOS Safari momentum scrolling */
 .header-sticky {
   position: -webkit-sticky;
@@ -403,4 +385,11 @@
   body {
     position: relative;
   }
+}
+
+/* Citation previews stay neutral and small, independently of the widget accent. */
+.tooltip-content.compact-citation-tooltip {
+  background-color: var(--color-assistant-message-bg, #fff);
+  border-color: var(--color-border, #e2e8f0);
+  color: var(--color-text, #1e293b);
 }

@@ -5,7 +5,7 @@ import {
   handleOAuth2Callback,
   useTokenExchange,
 } from "@/api/auth";
-import LoadingSpinner from "@/components/LoadingSpinner";
+import PageSkeleton from "@/components/PageSkeleton";
 
 export default function LoginContent() {
   const navigate = useNavigate();
@@ -150,5 +150,5 @@ export default function LoginContent() {
     return null;
   }
 
-  return <LoadingSpinner message="로그인 중..." fullScreen />;
+  return <PageSkeleton label="로그인 중" />;
 }

@@ -1,5 +1,7 @@
 // API 응답 타입 정의
 
+import type { ExternalSource, WebSource } from "./widgetStreamEvents";
+
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
@@ -174,7 +176,12 @@ export interface SendChatResponse {
     type: "url" | "image";
     url: string;
     title?: string;
+    resourcePath?: string;
   }>;
+  // Ziggle 공지 (SSE sources 이벤트)
+  externalSources?: ExternalSource[];
+  // 웹 검색 출처 (SSE web_sources 이벤트)
+  webSources?: WebSource[];
 }
 
 // 답변 피드백 관련 타입

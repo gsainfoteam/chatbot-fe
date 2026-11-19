@@ -84,8 +84,10 @@ export default function Tooltip({
   );
 }
 
-export interface InfoTooltipProps
-  extends Omit<TooltipProps, "children" | "className"> {
+export interface InfoTooltipProps extends Omit<
+  TooltipProps,
+  "children" | "className"
+> {
   /** 스크린리더용 버튼 레이블 */
   label?: string;
   iconClassName?: string;
