@@ -23,7 +23,7 @@ const COPIED_DURATION_MS = 1500;
 const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-chat-brand";
 
-/** 상단 '새 대화 / 대화 기록' 버튼 (Figma 최종 03 '대화 전용 메뉴': h44, radius 10) */
+/** 상단 '새 질문 / 질문 기록' 버튼 (Figma 최종 03 '대화 전용 메뉴': h44, radius 10) */
 const MENU_BUTTON =
   "flex h-11 shrink-0 items-center justify-center rounded-chat-md border px-[18px] text-sm font-medium text-chat-ink transition-colors";
 
@@ -118,7 +118,7 @@ export default function ThreadView() {
     <>
       <h1 className="sr-only">{thread.title}</h1>
 
-      {/* 대화 전용 메뉴: 새 대화 / 대화 기록(사이드바 열고 닫기) + 공유 · 더 보기 */}
+      {/* 대화 전용 메뉴: 새 질문 / 질문 기록(사이드바 열고 닫기) + 공유 · 더 보기 */}
       <div className="shrink-0 px-4 pt-4 sm:px-6 lg:px-12 lg:pt-6">
         <div className="mx-auto flex w-full max-w-[832px] items-center gap-3">
           <Link
@@ -129,7 +129,7 @@ export default function ThreadView() {
               FOCUS_RING,
             )}
           >
-            새 대화
+            새 질문
           </Link>
           {/* 모바일에서는 드로어를 여는 메뉴 버튼 역할도 하므로 드로어가 닫히면 포커스가 여기로 돌아온다 */}
           <button
@@ -146,7 +146,7 @@ export default function ThreadView() {
               FOCUS_RING,
             )}
           >
-            대화 기록
+            질문 기록
           </button>
 
           <div className="ml-auto flex items-center gap-1">
