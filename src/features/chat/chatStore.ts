@@ -16,7 +16,6 @@ import {
   createWidgetSession,
   fetchLatestAssistantMessage,
   getSessionToken,
-  regenerateWidgetAnswer,
   saveSessionToken,
   sendWidgetChatMessage,
   submitMessageFeedback,
@@ -25,6 +24,7 @@ import type { SendChatResponse } from "@/api/types";
 import { getWidgetKey } from "./widgetKey";
 import type {
   ChatFeedback,
+  ChatFeedbackComment,
   ChatThread,
   StreamingState,
   ThreadMessage,
@@ -38,7 +38,6 @@ const TITLE_MAX_LENGTH = 40;
 export const STATUS_SEARCHING = "자료를 찾아보는 중";
 export const STATUS_READING = "파일을 읽어보는 중";
 export const STATUS_THINKING = "조금 더 생각 중";
-export const STATUS_REGENERATING = "답변을 다시 생성하는 중";
 
 export const ERROR_NO_WIDGET_KEY =
   "챗봇 설정(위젯 키)을 찾을 수 없어요. 페이지를 새로고침한 뒤 다시 시도해 주세요.";
@@ -269,18 +268,10 @@ function setStreaming(threadId: string, value: StreamingState | null): void {
   setState({ streaming: next });
 }
 
-function startStreaming(
-  threadId: string,
-  messageId: string,
-  regenerating: boolean,
-): AbortController {
+function startStreaming(threadId: string, messageId: string): AbortController {
   const controller = new AbortController();
   abortControllers.set(threadId, controller);
-  setStreaming(threadId, {
-    messageId,
-    statusText: regenerating ? STATUS_REGENERATING : STATUS_SEARCHING,
-    regenerating,
-  });
+  setStreaming(threadId, { messageId, statusText: STATUS_SEARCHING });
 
   // 로딩 시간에 따라 안내 문구 변경 (위젯과 동일한 타이밍)
   const timers = [
@@ -320,7 +311,7 @@ function setFeedbackBusy(messageId: string, busy: boolean): void {
   setState({ feedbackBusy: next });
 }
 
-/** 스트림 완료 후 서버에 저장된 assistant 메시지 ID를 로컬 메시지에 연결 (피드백/재생성용) */
+/** 스트림 완료 후 서버에 저장된 assistant 메시지 ID를 로컬 메시지에 연결 (피드백용) */
 async function attachServerId(threadId: string, messageId: string): Promise<void> {
   try {
     const latest = await fetchLatestAssistantMessage();
@@ -419,7 +410,7 @@ async function streamAnswer(
   widgetKey: string,
   question: string,
 ): Promise<void> {
-  const controller = startStreaming(threadId, assistantId, false);
+  const controller = startStreaming(threadId, assistantId);
 
   try {
     await ensureSession(widgetKey);
@@ -493,95 +484,21 @@ export async function submitFeedback(
   }
 }
 
-/** 재생성 가능 여부: 대화의 마지막 답변이고, 서버에 저장됐고, 아직 재생성되지 않았을 때 */
-export function canRegenerate(thread: ChatThread, message: ThreadMessage): boolean {
-  const last = thread.messages[thread.messages.length - 1];
-  return (
-    message.role === "assistant" &&
-    !!message.serverId &&
-    !message.regeneratedAnswer &&
-    !message.error &&
-    last?.id === message.id
-  );
-}
-
 /**
- * 답변 다시 받기. 백엔드 규칙상 BAD 피드백이 저장된 답변만 1회 재생성할 수 있으므로,
- * 아직 BAD 피드백이 없으면 먼저 저장한 뒤 재생성합니다.
+ * 답변 피드백 의견 저장 (👍/👎 뒤에 여는 의견 패널).
+ * TODO(BE 연결): 의견 전송 API가 없어 지금은 이 브라우저의 대화 기록(localStorage)에만 남긴다.
  */
-export async function regenerateAnswer(threadId: string, messageId: string): Promise<void> {
-  const thread = state.threads.find((t) => t.id === threadId);
-  const original = thread && getMessage(threadId, messageId);
-  if (!thread || !original || !canRegenerate(thread, original)) return;
-  if (hasActiveStream() || state.feedbackBusy[messageId]) return;
-
-  const serverId = original.serverId!;
-  setFeedbackBusy(messageId, true);
-  try {
-    if (original.feedback !== "BAD") {
-      await submitMessageFeedback(serverId, "BAD");
-      updateMessage(threadId, messageId, (m) => ({ ...m, feedback: "BAD" }));
-    }
-  } catch (error) {
-    console.error("Failed to submit feedback before regeneration:", error);
-    setFeedbackBusy(messageId, false);
-    return;
-  }
-  setFeedbackBusy(messageId, false);
-
-  // 피드백 요청을 기다리는 사이 대화가 바뀌었을 수 있다(새 질문 전송, 삭제 등). 조건을 다시 확인
-  const currentThread = state.threads.find((t) => t.id === threadId);
-  const originalSnapshot = currentThread && getMessage(threadId, messageId);
-  if (
-    !currentThread ||
-    !originalSnapshot ||
-    !canRegenerate(currentThread, originalSnapshot) ||
-    hasActiveStream()
-  ) {
-    return;
-  }
-
-  const regenId = uid();
-  // 원본 답변 자리에서 재생성 답변을 스트리밍
-  updateMessage(threadId, messageId, () => ({
-    id: regenId,
-    role: "assistant",
-    text: "",
-    sources: [],
-    createdAt: Date.now(),
-    regeneratedAnswer: true,
+export function submitFeedbackComment(
+  threadId: string,
+  messageId: string,
+  comment: Omit<ChatFeedbackComment, "submittedAt">,
+): void {
+  const text = comment.text.trim();
+  if (!text && comment.reasons.length === 0) return;
+  updateMessage(threadId, messageId, (message) => ({
+    ...message,
+    feedbackComment: { reasons: comment.reasons, text, submittedAt: Date.now() },
   }));
-
-  const controller = startStreaming(threadId, regenId, true);
-  let received = false;
-  try {
-    await regenerateWidgetAnswer(
-      serverId,
-      (streamedText) => {
-        if (streamedText) received = true;
-        updateMessage(threadId, regenId, (m) => ({ ...m, text: streamedText }));
-      },
-      (finalResponse) => {
-        applyFinalResponse(threadId, regenId, finalResponse);
-        finishStreaming(threadId);
-        void attachServerId(threadId, regenId);
-      },
-      { signal: controller.signal },
-    );
-  } catch (error) {
-    finishStreaming(threadId);
-    if (isAbortError(error)) {
-      // 아무것도 받기 전에 중지했으면 원본 답변을 되살린다 (재생성 다시 가능)
-      if (!received) updateMessage(threadId, regenId, () => originalSnapshot);
-      return;
-    }
-
-    console.error("Failed to regenerate answer:", error);
-    const current = getMessage(threadId, regenId);
-    if (current && current.text.trim()) return;
-    // 아무것도 못 받았으면 원본 답변 복원 (다시 시도 가능)
-    updateMessage(threadId, regenId, () => originalSnapshot);
-  }
 }
 
 export function deleteThread(threadId: string): void {
