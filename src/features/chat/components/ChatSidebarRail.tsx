@@ -53,32 +53,39 @@ export default function ChatSidebarRail({ onOpen }: ChatSidebarRailProps) {
         </Tooltip>
       </div>
 
-      {/* 펼친 사이드바의 새 질문 버튼과 같은 세로 위치: 로고 행 아래 24px */}
-      <nav aria-label="바로 가기" className="mt-6 flex flex-col items-center gap-1.5">
-        <Tooltip content="새 질문" side="right" className="font-chat">
-          <Link
-            to="/"
-            aria-label="새 질문"
-            aria-current={onHome ? "page" : undefined}
-            className={cn(
-              RAIL_BUTTON,
-              onHome &&
-                "bg-chat-brand-50 text-chat-brand-strong hover:bg-chat-brand-100/70 hover:text-chat-brand-strong",
-            )}
-          >
-            <Plus className="size-4" strokeWidth={2} aria-hidden="true" />
-          </Link>
-        </Tooltip>
-        <Tooltip content="질문 검색" side="right" className="font-chat">
-          <button
-            type="button"
-            onClick={() => onOpen({ focusSearch: true })}
-            aria-label="질문 검색"
-            className={RAIL_BUTTON}
-          >
-            <Search className="size-4" strokeWidth={1.8} aria-hidden="true" />
-          </button>
-        </Tooltip>
+      {/*
+        펼친 사이드바와 행 높이·간격을 똑같이 둬서(로고 행 아래 24px → 새 질문 44px → 10px → 검색 40px)
+        여닫을 때 아이콘의 세로 위치가 그대로 유지되게 한다
+      */}
+      <nav aria-label="바로 가기" className="mt-6 flex flex-col items-center gap-2.5">
+        <div className="flex h-11 items-center">
+          <Tooltip content="새 질문" side="right" className="font-chat">
+            <Link
+              to="/"
+              aria-label="새 질문"
+              aria-current={onHome ? "page" : undefined}
+              className={cn(
+                RAIL_BUTTON,
+                onHome &&
+                  "bg-chat-brand-50 text-chat-brand-strong hover:bg-chat-brand-100/70 hover:text-chat-brand-strong",
+              )}
+            >
+              <Plus className="size-4" strokeWidth={2} aria-hidden="true" />
+            </Link>
+          </Tooltip>
+        </div>
+        <div className="flex h-10 items-center">
+          <Tooltip content="질문 검색" side="right" className="font-chat">
+            <button
+              type="button"
+              onClick={() => onOpen({ focusSearch: true })}
+              aria-label="질문 검색"
+              className={RAIL_BUTTON}
+            >
+              <Search className="size-4" strokeWidth={1.8} aria-hidden="true" />
+            </button>
+          </Tooltip>
+        </div>
       </nav>
 
       {/* 펼친 사이드바 하단의 개발자 콘솔 바로가기 버튼과 같은 세로 위치 */}
