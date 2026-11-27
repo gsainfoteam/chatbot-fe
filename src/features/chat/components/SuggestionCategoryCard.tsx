@@ -16,15 +16,21 @@ const FOCUS_RING =
 export const SUGGESTION_CARD_CLASS =
   "flex flex-col gap-4 rounded-[14px] border border-chat-sidebar-border bg-chat-surface py-4";
 
-/** 요즘 뜨는 질문 카드의 질문 한 줄 (16px, 좌우 20, 호버 시 옅은 브랜드 바탕) */
+/**
+ * 추천 질문 목록: 좌우 8px 띄워 호버 바탕이 카드 가장자리에 붙지 않게 한다.
+ * 행 안쪽 12px과 합쳐 글자는 카드 머리(20px)와 같은 줄에서 시작한다.
+ */
+export const SUGGESTION_LIST_CLASS = "flex flex-col px-2";
+
+/** 요즘 뜨는 질문 카드의 질문 한 줄 (16px, 호버 시 옅은 브랜드 바탕) */
 export const SUGGESTION_ROW_CLASS = cn(
-  "flex w-full items-center gap-2.5 rounded-chat-md px-5 py-1 text-left text-base leading-normal font-medium text-chat-sidebar-ink transition-colors hover:bg-chat-brand-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent",
+  "flex w-full items-center gap-2.5 rounded-chat-md px-3 py-1 text-left text-base leading-normal font-medium text-chat-sidebar-ink transition-colors hover:bg-chat-brand-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent",
   FOCUS_RING,
 );
 
 /** 펼친 카테고리 카드의 질문 한 줄: 14px, 화살표 없이 질문만. 펼침 영역이 overflow-hidden이라 포커스 링은 안쪽에 그린다 */
 const CATEGORY_ROW_CLASS =
-  "flex w-full items-center rounded-chat-md px-5 py-1.5 text-left text-sm leading-normal font-medium text-chat-sidebar-ink transition-colors hover:bg-chat-brand-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-chat-brand";
+  "flex w-full items-center rounded-chat-md px-3 py-1.5 text-left text-sm leading-normal font-medium text-chat-sidebar-ink transition-colors hover:bg-chat-brand-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-chat-brand";
 
 interface SuggestionCategoryCardProps {
   category: SuggestionCategory;
@@ -85,7 +91,7 @@ export default function SuggestionCategoryCard({
         )}
       >
         <div className="min-h-0 overflow-hidden">
-          <ul className="flex flex-col gap-1 pt-4">
+          <ul className={cn(SUGGESTION_LIST_CLASS, "gap-1 pt-4")}>
             {category.questions.map((question) => (
               <li key={question}>
                 <button

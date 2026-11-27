@@ -2,7 +2,11 @@ import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SuggestedQuestionResponse } from "@/api/types";
 import { TRENDING_LIMIT, type SuggestedQuestionsState } from "../useSuggestedQuestions";
-import { SUGGESTION_CARD_CLASS, SUGGESTION_ROW_CLASS } from "./SuggestionCategoryCard";
+import {
+  SUGGESTION_CARD_CLASS,
+  SUGGESTION_LIST_CLASS,
+  SUGGESTION_ROW_CLASS,
+} from "./SuggestionCategoryCard";
 import { FlameIcon } from "./SuggestionIcons";
 
 interface TrendingQuestionsCardProps {
@@ -56,7 +60,7 @@ export default function TrendingQuestionsCard({
           <span className="sr-only">요즘 뜨는 질문을 불러오는 중</span>
         </div>
       ) : (
-        <ul className="flex flex-col gap-1.5">
+        <ul className={cn(SUGGESTION_LIST_CLASS, "gap-1.5")}>
           {state.items.map((item) => (
             <li key={item.id}>
               <button
