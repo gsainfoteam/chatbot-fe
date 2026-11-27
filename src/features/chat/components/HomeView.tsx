@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils";
 import TopBar from "./TopBar";
 import Composer from "./Composer";
 import ChatFooter from "./ChatFooter";
+import ComposerHelper from "./ComposerHelper";
 import RepelHeading from "./RepelHeading";
-import UsageGuideDialog from "./UsageGuideDialog";
 import { hasActiveStream, sendMessage, setShowSources, useChatStore } from "../chatStore";
 import { suggestedQuestions } from "../suggestions";
 
@@ -18,7 +18,6 @@ export default function HomeView() {
   const navigate = useNavigate();
   const { showSources, streaming } = useChatStore();
   const [value, setValue] = useState("");
-  const [guideOpen, setGuideOpen] = useState(false);
 
   // 위젯 세션이 하나라 다른 대화의 답변이 끝날 때까지는 새 질문을 보낼 수 없다
   // TODO(BE 연결): 429(질문 횟수 초과) 안내가 생기면 여기서 입력창·추천 질문도 잠근다
@@ -31,23 +30,6 @@ export default function HomeView() {
     setValue("");
     navigate(`/c/${id}`);
   };
-
-  const helper = (
-    <>
-      <p className="text-[13px] leading-normal text-chat-muted">로그인 없이 질문할 수 있어요</p>
-      <button
-        type="button"
-        onClick={() => setGuideOpen(true)}
-        className={cn(
-          "-mx-1 flex h-8 items-center gap-2 rounded-chat-md px-1 text-sm font-medium text-chat-ink transition-colors hover:text-chat-brand-text",
-          FOCUS_RING,
-        )}
-      >
-        <span aria-hidden="true">?</span>
-        챗봇 사용법
-      </button>
-    </>
-  );
 
   const sourcesToggle = (
     <button
@@ -96,14 +78,13 @@ export default function HomeView() {
           </div>
 
           <Composer
-            variant="hero"
             value={value}
             onChange={setValue}
             onSubmit={() => submit(value)}
             disabled={blocked}
             placeholder="수강신청, 기숙사, 학교생활… 편하게 물어보세요"
             ariaLabel="질문 입력"
-            helper={helper}
+            helper={<ComposerHelper />}
             tools={sourcesToggle}
             autoFocus
           />
@@ -144,8 +125,6 @@ export default function HomeView() {
       </div>
 
       <ChatFooter showCredit />
-
-      <UsageGuideDialog open={guideOpen} onOpenChange={setGuideOpen} />
     </>
   );
 }

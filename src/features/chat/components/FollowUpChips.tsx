@@ -13,14 +13,14 @@ export default function FollowUpChips({
   if (!questions || questions.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2.5">
       {questions.map((question) => (
         <button
           key={question}
           type="button"
           disabled={disabled}
           onClick={() => onPick(question)}
-          className="h-9 max-w-full truncate rounded-full border border-chat-border bg-chat-surface px-3.5 text-sm font-medium text-chat-ink-2 transition-colors hover:border-chat-brand-100 hover:bg-chat-brand-50 hover:text-chat-brand-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-chat-brand disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-11 max-w-full truncate rounded-chat-md border border-chat-border bg-chat-surface px-[18px] text-sm font-medium text-chat-ink transition-colors hover:border-chat-brand-100 hover:bg-chat-brand-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-chat-brand disabled:cursor-not-allowed disabled:opacity-50"
         >
           {question}
         </button>

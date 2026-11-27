@@ -80,9 +80,21 @@ export default function ChatShell() {
     [updateCollapsed],
   );
 
+  const toggleSidebar = useCallback(() => {
+    const isDesktop = window.matchMedia(DESKTOP_QUERY).matches;
+    if (isDesktop) updateCollapsed(!collapsed);
+    else setDrawerOpen(true);
+  }, [collapsed, updateCollapsed]);
+
   const contextValue = useMemo(
-    () => ({ sidebarCollapsed: collapsed, drawerOpen, openSidebar, menuButtonRef }),
-    [collapsed, drawerOpen, openSidebar],
+    () => ({
+      sidebarCollapsed: collapsed,
+      drawerOpen,
+      openSidebar,
+      toggleSidebar,
+      menuButtonRef,
+    }),
+    [collapsed, drawerOpen, openSidebar, toggleSidebar],
   );
 
   // 드로어가 열리면 닫기 버튼부터 포커스 (없으면 Base UI 기본: 첫 포커스 가능 요소)

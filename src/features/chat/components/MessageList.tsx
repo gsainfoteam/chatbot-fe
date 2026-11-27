@@ -9,7 +9,7 @@ interface MessageListProps {
   showSources: boolean;
 }
 
-/** 대화 메시지 열 (760px 컬럼, 메시지 간 24px) */
+/** 대화 메시지 열 (Figma 최종 03: 832px 컬럼, 메시지 간 28px) */
 export default function MessageList({
   thread,
   streaming,
@@ -18,7 +18,7 @@ export default function MessageList({
   const { feedbackBusy } = useChatStore();
 
   return (
-    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-[832px] flex-col gap-7">
       {thread.messages.map((message) =>
         message.role === "user" ? (
           <UserMessage key={message.id} message={message} />

@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 import { Share } from "lucide-react";
-import TopBar from "./TopBar";
+import { cn } from "@/lib/utils";
 import Composer from "./Composer";
+import ComposerHelper from "./ComposerHelper";
+import ChatFooter from "./ChatFooter";
 import MessageList from "./MessageList";
 import ThreadMenu from "./ThreadMenu";
+import { useChatShell } from "../chatShellContext";
 import {
   hasActiveStream,
   sendMessage,
@@ -13,10 +16,16 @@ import {
   useStreaming,
   useThread,
 } from "../chatStore";
-import { FOOTNOTE_TEXT } from "../suggestions";
 import type { ChatThread } from "../types";
 
 const COPIED_DURATION_MS = 1500;
+
+const FOCUS_RING =
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-chat-brand";
+
+/** 상단 '새 대화 / 대화 기록' 버튼 (Figma 최종 03 '대화 전용 메뉴': h44, radius 10) */
+const MENU_BUTTON =
+  "flex h-11 shrink-0 items-center justify-center rounded-chat-md border px-[18px] text-sm font-medium text-chat-ink transition-colors";
 
 /** 공유용 평문 대화록: "질문: …\n답변: …\n\n" 반복 + 출처 한 줄 */
 function buildTranscript(thread: ChatThread): string {
@@ -34,7 +43,7 @@ function isAbortError(error: unknown): boolean {
 }
 
 /**
- * 대화(스레드) 화면: 상단 바 + 메시지 스크롤 영역 + 하단 입력창.
+ * 대화(스레드) 화면 (Figma 최종 03): 대화 전용 메뉴 + 메시지 스크롤 영역 + 입력창 + 푸터.
  * ThreadPage가 threadId를 key로 넘기므로 대화가 바뀌면 입력 중인 내용·복사 상태가 초기화됩니다.
  */
 export default function ThreadView() {
@@ -42,6 +51,7 @@ export default function ThreadView() {
   const thread = useThread(threadId);
   const streaming = useStreaming(threadId);
   const { showSources, streaming: streamingByThread } = useChatStore();
+  const { sidebarCollapsed, drawerOpen, toggleSidebar, menuButtonRef } = useChatShell();
   const [value, setValue] = useState("");
   const [copied, setCopied] = useState(false);
   const copiedTimer = useRef<number | undefined>(undefined);
@@ -106,51 +116,78 @@ export default function ThreadView() {
 
   return (
     <>
-      <TopBar
-        elevated
-        title={
-          <h1 className="block truncate text-[15px] leading-[22px] font-semibold text-chat-ink">
-            {thread.title}
-          </h1>
-        }
-        actions={
-          <>
+      <h1 className="sr-only">{thread.title}</h1>
+
+      {/* 대화 전용 메뉴: 새 대화 / 대화 기록(사이드바 열고 닫기) + 공유 · 더 보기 */}
+      <div className="shrink-0 px-4 pt-4 sm:px-6 lg:px-12 lg:pt-6">
+        <div className="mx-auto flex w-full max-w-[832px] items-center gap-3">
+          <Link
+            to="/"
+            className={cn(
+              MENU_BUTTON,
+              "border-chat-border bg-chat-surface hover:bg-chat-hover",
+              FOCUS_RING,
+            )}
+          >
+            새 대화
+          </Link>
+          {/* 모바일에서는 드로어를 여는 메뉴 버튼 역할도 하므로 드로어가 닫히면 포커스가 여기로 돌아온다 */}
+          <button
+            ref={menuButtonRef}
+            type="button"
+            onClick={toggleSidebar}
+            aria-expanded={drawerOpen || undefined}
+            className={cn(
+              MENU_BUTTON,
+              "border-chat-border bg-chat-surface hover:bg-chat-hover",
+              // 데스크톱에서 사이드바가 펼쳐져 있으면 선택된 상태(brand-50)로 보인다
+              !sidebarCollapsed &&
+                "lg:border-transparent lg:bg-chat-brand-50 lg:hover:bg-chat-brand-100/70",
+              FOCUS_RING,
+            )}
+          >
+            대화 기록
+          </button>
+
+          <div className="ml-auto flex items-center gap-1">
             <button
               type="button"
               onClick={() => void handleShare()}
-              className="flex h-9 items-center gap-1.5 rounded-chat-md px-3 text-sm font-medium text-chat-ink-2 transition-colors hover:bg-chat-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-chat-brand"
+              className={cn(
+                "flex h-9 items-center gap-1.5 rounded-chat-md px-3 text-sm font-medium text-chat-ink-2 transition-colors hover:bg-chat-hover",
+                FOCUS_RING,
+              )}
             >
               <Share className="size-[17px]" strokeWidth={1.8} aria-hidden="true" />
               {copied ? "복사됨" : "공유"}
             </button>
             <ThreadMenu thread={thread} />
-          </>
-        }
-      />
+          </div>
+        </div>
+      </div>
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto px-4 pt-7 pb-2 sm:px-6 lg:px-12"
+        className="min-h-0 flex-1 overflow-y-auto px-4 pt-8 pb-4 sm:px-6 lg:px-12 lg:pt-14"
       >
         <MessageList thread={thread} streaming={streaming} showSources={showSources} />
       </div>
 
-      <div className="flex shrink-0 flex-col items-center gap-2.5 px-4 pt-3 pb-[18px] sm:px-6 lg:px-12">
+      <div className="flex shrink-0 justify-center px-4 pt-2 pb-5 sm:px-6 lg:px-12">
         <Composer
-          variant="compact"
           value={value}
           onChange={setValue}
           onSubmit={handleSubmit}
           streaming={!!streaming}
           onStop={() => stopStreaming(thread.id)}
           disabled={otherStreaming}
-          placeholder="이어서 질문하기"
+          placeholder="이어서 궁금한 내용을 물어보세요"
           ariaLabel="이어서 질문하기"
+          helper={<ComposerHelper />}
         />
-        <p className="text-center text-xs leading-[18px] text-chat-subtle">
-          {FOOTNOTE_TEXT}
-        </p>
       </div>
+
+      <ChatFooter />
     </>
   );
 }

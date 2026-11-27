@@ -1,4 +1,3 @@
-import { Info } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { code } from "@streamdown/code";
 import { hasActiveStream, sendMessage, useChatStore } from "../chatStore";
@@ -22,7 +21,10 @@ interface AssistantMessageProps {
 const WARNING_TEXT =
   "기간·마감은 바뀔 수 있어요. 신청 전에 원문 공지를 꼭 확인해 주세요.";
 
-/** 챗봇 답변: 아바타 + 본문(마크다운) + 원문 확인 경고 + 출처 카드 + 피드백 + 후속 질문 */
+/**
+ * 챗봇 답변 (Figma 최종 03 'Assistant response'):
+ * 'GIST 챗봇' 라벨 → 본문(마크다운) → 함께 확인할 자료 → 원문 확인 안내 → 피드백 → 후속 질문
+ */
 export default function AssistantMessage({
   thread,
   message,
@@ -43,7 +45,7 @@ export default function AssistantMessage({
   let body;
   if (!message.text && isStreaming) {
     body = (
-      <div className="flex items-center gap-1.5 text-[15px] leading-[1.65]">
+      <div className="flex items-center gap-1.5 text-base leading-normal sm:text-lg">
         <span className="loading-text-shimmer">{statusText}</span>
         <span className="flex items-center gap-1.5 text-chat-subtle">
           <span className="thinking-dot" />
@@ -54,7 +56,7 @@ export default function AssistantMessage({
     );
   } else if (message.error) {
     body = (
-      <p className="text-[15px] leading-[1.65] break-words text-chat-muted">
+      <p className="text-base leading-normal break-words text-chat-muted sm:text-lg">
         {message.text}
       </p>
     );
@@ -63,7 +65,7 @@ export default function AssistantMessage({
       <Streamdown
         plugins={{ code }}
         isAnimating={isStreaming}
-        className="min-w-0 text-[15px] leading-[1.65] break-words text-chat-ink [&_a]:text-chat-brand-text [&_pre]:text-[13px] [&_table]:text-sm"
+        className="min-w-0 text-base leading-normal break-words text-chat-ink sm:text-lg [&_a]:text-chat-brand-text [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-2xl [&_h2]:font-bold [&_h3]:text-xl [&_h3]:font-bold [&_pre]:text-[13px] [&_table]:text-sm"
       >
         {message.text}
       </Streamdown>
@@ -71,37 +73,28 @@ export default function AssistantMessage({
   }
 
   return (
-    <div className="flex items-start gap-3.5">
-      <img
-        src="/logo.svg"
-        alt=""
-        aria-hidden="true"
-        className="size-8 shrink-0 rounded-full"
-      />
-      <div className="flex min-w-0 flex-1 flex-col gap-3.5 pt-1">
-        {body}
+    <div className="flex min-w-0 flex-col gap-[18px]">
+      <p className="text-lg leading-normal font-semibold text-chat-brand-text">GIST 챗봇</p>
 
-        {showWarning && (
-          <div className="flex items-center gap-2.5 rounded-chat-md border border-chat-brand-100 bg-chat-brand-50 px-3.5 py-2.5 text-[13px] leading-5 font-medium text-chat-brand-strong">
-            <Info className="size-[17px] shrink-0" strokeWidth={1.8} aria-hidden="true" />
-            <span>{WARNING_TEXT}</span>
-          </div>
-        )}
+      {body}
 
-        {showCards && <SourceCards sources={sources} />}
+      {showCards && <SourceCards sources={sources} />}
 
-        {showFeedback && (
-          <FeedbackBar thread={thread} message={message} disabled={feedbackBusy} />
-        )}
+      {showWarning && (
+        <p className="text-xs leading-normal break-keep text-chat-muted">{WARNING_TEXT}</p>
+      )}
 
-        {isComplete && (
-          <FollowUpChips
-            questions={message.followUps}
-            onPick={(question) => sendMessage(thread.id, question)}
-            disabled={anyStreaming}
-          />
-        )}
-      </div>
+      {showFeedback && (
+        <FeedbackBar thread={thread} message={message} disabled={feedbackBusy} />
+      )}
+
+      {isComplete && (
+        <FollowUpChips
+          questions={message.followUps}
+          onPick={(question) => sendMessage(thread.id, question)}
+          disabled={anyStreaming}
+        />
+      )}
     </div>
   );
 }
