@@ -1,31 +1,40 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowUpRight, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TopBar from "./TopBar";
 import Composer from "./Composer";
 import ChatFooter from "./ChatFooter";
 import ComposerHelper from "./ComposerHelper";
 import RepelHeading from "./RepelHeading";
+import SuggestionCategoryCard from "./SuggestionCategoryCard";
+import TrendingQuestionsCard from "./TrendingQuestionsCard";
 import { hasActiveStream, sendMessage, setShowSources, useChatStore } from "../chatStore";
-import { suggestedQuestions } from "../suggestions";
+import { suggestionCategories, type SuggestionCategoryId } from "../suggestions";
+import { useSuggestedQuestions } from "../useSuggestedQuestions";
 
 const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-chat-brand";
 
-/** 홈(새 대화) 메인 영역 (Figma 최종 01·02): 인사말 → 입력창 → 추천 질문 → 푸터 */
+/**
+ * 홈(새 대화) 메인 영역: 인사말 → 입력창 (Figma 최종 01·02) → 추천 질문 (Figma '02 후') → 푸터
+ */
 export default function HomeView() {
   const navigate = useNavigate();
   const { showSources, streaming } = useChatStore();
   const [value, setValue] = useState("");
+  // 카테고리 카드는 한 번에 하나만 펼친다 (처음엔 모두 접힘)
+  const [openCategory, setOpenCategory] = useState<SuggestionCategoryId | null>(null);
+  const trending = useSuggestedQuestions();
 
   // 위젯 세션이 하나라 다른 대화의 답변이 끝날 때까지는 새 질문을 보낼 수 없다
   // TODO(BE 연결): 429(질문 횟수 초과) 안내가 생기면 여기서 입력창·추천 질문도 잠근다
   const blocked = hasActiveStream(streaming);
 
   // 새 대화를 만들고 바로 스레드 화면으로 이동 (스트리밍은 저장소에서 이어짐)
-  const submit = (text: string) => {
-    const id = sendMessage(null, text);
+  // prompt가 있으면(추천 질문) 말풍선엔 text, 채팅 요청엔 prompt를 보낸다
+  const submit = (text: string, prompt?: string | null) => {
+    const id = sendMessage(null, text, { prompt });
     if (!id) return;
     setValue("");
     navigate(`/c/${id}`);
@@ -97,37 +106,47 @@ export default function HomeView() {
             <section aria-labelledby="suggested-heading" className="flex flex-col gap-3">
               <h2
                 id="suggested-heading"
-                className="text-sm leading-normal font-medium text-chat-muted"
+                className="text-sm leading-normal font-medium text-chat-sidebar-muted"
               >
-                <span className="sm:hidden">이런 질문부터 시작해 보세요</span>
-                <span className="hidden sm:inline">무엇부터 물어볼지 고민된다면</span>
+                무엇부터 물어볼지 고민된다면
               </h2>
-              {/* 모바일(Figma 09)은 질문만 있는 한 줄 카드 3개, 그 이상은 라벨이 붙은 2열 카드 4개 */}
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4">
-                {suggestedQuestions.map(({ category, question }, index) => (
-                  <button
-                    key={question}
-                    type="button"
+              {/*
+                데스크톱: [카테고리 카드 3개 세로, 320px] [요즘 뜨는 질문] (Figma '02 후')
+                모바일: 요즘 뜨는 질문이 맨 위, 그 아래 카테고리 카드 한 열
+                추천 질문 API를 못 쓰면 요즘 뜨는 질문 카드를 숨기고 카테고리 카드가 3열로 넓어진다
+              */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+                {trending.status !== "unavailable" && (
+                  <TrendingQuestionsCard
+                    state={trending}
                     disabled={blocked}
-                    onClick={() => submit(question)}
-                    className={cn(
-                      "flex min-h-12 min-w-0 flex-col items-start justify-center rounded-xl border border-chat-border bg-chat-surface px-4 py-2.5 text-left font-medium leading-normal transition-colors sm:min-h-[104px] sm:justify-start sm:gap-4 sm:rounded-[14px] sm:p-5",
-                      index >= 3 && "max-sm:hidden",
-                      "hover:border-chat-brand-100 hover:bg-chat-brand-50/40 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-chat-border disabled:hover:bg-chat-surface",
-                      FOCUS_RING,
-                    )}
-                  >
-                    <span className="hidden text-xs text-chat-brand-text sm:block">{category}</span>
-                    <span className="flex items-center gap-2 text-sm break-keep text-chat-ink sm:text-[17px]">
-                      {question}
-                      <ArrowUpRight
-                        className="size-4 shrink-0"
-                        strokeWidth={2}
-                        aria-hidden="true"
-                      />
-                    </span>
-                  </button>
-                ))}
+                    onPick={(item) => submit(item.question, item.prompt)}
+                    className="justify-center sm:order-2 sm:min-h-[184px] sm:min-w-0 sm:flex-1"
+                  />
+                )}
+                <div
+                  className={cn(
+                    "flex flex-col gap-3 sm:order-1 sm:gap-4",
+                    trending.status === "unavailable"
+                      ? "sm:grid sm:flex-1 sm:grid-cols-3 sm:items-start"
+                      : "sm:w-[320px] sm:shrink-0",
+                  )}
+                >
+                  {suggestionCategories.map((category) => (
+                    <SuggestionCategoryCard
+                      key={category.id}
+                      category={category}
+                      expanded={openCategory === category.id}
+                      onToggle={() =>
+                        setOpenCategory((current) =>
+                          current === category.id ? null : category.id,
+                        )
+                      }
+                      onPick={(question) => submit(question)}
+                      disabled={blocked}
+                    />
+                  ))}
+                </div>
               </div>
             </section>
           </div>
