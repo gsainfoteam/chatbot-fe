@@ -6,7 +6,7 @@ import { SUGGESTION_CARD_CLASS, SUGGESTION_ROW_CLASS } from "./SuggestionCategor
 import { FlameIcon } from "./SuggestionIcons";
 
 interface TrendingQuestionsCardProps {
-  state: Exclude<SuggestedQuestionsState, { status: "unavailable" }>;
+  state: SuggestedQuestionsState;
   onPick: (item: SuggestedQuestionResponse) => void;
   disabled?: boolean;
   className?: string;

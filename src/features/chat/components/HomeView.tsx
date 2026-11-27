@@ -113,25 +113,15 @@ export default function HomeView() {
               {/*
                 데스크톱: [카테고리 카드 3개 세로, 320px] [요즘 뜨는 질문] (Figma '02 후')
                 모바일: 요즘 뜨는 질문이 맨 위, 그 아래 카테고리 카드 한 열
-                추천 질문 API를 못 쓰면 요즘 뜨는 질문 카드를 숨기고 카테고리 카드가 3열로 넓어진다
               */}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
-                {trending.status !== "unavailable" && (
-                  <TrendingQuestionsCard
-                    state={trending}
-                    disabled={blocked}
-                    onPick={(item) => submit(item.question, item.prompt)}
-                    className="justify-center sm:order-2 sm:min-h-[184px] sm:min-w-0 sm:flex-1"
-                  />
-                )}
-                <div
-                  className={cn(
-                    "flex flex-col gap-3 sm:order-1 sm:gap-4",
-                    trending.status === "unavailable"
-                      ? "sm:grid sm:flex-1 sm:grid-cols-3 sm:items-start"
-                      : "sm:w-[320px] sm:shrink-0",
-                  )}
-                >
+                <TrendingQuestionsCard
+                  state={trending}
+                  disabled={blocked}
+                  onPick={(item) => submit(item.question, item.prompt)}
+                  className="justify-center sm:order-2 sm:min-h-[184px] sm:min-w-0 sm:flex-1"
+                />
+                <div className="flex flex-col gap-3 sm:order-1 sm:w-[320px] sm:shrink-0 sm:gap-4">
                   {suggestionCategories.map((category) => (
                     <SuggestionCategoryCard
                       key={category.id}

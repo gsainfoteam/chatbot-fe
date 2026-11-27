@@ -414,7 +414,7 @@ export function sendMessage(
 
 /**
  * 홈 '요즘 뜨는 질문'용 추천 질문 조회. 위젯 세션이 필요해 없으면 먼저 발급받는다.
- * 위젯 키가 없거나 요청이 실패하면 빈 배열 (화면에서는 카드를 숨긴다).
+ * 위젯 키가 없거나 요청이 실패하면 빈 배열 (화면에서는 기본 질문을 보여준다).
  */
 export async function loadSuggestedQuestions(): Promise<SuggestedQuestionResponse[]> {
   const widgetKey = getWidgetKey();
