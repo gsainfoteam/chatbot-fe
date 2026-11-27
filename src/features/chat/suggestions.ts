@@ -14,6 +14,8 @@ export const suggestedQuestions: SuggestedQuestion[] = [
   { category: "장학 · 지원 알아보기", question: "신입생이 받을 수 있는 장학금은?" },
 ];
 
-/** 화면 하단 안내문 (home / thread 공통) */
+/** 화면 하단 안내문 (home / thread 공통). 모바일은 짧은 문구 (Figma 최종 09) */
 export const FOOTNOTE_TEXT =
   "답변과 함께 관련 자료를 확인할 수 있어요. 중요한 일정과 신청 조건은 원문을 확인해 주세요.";
+
+export const FOOTNOTE_TEXT_SHORT = "중요한 일정과 신청 조건은 원문을 확인해 주세요.";

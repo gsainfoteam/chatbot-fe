@@ -156,9 +156,10 @@ export default function Composer({
       )}
     >
       {textarea}
-      <div className="flex items-end justify-between gap-3">
-        <div className="flex min-w-0 flex-col items-start gap-1">{helper}</div>
-        <div className="flex shrink-0 items-center gap-1.5">
+      {/* 좁은 화면에서 도구가 안내 문구를 누르지 않도록, 자리가 모자라면 도구 묶음이 다음 줄 오른쪽으로 내려간다 */}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex shrink-0 flex-col items-start gap-1 whitespace-nowrap">{helper}</div>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {attachButton}
           {tools}
           {actionButton}
