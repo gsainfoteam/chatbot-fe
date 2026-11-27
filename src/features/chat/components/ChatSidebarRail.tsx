@@ -30,11 +30,8 @@ export default function ChatSidebarRail({ onOpen }: ChatSidebarRailProps) {
 
   return (
     <div className="flex h-full w-16 flex-col items-center border-r border-chat-sidebar-border bg-chat-sidebar px-3 py-6">
-      {/*
-        로고 행: 펼친 사이드바의 로고 행(44px)과 같은 높이. 가로도 펼친 로고와 같은 자리(중심 38px)에
-        오도록 가운데 정렬 대신 왼쪽에서 20px(px-3 + pl-2) 띄운다
-      */}
-      <div className="flex h-11 items-center self-start pl-2">
+      {/* 로고 행: 펼친 사이드바의 로고 행(44px)과 같은 높이, 가로는 레일 가운데 */}
+      <div className="flex h-11 items-center">
         <Tooltip content="사이드바 열기" side="right" className="font-chat">
           <button
             type="button"
