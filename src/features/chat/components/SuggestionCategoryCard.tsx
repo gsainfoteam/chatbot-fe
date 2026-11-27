@@ -1,5 +1,4 @@
 import type { ComponentType, SVGProps } from "react";
-import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SuggestionCategory, SuggestionCategoryId } from "../suggestions";
 import { AngleDownIcon, ChildHeadIcon, GraduationCapIcon, SchoolIcon } from "./SuggestionIcons";
@@ -17,11 +16,15 @@ const FOCUS_RING =
 export const SUGGESTION_CARD_CLASS =
   "flex flex-col gap-4 rounded-[14px] border border-chat-sidebar-border bg-chat-surface py-4";
 
-/** 펼친 카드·요즘 뜨는 질문 카드의 질문 한 줄 (16px, 좌우 20, 호버 시 옅은 브랜드 바탕) */
+/** 요즘 뜨는 질문 카드의 질문 한 줄 (16px, 좌우 20, 호버 시 옅은 브랜드 바탕) */
 export const SUGGESTION_ROW_CLASS = cn(
   "flex w-full items-center gap-2.5 rounded-chat-md px-5 py-1 text-left text-base leading-normal font-medium text-chat-sidebar-ink transition-colors hover:bg-chat-brand-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent",
   FOCUS_RING,
 );
+
+/** 펼친 카테고리 카드의 질문 한 줄: 14px, 화살표 없이 질문만. 펼침 영역이 overflow-hidden이라 포커스 링은 안쪽에 그린다 */
+const CATEGORY_ROW_CLASS =
+  "flex w-full items-center rounded-chat-md px-5 py-1.5 text-left text-sm leading-normal font-medium text-chat-sidebar-ink transition-colors hover:bg-chat-brand-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-chat-brand";
 
 interface SuggestionCategoryCardProps {
   category: SuggestionCategory;
@@ -32,7 +35,9 @@ interface SuggestionCategoryCardProps {
 }
 
 /**
- * 카테고리 카드 (Figma '02 후' 추천 질문 카드): 머리를 누르면 질문 3개가 펼쳐진다.
+ * 카테고리 카드 (Figma '02 후' 추천 질문 카드): 머리를 누르면 질문 3개가 부드럽게 펼쳐진다.
+ * 펼침은 grid-template-rows 0fr ↔ 1fr 전환으로 높이를 애니메이션한다 (동작 줄이기 설정이면 바로 바뀜).
+ * 접힌 동안에는 inert로 질문 버튼을 포커스·스크린리더에서 뺀다.
  * 한 번에 하나만 펼치는 규칙은 부모(HomeView)가 expanded로 관리한다.
  */
 export default function SuggestionCategoryCard({
@@ -46,7 +51,8 @@ export default function SuggestionCategoryCard({
   const panelId = `suggestion-${category.id}`;
 
   return (
-    <div className={SUGGESTION_CARD_CLASS}>
+    // 머리와 질문 사이 16px은 펼침 영역 안쪽 여백으로 둔다 (접혔을 때 간격이 남지 않도록 gap 0)
+    <div className={cn(SUGGESTION_CARD_CLASS, "gap-0")}>
       <button
         type="button"
         onClick={onToggle}
@@ -70,23 +76,31 @@ export default function SuggestionCategoryCard({
         />
       </button>
 
-      {expanded && (
-        <ul id={panelId} className="flex flex-col gap-1.5">
-          {category.questions.map((question) => (
-            <li key={question}>
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={() => onPick(question)}
-                className={SUGGESTION_ROW_CLASS}
-              >
-                <span className="break-keep">{question}</span>
-                <ArrowUpRight className="size-4 shrink-0" strokeWidth={2} aria-hidden="true" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      <div
+        id={panelId}
+        inert={!expanded}
+        className={cn(
+          "grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none",
+          expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+        )}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <ul className="flex flex-col gap-1 pt-4">
+            {category.questions.map((question) => (
+              <li key={question}>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onPick(question)}
+                  className={CATEGORY_ROW_CLASS}
+                >
+                  <span className="break-keep">{question}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }
