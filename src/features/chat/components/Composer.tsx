@@ -19,10 +19,8 @@ export interface ComposerProps {
   disabled?: boolean;
   placeholder: string;
   ariaLabel: string;
-  /** 하단 오른쪽, 전송 버튼 앞 도구 영역 (예: 출처 공지 함께 보기 토글) */
+  /** 하단 왼쪽, 첨부 버튼 옆 도구 영역 (예: 출처 공지 함께 보기 토글) */
   tools?: ReactNode;
-  /** 하단 왼쪽 안내 영역 (예: 로그인 없이 질문할 수 있어요 · 챗봇 사용법) */
-  helper?: ReactNode;
   autoFocus?: boolean;
   className?: string;
 }
@@ -32,9 +30,12 @@ const MAX_TEXTAREA_HEIGHT = 200;
 const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-chat-brand";
 
+/** 입력란에 키보드 포커스가 있으면 둥근 입력창 둘레에 포커스 링 (버튼 포커스에는 반응하지 않음) */
+const TEXTAREA_FOCUS_RING =
+  "has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:outline-offset-2 has-[textarea:focus-visible]:outline-chat-brand";
+
 /**
- * 질문 입력창 (Figma 최종 01·03 'Chat composer': 입력 영역 + 하단 안내·도구·전송 행).
- * 홈과 대화 화면이 같은 모양을 씁니다. Enter 전송 / Shift+Enter 줄바꿈, 한글 조합 중 Enter 무시.
+ * 질문 입력창. 홈과 대화 화면이 같은 모양(예전 홈 입력창 디자인 + 그림자)을 씁니다. Enter 전송 / Shift+Enter 줄바꿈, 한글 조합 중 Enter 무시.
  * 파일 첨부 버튼은 시안에 있지만 위젯 API에 업로드가 없어 비활성 상태로 둡니다
  * (HANDOFF.md "구현 메모" 참고).
  */
@@ -48,7 +49,6 @@ export default function Composer({
   placeholder,
   ariaLabel,
   tools,
-  helper,
   autoFocus = false,
   className,
 }: ComposerProps) {
@@ -94,7 +94,7 @@ export default function Composer({
         }, 0);
       }}
       onKeyDown={handleKeyDown}
-      className="min-w-0 resize-none border-0 bg-transparent text-lg leading-normal text-chat-ink outline-none placeholder:text-chat-muted disabled:cursor-not-allowed"
+      className="min-w-0 resize-none border-0 bg-transparent text-base leading-[1.6] text-chat-ink outline-none placeholder:text-chat-subtle disabled:cursor-not-allowed"
     />
   );
 
@@ -120,7 +120,7 @@ export default function Composer({
       onClick={onStop}
       aria-label="응답 중지"
       className={cn(
-        "flex size-11 shrink-0 items-center justify-center rounded-chat-md bg-chat-brand text-chat-on-brand transition-colors hover:bg-chat-brand-strong",
+        "flex size-11 shrink-0 items-center justify-center rounded-full bg-chat-brand text-chat-on-brand transition-colors hover:bg-chat-brand-strong",
         FOCUS_RING,
       )}
     >
@@ -132,7 +132,7 @@ export default function Composer({
       disabled={!canSend}
       aria-label="보내기"
       className={cn(
-        "flex size-11 shrink-0 items-center justify-center rounded-chat-md bg-chat-brand text-chat-on-brand transition-colors hover:bg-chat-brand-strong disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-chat-brand",
+        "flex size-11 shrink-0 items-center justify-center rounded-full bg-chat-brand text-chat-on-brand transition-colors hover:bg-chat-brand-strong disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-chat-brand",
         FOCUS_RING,
       )}
     >
@@ -149,21 +149,19 @@ export default function Composer({
     <form
       onSubmit={handleSubmit}
       className={cn(
-        // Figma 최종 01·02: radius 14, padding 24, 높이 164. 입력 중이면 테두리가 브랜드색(02)
-        "flex min-h-[164px] w-full max-w-[832px] flex-col justify-between gap-4 rounded-[14px] border border-chat-border bg-chat-surface p-5 transition-colors sm:p-6",
-        "has-[textarea:focus]:border-chat-brand",
+        // 예전 홈 입력창(f86537a) 모양: radius 26, 브랜드 그림자, 아래 줄 [첨부 · 도구 … 전송]
+        "flex w-full max-w-[832px] flex-col gap-2.5 rounded-chat-xl border border-chat-border bg-chat-surface px-[22px] pt-[18px] pr-[18px] pb-3 shadow-chat-composer",
+        TEXTAREA_FOCUS_RING,
         className,
       )}
     >
       {textarea}
-      {/* 좁은 화면에서 도구가 안내 문구를 누르지 않도록, 자리가 모자라면 도구 묶음이 다음 줄 오른쪽으로 내려간다 */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex shrink-0 flex-col items-start gap-1 whitespace-nowrap">{helper}</div>
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-1.5">
           {attachButton}
           {tools}
-          {actionButton}
         </div>
+        {actionButton}
       </div>
     </form>
   );

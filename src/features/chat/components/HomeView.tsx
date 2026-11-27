@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import TopBar from "./TopBar";
 import Composer from "./Composer";
 import ChatFooter from "./ChatFooter";
-import ComposerHelper from "./ComposerHelper";
 import RepelHeading from "./RepelHeading";
 import SuggestionCategoryCard from "./SuggestionCategoryCard";
 import TrendingQuestionsCard from "./TrendingQuestionsCard";
@@ -98,7 +97,6 @@ export default function HomeView() {
               disabled={blocked}
               placeholder="수강신청, 기숙사, 학교생활… 편하게 물어보세요"
               ariaLabel="질문 입력"
-              helper={<ComposerHelper />}
               tools={sourcesToggle}
               autoFocus
             />

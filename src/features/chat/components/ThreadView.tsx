@@ -3,7 +3,6 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { Share } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Composer from "./Composer";
-import ComposerHelper from "./ComposerHelper";
 import ChatFooter from "./ChatFooter";
 import MessageList from "./MessageList";
 import ThreadMenu from "./ThreadMenu";
@@ -183,7 +182,6 @@ export default function ThreadView() {
           disabled={otherStreaming}
           placeholder="이어서 궁금한 내용을 물어보세요"
           ariaLabel="이어서 질문하기"
-          helper={<ComposerHelper />}
         />
       </div>
 
