@@ -68,7 +68,11 @@ export default function HomeView() {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto flex min-h-full w-full max-w-[832px] flex-col justify-center gap-6 px-5 pt-4 pb-10 sm:gap-7 sm:px-6 sm:pt-6 sm:pb-12 lg:px-0 lg:py-16">
+          {/*
+            가운데 정렬 대신 위에서부터 쌓는다: 추천 카드가 펼쳐져도 인사말·입력창 위치는 그대로,
+            질문 영역만 아래로 늘어난다. 데스크톱 상단 여백은 화면 높이에 맞춰 48~144px
+          */}
+          <div className="mx-auto flex w-full max-w-[832px] flex-col gap-6 px-5 pt-4 pb-10 sm:gap-7 sm:px-6 sm:pt-6 sm:pb-12 lg:px-0 lg:pt-[clamp(48px,14vh,144px)] lg:pb-16">
             <div className="flex flex-col items-center gap-3 text-center">
               <p className="text-xs leading-normal font-medium text-chat-brand-text sm:text-sm">
                 학교생활의 첫 질문, GIST 챗봇
@@ -112,13 +116,13 @@ export default function HomeView() {
                 데스크톱: [카테고리 카드 3개 세로, 320px] [요즘 뜨는 질문] (Figma '02 후')
                 모바일: 요즘 뜨는 질문이 맨 위, 그 아래 카테고리 카드 한 열
               */}
-              {/* 두 열을 같은 높이로 늘려 요즘 뜨는 질문 카드 하단이 마지막 카테고리 카드 하단과 맞게 한다 */}
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-4">
+              {/* 두 열 모두 위쪽 정렬, 요즘 뜨는 질문 카드는 카테고리 카드가 펼쳐져도 제 높이를 유지한다 */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
                 <TrendingQuestionsCard
                   state={trending}
                   disabled={blocked}
                   onPick={(item) => submit(item.question, item.prompt)}
-                  className="justify-center sm:order-2 sm:min-w-0 sm:flex-1"
+                  className="sm:order-2 sm:min-w-0 sm:flex-1"
                 />
                 <div className="flex flex-col gap-3 sm:order-1 sm:w-[320px] sm:shrink-0 sm:gap-4">
                   {suggestionCategories.map((category) => (

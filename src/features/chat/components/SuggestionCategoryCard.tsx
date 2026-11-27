@@ -22,15 +22,18 @@ export const SUGGESTION_CARD_CLASS =
  */
 export const SUGGESTION_LIST_CLASS = "flex flex-col px-2";
 
-/** 요즘 뜨는 질문 카드의 질문 한 줄 (14px, 화살표 없이, 호버 시 옅은 브랜드 바탕) */
+/** 요즘 뜨는 질문 카드의 질문 한 줄 (14px, 화살표 없이, 호버 시 옅은 브랜드 바탕). 모바일은 누르기 쉽게 최소 44px */
 export const SUGGESTION_ROW_CLASS = cn(
-  "flex w-full items-center gap-2.5 rounded-chat-md px-3 py-1 text-left text-sm leading-normal font-medium text-chat-sidebar-ink transition-colors hover:bg-chat-brand-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent",
+  "flex min-h-11 w-full items-center sm:min-h-0 gap-2.5 rounded-chat-md px-3 py-1 text-left text-sm leading-normal font-medium text-chat-sidebar-ink transition-colors hover:bg-chat-brand-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent",
   FOCUS_RING,
 );
 
-/** 펼친 카테고리 카드의 질문 한 줄: 14px, 화살표 없이 질문만. 펼침 영역이 overflow-hidden이라 포커스 링은 안쪽에 그린다 */
+/**
+ * 펼친 카테고리 카드의 질문 한 줄: 14px, 화살표 없이 질문만. 모바일은 누르기 쉽게 최소 44px.
+ * 펼친 카드는 옅은 브랜드 바탕이라 호버는 한 단계 진하게. 펼침 영역이 overflow-hidden이라 포커스 링은 안쪽에 그린다
+ */
 const CATEGORY_ROW_CLASS =
-  "flex w-full items-center rounded-chat-md px-3 py-1.5 text-left text-sm leading-normal font-medium text-chat-sidebar-ink transition-colors hover:bg-chat-brand-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-chat-brand";
+  "flex min-h-11 w-full items-center rounded-chat-md px-3 py-1.5 text-left text-sm leading-normal font-medium text-chat-sidebar-ink transition-colors sm:min-h-0 hover:bg-chat-brand-100/60 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-chat-brand";
 
 interface SuggestionCategoryCardProps {
   category: SuggestionCategory;
@@ -57,8 +60,15 @@ export default function SuggestionCategoryCard({
   const panelId = `suggestion-${category.id}`;
 
   return (
-    // 머리와 질문 사이 16px은 펼침 영역 안쪽 여백으로 둔다 (접혔을 때 간격이 남지 않도록 gap 0)
-    <div className={cn(SUGGESTION_CARD_CLASS, "gap-0")}>
+    // 머리와 질문 사이 12px은 펼침 영역 안쪽 여백으로 둔다 (접혔을 때 간격이 남지 않도록 gap 0)
+    // 펼친 카드만 옅은 브랜드 테두리·바탕으로 선택된 상태를 보여준다
+    <div
+      className={cn(
+        SUGGESTION_CARD_CLASS,
+        "gap-0 transition-colors duration-300 motion-reduce:transition-none",
+        expanded && "border-chat-brand-100 bg-chat-brand-50/60",
+      )}
+    >
       <button
         type="button"
         onClick={onToggle}
@@ -91,7 +101,7 @@ export default function SuggestionCategoryCard({
         )}
       >
         <div className="min-h-0 overflow-hidden">
-          <ul className={cn(SUGGESTION_LIST_CLASS, "gap-1 pt-4")}>
+          <ul className={cn(SUGGESTION_LIST_CLASS, "gap-1 pt-3")}>
             {category.questions.map((question) => (
               <li key={question}>
                 <button
