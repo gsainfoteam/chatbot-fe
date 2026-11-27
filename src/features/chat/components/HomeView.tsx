@@ -112,12 +112,13 @@ export default function HomeView() {
                 데스크톱: [카테고리 카드 3개 세로, 320px] [요즘 뜨는 질문] (Figma '02 후')
                 모바일: 요즘 뜨는 질문이 맨 위, 그 아래 카테고리 카드 한 열
               */}
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+              {/* 두 열을 같은 높이로 늘려 요즘 뜨는 질문 카드 하단이 마지막 카테고리 카드 하단과 맞게 한다 */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-4">
                 <TrendingQuestionsCard
                   state={trending}
                   disabled={blocked}
                   onPick={(item) => submit(item.question, item.prompt)}
-                  className="justify-center sm:order-2 sm:min-h-[184px] sm:min-w-0 sm:flex-1"
+                  className="justify-center sm:order-2 sm:min-w-0 sm:flex-1"
                 />
                 <div className="flex flex-col gap-3 sm:order-1 sm:w-[320px] sm:shrink-0 sm:gap-4">
                   {suggestionCategories.map((category) => (
