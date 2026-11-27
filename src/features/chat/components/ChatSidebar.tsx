@@ -67,9 +67,16 @@ export default function ChatSidebar({
     >
       {/* 로고 + 접기 */}
       <div className="flex h-11 shrink-0 items-center justify-between">
+        {/*
+          로고는 접힌 레일의 로고와 같은 자리(가로 중심 31.5px)에 둬서 여닫을 때 움직이지 않게 한다.
+          사이드바 여백(24px)보다 6.5px 왼쪽으로 당긴다
+        */}
         <Link
           to="/"
-          className={cn("flex min-w-0 items-center gap-[7px] rounded-chat-sm", FOCUS_RING)}
+          className={cn(
+            "-ml-[6.5px] flex min-w-0 items-center gap-[7px] rounded-chat-sm",
+            FOCUS_RING,
+          )}
         >
           <img
             src="/logo-mark.svg"
