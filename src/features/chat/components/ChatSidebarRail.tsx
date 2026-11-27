@@ -1,11 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
-import { PanelLeftOpen, Plus, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/common";
 import DevConsoleButton from "./DevConsoleButton";
+import { SidebarToggleIcon } from "./SidebarIcons";
 
 interface ChatSidebarRailProps {
-  /** 사이드바 펼치기. focusSearch면 펼친 뒤 대화 검색에 포커스 */
+  /** 사이드바 펼치기. focusSearch면 펼친 뒤 질문 검색에 포커스 */
   onOpen: (options?: { focusSearch?: boolean }) => void;
 }
 
@@ -14,21 +15,21 @@ const FOCUS_RING =
 
 /** 접힌 레일의 36px 원형 버튼 */
 const RAIL_BUTTON = cn(
-  "flex size-9 items-center justify-center rounded-full text-chat-ink-2 transition-colors hover:bg-chat-hover hover:text-chat-ink",
+  "flex size-9 items-center justify-center rounded-full text-chat-sidebar-muted transition-colors hover:bg-chat-hover hover:text-chat-sidebar-ink",
   FOCUS_RING,
 );
 
 /**
  * 접힌 사이드바(64px 레일).
  * - 맨 위 로고가 "사이드바 열기" 버튼: 마우스를 올리거나 포커스하면 로고 대신 열기 아이콘이 보입니다
- * - 새 대화 · 대화 검색 바로가기, 맨 아래 '개발자 콘솔' 아이콘 버튼
+ * - 새 질문 · 질문 검색 바로가기, 맨 아래 '개발자 콘솔 바로가기' 아이콘 버튼
  */
 export default function ChatSidebarRail({ onOpen }: ChatSidebarRailProps) {
   const { pathname } = useLocation();
   const onHome = pathname === "/";
 
   return (
-    <div className="flex h-full w-16 flex-col items-center border-r border-chat-border bg-chat-sidebar px-3 py-6">
+    <div className="flex h-full w-16 flex-col items-center border-r border-chat-sidebar-border bg-chat-sidebar px-3 py-6">
       {/* 로고 행: 펼친 사이드바의 로고 행(44px)과 같은 높이 */}
       <div className="flex h-11 items-center">
         <Tooltip content="사이드바 열기" side="right" className="font-chat">
@@ -44,21 +45,20 @@ export default function ChatSidebarRail({ onOpen }: ChatSidebarRailProps) {
               aria-hidden="true"
               className="size-7 object-contain group-hover:hidden group-focus-visible:hidden"
             />
-            <PanelLeftOpen
-              className="hidden size-5 group-hover:block group-focus-visible:block"
-              strokeWidth={1.8}
+            <SidebarToggleIcon
+              className="hidden h-[18px] w-[23px] group-hover:block group-focus-visible:block"
               aria-hidden="true"
             />
           </button>
         </Tooltip>
       </div>
 
-      {/* 펼친 사이드바의 새 대화 버튼과 같은 세로 위치: 로고 행 아래 24px */}
+      {/* 펼친 사이드바의 새 질문 버튼과 같은 세로 위치: 로고 행 아래 24px */}
       <nav aria-label="바로 가기" className="mt-6 flex flex-col items-center gap-1.5">
-        <Tooltip content="새 대화" side="right" className="font-chat">
+        <Tooltip content="새 질문" side="right" className="font-chat">
           <Link
             to="/"
-            aria-label="새 대화"
+            aria-label="새 질문"
             aria-current={onHome ? "page" : undefined}
             className={cn(
               RAIL_BUTTON,
@@ -69,11 +69,11 @@ export default function ChatSidebarRail({ onOpen }: ChatSidebarRailProps) {
             <Plus className="size-4" strokeWidth={2} aria-hidden="true" />
           </Link>
         </Tooltip>
-        <Tooltip content="대화 검색" side="right" className="font-chat">
+        <Tooltip content="질문 검색" side="right" className="font-chat">
           <button
             type="button"
             onClick={() => onOpen({ focusSearch: true })}
-            aria-label="대화 검색"
+            aria-label="질문 검색"
             className={RAIL_BUTTON}
           >
             <Search className="size-4" strokeWidth={1.8} aria-hidden="true" />
@@ -81,8 +81,8 @@ export default function ChatSidebarRail({ onOpen }: ChatSidebarRailProps) {
         </Tooltip>
       </nav>
 
-      {/* 펼친 사이드바 하단의 개발자 콘솔 버튼(44px)과 같은 세로 위치 */}
-      <div className="mt-auto flex h-11 items-center">
+      {/* 펼친 사이드바 하단의 개발자 콘솔 바로가기 버튼과 같은 세로 위치 */}
+      <div className="mt-auto flex h-[39px] items-center">
         <DevConsoleButton variant="icon" />
       </div>
     </div>

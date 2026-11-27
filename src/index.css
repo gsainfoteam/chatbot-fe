@@ -73,14 +73,18 @@
  * Tailwind 유틸리티는 아래 @theme inline 블록을 통해 bg-chat-brand, text-chat-ink, rounded-chat-lg 형태로 노출됩니다.
  */
 :root {
-  --chat-brand: #df3326;
-  --chat-brand-strong: #c42b1f;
-  --chat-brand-text: #df3326;
-  --chat-brand-50: #fef2f2;
+  --chat-brand: #d93d2a;
+  --chat-brand-strong: #c4321f;
+  --chat-brand-text: #d93d2a;
+  --chat-brand-50: #fff5f2;
   --chat-brand-100: #fcdcd8;
   --chat-bg: #fefcfc;
   --chat-surface: #ffffff;
-  --chat-sidebar: #f9fafb;
+  --chat-sidebar: #fafafa;
+  /* 사이드바 전용 (Figma '02 후' · '03 후'): 따뜻한 검정·회색 글자, 옅은 테두리 */
+  --chat-sidebar-ink: #251816;
+  --chat-sidebar-muted: #716a69;
+  --chat-sidebar-border: #e1e1e1;
   --chat-hover: #f3f4f6;
   --chat-border: #e6e7eb;
   --chat-ink: #121827;
@@ -107,6 +111,9 @@
   --chat-bg: #15171c;
   --chat-surface: #1d2027;
   --chat-sidebar: #111317;
+  --chat-sidebar-ink: #f3f4f6;
+  --chat-sidebar-muted: #a9afba;
+  --chat-sidebar-border: #2c3038;
   --chat-hover: #262a32;
   --chat-border: #2c3038;
   --chat-ink: #f3f4f6;
@@ -131,6 +138,9 @@
   --color-chat-bg: var(--chat-bg);
   --color-chat-surface: var(--chat-surface);
   --color-chat-sidebar: var(--chat-sidebar);
+  --color-chat-sidebar-ink: var(--chat-sidebar-ink);
+  --color-chat-sidebar-muted: var(--chat-sidebar-muted);
+  --color-chat-sidebar-border: var(--chat-sidebar-border);
   --color-chat-hover: var(--chat-hover);
   --color-chat-border: var(--chat-border);
   --color-chat-ink: var(--chat-ink);

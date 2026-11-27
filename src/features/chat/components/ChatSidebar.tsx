@@ -1,18 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { Plus, Search, Trash2, X } from "lucide-react";
+import { Plus, Search, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tooltip } from "@/components/common";
 import { useChatStore } from "../chatStore";
 import { filterThreads, groupThreadsByDate } from "../threadGroups";
 import type { ChatThread } from "../types";
 import DeleteThreadDialog from "./DeleteThreadDialog";
 import DevConsoleButton from "./DevConsoleButton";
+import { QuestionCircleIcon, SidebarToggleIcon } from "./SidebarIcons";
 
 interface ChatSidebarProps {
   /** desktop: 사이드바 접기 / drawer: 드로어 닫기 */
   variant: "desktop" | "drawer";
   onClose: () => void;
-  /** 값이 바뀔 때마다 대화 검색 입력에 포커스 (레일의 검색 아이콘으로 열었을 때) */
+  /** 값이 바뀔 때마다 질문 검색 입력에 포커스 (레일의 검색 아이콘으로 열었을 때) */
   focusSearchToken?: number;
 }
 
@@ -23,8 +25,8 @@ const ROW_FOCUS_RING =
   "focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-chat-brand";
 
 /**
- * 좌측 사이드바(280px, Figma 최종 01·03 '기본 사이드바'):
- * 로고 · 닫기 / 새 대화 / 대화 검색 / 날짜별 대화 기록 / 하단 '개발자 콘솔' 버튼.
+ * 좌측 사이드바(280px, Figma '02 후' · '03 후' 사이드바):
+ * 로고 · 접기 / 새 질문 / 질문 검색 / 날짜별 질문 기록 / 하단 '개발자 콘솔 바로가기'.
  * drawer 변형은 ChatShell의 드로어 래퍼가 폭을 정하므로 w-full로 채웁니다.
  */
 export default function ChatSidebar({
@@ -59,53 +61,59 @@ export default function ChatSidebar({
   return (
     <aside
       className={cn(
-        "flex h-full flex-col gap-6 border-r border-chat-border bg-chat-sidebar p-6",
+        "flex h-full flex-col gap-6 border-r border-chat-sidebar-border bg-chat-sidebar p-6 text-chat-sidebar-ink",
         isDrawer ? "w-full" : "w-[280px]",
       )}
     >
-      {/* 로고 + 닫기 */}
+      {/* 로고 + 접기 */}
       <div className="flex h-11 shrink-0 items-center justify-between">
         <Link
           to="/"
           className={cn("flex min-w-0 items-center gap-[7px] rounded-chat-sm", FOCUS_RING)}
         >
-          <img src="/logo-mark.svg" alt="" aria-hidden="true" className="size-7 shrink-0 object-contain" />
-          <span className="truncate text-[15.75px] leading-normal font-semibold text-chat-ink">
+          <img
+            src="/logo-mark.svg"
+            alt=""
+            aria-hidden="true"
+            className="h-[26px] w-7 shrink-0 object-contain"
+          />
+          <span className="truncate text-[21.6px] leading-normal font-semibold tracking-[-0.04em]">
             GIST 챗봇
           </span>
         </Link>
         {/* 드로어로 열리면 ChatShell이 이 버튼(data-sidebar-close)에 먼저 포커스를 준다 */}
-        <button
-          type="button"
-          onClick={onClose}
-          data-sidebar-close=""
-          aria-label={closeLabel}
-          className={cn(
-            "flex h-11 shrink-0 items-center gap-1 rounded-chat-md px-2.5 text-sm font-medium text-chat-brand-text transition-colors hover:bg-chat-brand-50",
-            FOCUS_RING,
-          )}
-        >
-          닫기
-          <X className="size-4" strokeWidth={2} aria-hidden="true" />
-        </button>
+        <Tooltip content={closeLabel} className="font-chat">
+          <button
+            type="button"
+            onClick={onClose}
+            data-sidebar-close=""
+            aria-label={closeLabel}
+            className={cn(
+              "-mr-2 flex size-9 shrink-0 items-center justify-center rounded-chat-md text-chat-sidebar-muted transition-colors hover:bg-chat-hover hover:text-chat-sidebar-ink",
+              FOCUS_RING,
+            )}
+          >
+            <SidebarToggleIcon className="h-[18px] w-[23px]" aria-hidden="true" />
+          </button>
+        </Tooltip>
       </div>
 
-      {/* 새 대화 + 대화 검색 */}
+      {/* 새 질문 + 질문 검색 */}
       <div className="flex shrink-0 flex-col gap-2.5">
         <Link
           to="/"
           aria-current={onHome ? "page" : undefined}
           className={cn(
-            "flex h-11 items-center justify-center gap-1.5 rounded-[14px] border border-chat-border bg-chat-surface text-sm font-medium text-chat-ink transition-colors hover:bg-chat-hover",
+            "flex h-11 items-center justify-center gap-1.5 rounded-[14px] border border-chat-sidebar-border bg-chat-surface text-sm font-medium transition-colors hover:bg-chat-hover",
             FOCUS_RING,
           )}
         >
-          <Plus className="size-4" strokeWidth={2} aria-hidden="true" />새 대화
+          <Plus className="size-4" strokeWidth={2} aria-hidden="true" />새 질문
         </Link>
 
         <label
           className={cn(
-            "flex h-10 items-center gap-2 rounded-chat-md px-3 text-chat-subtle transition-colors hover:bg-chat-hover focus-within:bg-chat-hover",
+            "flex h-10 items-center gap-2 rounded-chat-md px-4 text-chat-sidebar-muted transition-colors hover:bg-chat-hover focus-within:bg-chat-hover",
             "focus-within:outline-1 focus-within:outline-offset-1 focus-within:outline-chat-brand",
           )}
         >
@@ -115,28 +123,42 @@ export default function ChatSidebar({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            aria-label="대화 검색"
-            placeholder="대화 검색"
-            className="min-w-0 flex-1 bg-transparent text-sm text-chat-ink outline-none placeholder:text-chat-subtle"
+            aria-label="질문 검색"
+            placeholder="질문 검색"
+            className="min-w-0 flex-1 bg-transparent text-sm font-medium text-chat-sidebar-ink outline-none placeholder:text-chat-sidebar-muted"
           />
         </label>
       </div>
 
-      {/* 대화 기록 (포커스 링이 잘리지 않도록 -mx-1 px-1로 여유를 둠) */}
+      {/* 질문 기록 (포커스 링이 잘리지 않도록 목록에 -mx-1 px-1 여유를 둠) */}
       <nav aria-labelledby="chat-history-heading" className="flex min-h-0 flex-1 flex-col gap-3">
-        <h2
-          id="chat-history-heading"
-          className="shrink-0 text-lg leading-normal font-semibold text-chat-ink"
-        >
-          대화 기록
-        </h2>
+        <div className="flex shrink-0 items-center justify-between">
+          <h2 id="chat-history-heading" className="text-lg leading-normal font-semibold">
+            질문 기록
+          </h2>
+          {/* 호버·포커스하면 회색 원 배경 + 안내 툴팁 (Figma '02 후 (2)') */}
+          <Tooltip content="같은 기기에서는 대화 기록이 보존돼요." side="right" className="font-chat">
+            <button
+              type="button"
+              aria-label="질문 기록 안내: 같은 기기에서는 대화 기록이 보존돼요."
+              className={cn(
+                "flex size-6 items-center justify-center rounded-full text-chat-sidebar-muted transition-colors hover:bg-chat-sidebar-border focus-visible:bg-chat-sidebar-border",
+                FOCUS_RING,
+              )}
+            >
+              <QuestionCircleIcon className="size-4" aria-hidden="true" />
+            </button>
+          </Tooltip>
+        </div>
         <div className="-mx-1 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-1 pb-1 [scrollbar-width:thin]">
           {emptyText ? (
-            <p className="text-[13px] leading-normal text-chat-muted">{emptyText}</p>
+            <p className="text-[13px] leading-normal text-chat-sidebar-muted">{emptyText}</p>
           ) : (
             groups.map((group) => (
               <div key={group.label} className="flex flex-col gap-1">
-                <div className="pb-1 text-xs leading-normal text-chat-muted">{group.label}</div>
+                <div className="text-[13px] leading-normal text-chat-sidebar-muted">
+                  {group.label}
+                </div>
                 {group.threads.map((thread) => {
                   const active = thread.id === threadId;
                   return (
@@ -146,28 +168,22 @@ export default function ChatSidebar({
                         to={`/c/${thread.id}`}
                         aria-current={active ? "page" : undefined}
                         className={cn(
-                          "flex flex-col gap-1 rounded-chat-md py-2.5 pr-9 pl-3 transition-colors",
+                          "block truncate rounded-chat-md border py-3 pr-10 pl-4 text-sm leading-normal font-medium transition-colors",
                           FOCUS_RING,
+                          // 선택된 대화: 브랜드 테두리 + 옅은 브랜드 바탕 (글자는 대비를 위해 한 단계 진한 브랜드색)
                           active
-                            ? "bg-chat-brand-50 py-3 group-hover:bg-chat-brand-100/70"
-                            : "group-hover:bg-chat-hover group-focus-within:bg-chat-hover",
+                            ? "border-chat-brand bg-chat-brand-50 text-chat-brand-strong"
+                            : "border-transparent text-chat-sidebar-muted group-hover:bg-chat-hover group-hover:text-chat-sidebar-ink group-focus-within:bg-chat-hover",
                         )}
                       >
-                        <span className="truncate text-sm leading-normal font-medium text-chat-ink">
-                          {thread.title}
-                        </span>
-                        {active && (
-                          <span className="text-xs leading-normal text-chat-brand-text">
-                            현재 대화
-                          </span>
-                        )}
+                        {thread.title}
                       </Link>
                       <button
                         type="button"
                         aria-label={`"${thread.title}" 대화 삭제`}
                         onClick={() => setPendingDelete(thread)}
                         className={cn(
-                          "absolute top-1/2 right-1.5 flex size-7 -translate-y-1/2 items-center justify-center rounded-chat-sm text-chat-subtle opacity-0 transition-opacity hover:bg-chat-brand-100/60 hover:text-destructive group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100",
+                          "absolute top-1/2 right-2 flex size-7 -translate-y-1/2 items-center justify-center rounded-chat-sm text-chat-sidebar-muted opacity-0 transition-opacity hover:bg-chat-brand-100/60 hover:text-destructive group-hover:opacity-100 group-focus-within:opacity-100 pointer-coarse:opacity-100",
                           ROW_FOCUS_RING,
                         )}
                       >
