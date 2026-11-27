@@ -154,7 +154,7 @@ export default function ChatShell() {
           </Dialog.Portal>
         </Dialog.Root>
 
-        <main className="chat-grid-bg relative flex min-w-0 flex-1 flex-col">
+        <main className="relative bg-chat-surface flex min-w-0 flex-1 flex-col">
           <Outlet />
         </main>
       </div>

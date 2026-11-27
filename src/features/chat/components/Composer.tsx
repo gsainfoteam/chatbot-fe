@@ -21,8 +21,10 @@ export interface ComposerProps {
   disabled?: boolean;
   placeholder: string;
   ariaLabel: string;
-  /** hero 변형의 하단 좌측 도구 영역 (예: 출처 공지 함께 보기 토글) */
+  /** hero 변형의 하단 오른쪽, 전송 버튼 앞 도구 영역 (예: 출처 공지 함께 보기 토글) */
   tools?: ReactNode;
+  /** hero 변형의 하단 왼쪽 안내 영역 (예: 로그인 없이 질문할 수 있어요 · 챗봇 사용법) */
+  helper?: ReactNode;
   autoFocus?: boolean;
   className?: string;
 }
@@ -52,6 +54,7 @@ export default function Composer({
   placeholder,
   ariaLabel,
   tools,
+  helper,
   autoFocus = false,
   className,
 }: ComposerProps) {
@@ -97,7 +100,10 @@ export default function Composer({
         }, 0);
       }}
       onKeyDown={handleKeyDown}
-      className="min-w-0 flex-1 resize-none border-0 bg-transparent text-base leading-[1.6] text-chat-ink outline-none placeholder:text-chat-subtle disabled:cursor-not-allowed"
+      className={cn(
+        "min-w-0 flex-1 resize-none border-0 bg-transparent text-chat-ink outline-none placeholder:text-chat-muted disabled:cursor-not-allowed",
+        variant === "hero" ? "text-lg leading-normal" : "text-base leading-[1.6]",
+      )}
     />
   );
 
@@ -123,7 +129,7 @@ export default function Composer({
       onClick={onStop}
       aria-label="응답 중지"
       className={cn(
-        "flex size-11 shrink-0 items-center justify-center rounded-full bg-chat-brand text-chat-on-brand transition-colors hover:bg-chat-brand-strong",
+        "flex size-11 shrink-0 items-center justify-center rounded-chat-md bg-chat-brand text-chat-on-brand transition-colors hover:bg-chat-brand-strong",
         FOCUS_RING,
       )}
     >
@@ -135,7 +141,7 @@ export default function Composer({
       disabled={!canSend}
       aria-label="보내기"
       className={cn(
-        "flex size-11 shrink-0 items-center justify-center rounded-full bg-chat-brand text-chat-on-brand transition-colors hover:bg-chat-brand-strong disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-chat-brand",
+        "flex size-11 shrink-0 items-center justify-center rounded-chat-md bg-chat-brand text-chat-on-brand transition-colors hover:bg-chat-brand-strong disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-chat-brand",
         FOCUS_RING,
       )}
     >
@@ -153,18 +159,20 @@ export default function Composer({
       <form
         onSubmit={handleSubmit}
         className={cn(
-          "flex w-full max-w-[760px] flex-col gap-2.5 rounded-chat-xl border border-chat-border bg-chat-surface px-[22px] pt-[18px] pr-[18px] pb-3 shadow-chat-composer",
-          TEXTAREA_FOCUS_RING,
+          // Figma 최종 01·02: radius 14, padding 24, 높이 164. 입력 중이면 테두리가 브랜드색(02)
+          "flex min-h-[164px] w-full max-w-[832px] flex-col justify-between gap-4 rounded-[14px] border border-chat-border bg-chat-surface p-5 transition-colors sm:p-6",
+          "has-[textarea:focus]:border-chat-brand",
           className,
         )}
       >
         {textarea}
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-1.5">
+        <div className="flex items-end justify-between gap-3">
+          <div className="flex min-w-0 flex-col items-start gap-1">{helper}</div>
+          <div className="flex shrink-0 items-center gap-1.5">
             {attachButton}
             {tools}
+            {actionButton}
           </div>
-          {actionButton}
         </div>
       </form>
     );

@@ -1,27 +1,24 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, CircleHelp } from "lucide-react";
+import { ArrowUpRight, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getToken, useVerifyToken } from "@/api/auth";
 import TopBar from "./TopBar";
 import Composer from "./Composer";
+import ChatFooter from "./ChatFooter";
 import RepelHeading from "./RepelHeading";
 import UsageGuideDialog from "./UsageGuideDialog";
 import { hasActiveStream, sendMessage, setShowSources, useChatStore } from "../chatStore";
-import { FOOTNOTE_TEXT, suggestedQuestions } from "../suggestions";
+import { suggestedQuestions } from "../suggestions";
 
 const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-chat-brand";
 
-/** 홈(새 채팅) 메인 영역: 상단 바 → 배지·인사말 → 입력창 → 추천 질문 → 안내문 */
+/** 홈(새 대화) 메인 영역 (Figma 최종 01·02): 인사말 → 입력창 → 추천 질문 → 푸터 */
 export default function HomeView() {
   const navigate = useNavigate();
   const { showSources, streaming } = useChatStore();
   const [value, setValue] = useState("");
   const [guideOpen, setGuideOpen] = useState(false);
-
-  const hasToken = !!getToken();
-  const { data: user } = useVerifyToken(hasToken);
 
   // 위젯 세션이 하나라 다른 대화의 답변이 끝날 때까지는 새 질문을 보낼 수 없다
   // TODO(BE 연결): 429(질문 횟수 초과) 안내가 생기면 여기서 입력창·추천 질문도 잠근다
@@ -35,18 +32,21 @@ export default function HomeView() {
     navigate(`/c/${id}`);
   };
 
-  const guideButton = (
-    <button
-      type="button"
-      onClick={() => setGuideOpen(true)}
-      className={cn(
-        "flex h-9 items-center gap-1.5 rounded-chat-md px-3 text-sm font-medium text-chat-ink-2 transition-colors hover:bg-chat-hover hover:text-chat-ink",
-        FOCUS_RING,
-      )}
-    >
-      <CircleHelp className="size-[18px]" strokeWidth={1.8} aria-hidden="true" />
-      이용 안내
-    </button>
+  const helper = (
+    <>
+      <p className="text-[13px] leading-normal text-chat-muted">로그인 없이 질문할 수 있어요</p>
+      <button
+        type="button"
+        onClick={() => setGuideOpen(true)}
+        className={cn(
+          "-mx-1 flex h-8 items-center gap-2 rounded-chat-md px-1 text-sm font-medium text-chat-ink transition-colors hover:text-chat-brand-text",
+          FOCUS_RING,
+        )}
+      >
+        <span aria-hidden="true">?</span>
+        챗봇 사용법
+      </button>
+    </>
   );
 
   const sourcesToggle = (
@@ -71,26 +71,27 @@ export default function HomeView() {
 
   return (
     <>
-      <TopBar actions={guideButton} />
+      {/* 데스크톱은 상단 바 없이 사이드바만, 모바일은 사이드바(드로어) 열기 버튼 */}
+      <div className="lg:hidden">
+        <TopBar />
+      </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {/* 시안: padding 0 48px 48px. 좁은 화면에서만 상단 여백을 조금 둔다 */}
-        <div className="flex min-h-full flex-col items-center justify-center gap-7 px-4 pt-6 pb-12 sm:px-6 lg:px-12 lg:pt-0">
-          <span className="rounded-full border border-chat-brand-100 bg-chat-brand-50 px-3.5 py-1.5 text-[13px] leading-[18px] font-semibold text-chat-brand-strong">
-            GIST 구성원을 위한 정보 챗봇
-          </span>
-
-          <div className="flex flex-col items-center gap-3.5">
+      <div className="chat-home-bg min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto flex min-h-full w-full max-w-[832px] flex-col justify-center gap-7 px-4 pt-6 pb-12 sm:px-6 lg:px-0 lg:py-16">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <p className="text-sm leading-normal font-medium text-chat-brand-text">
+              학교생활의 첫 질문, GIST 챗봇
+            </p>
             {/* 마우스를 가져가면 글자가 밀려났다 돌아오는 인사말 */}
             <RepelHeading
-              className="text-center text-[32px] leading-[1.2] font-extrabold tracking-[-0.02em] break-keep text-chat-ink sm:text-[44px]"
+              className="text-center text-[32px] leading-[1.25] font-bold break-keep text-chat-ink sm:text-5xl sm:leading-[1.25]"
               lines={[
-                { text: user?.name ? `${user.name}님, 반가워요` : "반가워요" },
-                { text: "오늘은 무엇이 궁금하신가요?", className: "text-chat-brand-text" },
+                { text: "처음 만나는 GIST," },
+                { text: "궁금한 것부터 물어보세요.", className: "text-chat-brand-text" },
               ]}
             />
-            <p className="text-center text-base leading-[1.6] break-keep text-chat-muted">
-              학사공지·장학·생활 정보를 공지 원문과 함께 찾아 드려요.
+            <p className="text-base leading-normal break-keep text-chat-muted">
+              학사부터 학교생활까지, 관련 자료와 함께 찾아드려요.
             </p>
           </div>
 
@@ -100,44 +101,49 @@ export default function HomeView() {
             onChange={setValue}
             onSubmit={() => submit(value)}
             disabled={blocked}
-            placeholder="학사 일정, 장학금, 셔틀버스… 무엇이든 물어보세요"
+            placeholder="수강신청, 기숙사, 학교생활… 편하게 물어보세요"
             ariaLabel="질문 입력"
+            helper={helper}
             tools={sourcesToggle}
             autoFocus
           />
 
-          <div className="grid w-full max-w-[760px] grid-cols-1 gap-3 sm:grid-cols-2">
-            {suggestedQuestions.map(({ category, question, icon: Icon }) => (
-              <button
-                key={question}
-                type="button"
-                disabled={blocked}
-                onClick={() => submit(question)}
-                className={cn(
-                  "flex min-w-0 items-center gap-3.5 rounded-chat-lg border border-chat-border bg-chat-surface px-4 py-3.5 text-left shadow-chat-sm transition-colors hover:border-chat-brand-100 hover:bg-chat-brand-50/40 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-chat-border disabled:hover:bg-chat-surface",
-                  FOCUS_RING,
-                )}
-              >
-                <span className="flex size-[38px] shrink-0 items-center justify-center rounded-chat-md bg-chat-brand-50 text-chat-brand">
-                  <Icon className="size-5" strokeWidth={1.8} aria-hidden="true" />
-                </span>
-                <span className="flex min-w-0 flex-col gap-0.5">
-                  <span className="text-xs leading-4 font-semibold text-chat-subtle">
-                    {category}
-                  </span>
-                  <span className="text-[15px] leading-[22px] font-semibold break-words text-chat-ink">
+          <section aria-labelledby="suggested-heading" className="flex flex-col gap-3">
+            <h2
+              id="suggested-heading"
+              className="text-sm leading-normal font-medium text-chat-muted"
+            >
+              무엇부터 물어볼지 고민된다면
+            </h2>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+              {suggestedQuestions.map(({ category, question }) => (
+                <button
+                  key={question}
+                  type="button"
+                  disabled={blocked}
+                  onClick={() => submit(question)}
+                  className={cn(
+                    "flex min-h-[104px] min-w-0 flex-col items-start gap-4 rounded-[14px] border border-chat-border bg-chat-surface p-5 text-left font-medium leading-normal transition-colors hover:border-chat-brand-100 hover:bg-chat-brand-50/40 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-chat-border disabled:hover:bg-chat-surface",
+                    FOCUS_RING,
+                  )}
+                >
+                  <span className="text-xs text-chat-brand-text">{category}</span>
+                  <span className="flex items-center gap-2 text-[17px] break-keep text-chat-ink">
                     {question}
+                    <ArrowUpRight
+                      className="size-4 shrink-0"
+                      strokeWidth={2}
+                      aria-hidden="true"
+                    />
                   </span>
-                </span>
-              </button>
-            ))}
-          </div>
+                </button>
+              ))}
+            </div>
+          </section>
         </div>
       </div>
 
-      <p className="shrink-0 px-6 pb-5 text-center text-xs leading-[18px] text-chat-subtle">
-        {FOOTNOTE_TEXT}
-      </p>
+      <ChatFooter showCredit />
 
       <UsageGuideDialog open={guideOpen} onOpenChange={setGuideOpen} />
     </>

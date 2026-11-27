@@ -83,7 +83,6 @@
   --chat-sidebar: #f9fafb;
   --chat-hover: #f3f4f6;
   --chat-border: #e6e7eb;
-  --chat-grid-line: #f8f0ef;
   --chat-ink: #121827;
   --chat-ink-2: #384151;
   --chat-muted: #4c5564;
@@ -110,7 +109,6 @@
   --chat-sidebar: #111317;
   --chat-hover: #262a32;
   --chat-border: #2c3038;
-  --chat-grid-line: #1c1f25;
   --chat-ink: #f3f4f6;
   --chat-ink-2: #d2d5db;
   --chat-muted: #a9afba;
@@ -135,7 +133,6 @@
   --color-chat-sidebar: var(--chat-sidebar);
   --color-chat-hover: var(--chat-hover);
   --color-chat-border: var(--chat-border);
-  --color-chat-grid-line: var(--chat-grid-line);
   --color-chat-ink: var(--chat-ink);
   --color-chat-ink-2: var(--chat-ink-2);
   --color-chat-muted: var(--chat-muted);
@@ -156,13 +153,20 @@
   --shadow-chat-menu: var(--chat-shadow-menu);
 }
 
-/* 메인 채팅 영역 배경 격자 (48px 피치, grid-line 토큰) */
-.chat-grid-bg {
-  background-color: var(--chat-bg);
+/*
+ * 홈 배경 (Figma 최종 01 '기존 배경'): 대각선 줄무늬 + 은은한 브랜드색 글로우.
+ * 시안 레이어 불투명도 55%를 각 색의 알파에 곱해 둔 값입니다.
+ */
+.chat-home-bg {
   background-image:
-    linear-gradient(var(--chat-grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--chat-grid-line) 1px, transparent 1px);
-  background-size: 48px 48px;
+    radial-gradient(1236px 349px at 20% 30%, rgb(223 51 38 / 0.044), transparent),
+    radial-gradient(1236px 349px at 80% 70%, rgb(255 152 0 / 0.044), transparent),
+    radial-gradient(866px 244px at 50% 50%, rgb(223 51 38 / 0.028), transparent),
+    repeating-linear-gradient(
+      36.57deg,
+      transparent 0 259px,
+      rgb(223 51 38 / 0.033) 259px 285px
+    );
 }
 
 /* 툴팁 색상 (shadcn Tooltip 위에 프로젝트 테마 적용) */
