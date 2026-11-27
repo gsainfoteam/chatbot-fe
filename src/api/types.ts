@@ -177,6 +177,17 @@ export interface SendChatResponse {
   }>;
 }
 
+// 추천 질문 (GET /api/v1/widget/suggested-questions)
+export interface SuggestedQuestionResponse {
+  id: string;
+  /** 버튼·말풍선에 보여줄 질문 */
+  question: string;
+  /** 눌렀을 때 질문 대신 채팅 요청에 보낼 문장. null이면 question을 그대로 보낸다 */
+  prompt: string | null;
+  /** ADMIN: 관리자가 쓴 질문, AI: 지글 공지에서 만든 질문 (ADMIN이 먼저 옴) */
+  source: "ADMIN" | "AI";
+}
+
 // 답변 피드백 관련 타입
 export type FeedbackRating = "GOOD" | "BAD";
 

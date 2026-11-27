@@ -9,6 +9,7 @@ import type {
   PaginatedWidgetMessagesResponse,
   SendChatRequest,
   SendChatResponse,
+  SuggestedQuestionResponse,
   WidgetMessageResponse,
 } from "./types";
 
@@ -335,6 +336,17 @@ export async function fetchLatestAssistantMessage(): Promise<WidgetMessageRespon
   );
   const latest = response.data.messages?.[0];
   return latest && latest.role === "assistant" ? latest : null;
+}
+
+/**
+ * 추천 질문 목록 (관리자 질문 최대 2개 → 공지 기반 질문 최대 2개, 요청마다 무작위)
+ * GET /api/v1/widget/suggested-questions
+ */
+export async function fetchSuggestedQuestions(): Promise<SuggestedQuestionResponse[]> {
+  const response = await widgetApiClient.get<SuggestedQuestionResponse[]>(
+    "/v1/widget/suggested-questions"
+  );
+  return Array.isArray(response.data) ? response.data : [];
 }
 
 /**

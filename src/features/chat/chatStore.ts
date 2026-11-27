@@ -15,12 +15,13 @@ import { useSyncExternalStore } from "react";
 import {
   createWidgetSession,
   fetchLatestAssistantMessage,
+  fetchSuggestedQuestions,
   getSessionToken,
   saveSessionToken,
   sendWidgetChatMessage,
   submitMessageFeedback,
 } from "@/api/widgetChat";
-import type { SendChatResponse } from "@/api/types";
+import type { SendChatResponse, SuggestedQuestionResponse } from "@/api/types";
 import { getWidgetKey } from "./widgetKey";
 import type {
   ChatFeedback,
@@ -357,8 +358,14 @@ function applyFinalResponse(
  * 질문 전송. threadId가 없으면 새 대화를 만들고 그 ID를 돌려줍니다.
  * 스트리밍은 백그라운드로 이어지므로 호출 측은 바로 /c/:id 로 이동해도 됩니다.
  * 전송할 수 없는 상태(빈 문자열, 어느 대화든 답변 생성 중)면 null.
+ * options.prompt가 있으면 말풍선·대화 제목은 rawText로 두고, 채팅 요청에는 prompt를 보냅니다
+ * (추천 질문: 보이는 질문과 실제로 보낼 요청문이 다름).
  */
-export function sendMessage(threadId: string | null, rawText: string): string | null {
+export function sendMessage(
+  threadId: string | null,
+  rawText: string,
+  options?: { prompt?: string | null },
+): string | null {
   const text = rawText.trim();
   if (!text) return null;
   if (hasActiveStream()) return null;
@@ -400,8 +407,25 @@ export function sendMessage(threadId: string | null, rawText: string): string | 
     createdAt: Date.now(),
   });
 
-  void streamAnswer(id, assistantId, widgetKey, text);
+  const prompt = options?.prompt?.trim();
+  void streamAnswer(id, assistantId, widgetKey, prompt || text);
   return id;
+}
+
+/**
+ * 홈 '요즘 뜨는 질문'용 추천 질문 조회. 위젯 세션이 필요해 없으면 먼저 발급받는다.
+ * 위젯 키가 없거나 요청이 실패하면 빈 배열 (화면에서는 카드를 숨긴다).
+ */
+export async function loadSuggestedQuestions(): Promise<SuggestedQuestionResponse[]> {
+  const widgetKey = getWidgetKey();
+  if (!widgetKey) return [];
+  try {
+    await ensureSession(widgetKey);
+    return await fetchSuggestedQuestions();
+  } catch (error) {
+    console.error("Failed to load suggested questions:", error);
+    return [];
+  }
 }
 
 async function streamAnswer(
