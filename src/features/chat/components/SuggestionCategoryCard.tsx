@@ -22,9 +22,9 @@ export const SUGGESTION_CARD_CLASS =
  */
 export const SUGGESTION_LIST_CLASS = "flex flex-col px-2";
 
-/** 요즘 뜨는 질문 카드의 질문 한 줄 (16px, 호버 시 옅은 브랜드 바탕) */
+/** 요즘 뜨는 질문 카드의 질문 한 줄 (14px, 화살표 없이, 호버 시 옅은 브랜드 바탕) */
 export const SUGGESTION_ROW_CLASS = cn(
-  "flex w-full items-center gap-2.5 rounded-chat-md px-3 py-1 text-left text-base leading-normal font-medium text-chat-sidebar-ink transition-colors hover:bg-chat-brand-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent",
+  "flex w-full items-center gap-2.5 rounded-chat-md px-3 py-1 text-left text-sm leading-normal font-medium text-chat-sidebar-ink transition-colors hover:bg-chat-brand-50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent",
   FOCUS_RING,
 );
 

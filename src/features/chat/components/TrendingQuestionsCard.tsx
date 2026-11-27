@@ -1,4 +1,3 @@
-import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SuggestedQuestionResponse } from "@/api/types";
 import { TRENDING_LIMIT, type SuggestedQuestionsState } from "../useSuggestedQuestions";
@@ -71,7 +70,6 @@ export default function TrendingQuestionsCard({
               >
                 <FireMark />
                 <span className="min-w-0 break-keep">{item.question}</span>
-                <ArrowUpRight className="size-4 shrink-0" strokeWidth={2} aria-hidden="true" />
               </button>
             </li>
           ))}
