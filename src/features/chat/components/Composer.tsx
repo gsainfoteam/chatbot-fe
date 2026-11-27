@@ -31,11 +31,11 @@ const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-chat-brand";
 
 /**
- * 입력 중 표시: 굵은 포커스 링 대신 테두리를 옅은 브랜드색으로 바꾸고 바깥에 3px 연한 링을 둔다
- * (버튼 포커스에는 반응하지 않음)
+ * 입력 중 표시: 예전 굵은 브랜드색 링(2px)과 옅은 테두리의 중간 정도.
+ * 테두리를 브랜드색 70%로 바꾸고 바깥에 3px 반투명 브랜드 링을 둔다 (버튼 포커스에는 반응하지 않음)
  */
 const TEXTAREA_FOCUS_RING =
-  "transition-[border-color,box-shadow] has-[textarea:focus]:border-chat-brand/45 has-[textarea:focus]:ring-[3px] has-[textarea:focus]:ring-chat-brand-50";
+  "transition-[border-color,box-shadow] has-[textarea:focus]:border-chat-brand/70 has-[textarea:focus]:ring-[3px] has-[textarea:focus]:ring-chat-brand/15";
 
 /**
  * 질문 입력창. 홈과 대화 화면이 같은 모양(예전 홈 입력창 디자인 + 그림자)을 씁니다. Enter 전송 / Shift+Enter 줄바꿈, 한글 조합 중 Enter 무시.
