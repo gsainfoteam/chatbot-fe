@@ -5,7 +5,7 @@ import {
   SUGGESTION_CARD_CLASS,
   SUGGESTION_LIST_CLASS,
   SUGGESTION_ROW_CLASS,
-} from "./SuggestionCategoryCard";
+} from "./SuggestionTabsCard";
 import { FlameIcon } from "./SuggestionIcons";
 
 interface TrendingQuestionsCardProps {

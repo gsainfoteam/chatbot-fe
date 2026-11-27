@@ -1,18 +1,21 @@
-// 홈 '무엇부터 물어볼지 고민된다면' 카테고리 카드 3개 — Figma '02 후' 추천 질문 카드 순서·문구 그대로
+// 홈 '무엇부터 물어볼지 고민된다면' 탭 3개 — Figma '02 후' 추천 질문 카드 순서·문구 그대로
 
 export type SuggestionCategoryId = "freshman" | "campus-life" | "career";
 
 export interface SuggestionCategory {
   id: SuggestionCategoryId;
-  /** 카드 머리의 빨간 라벨 (12px) */
+  /** 탭 이름 */
+  tabLabel: string;
+  /** 탭 아래 질문 위에 붙는 친근한 빨간 문구 (12px) */
   label: string;
-  /** 펼쳤을 때 보이고 누르면 그대로 전송되는 질문 */
+  /** 탭을 고르면 보이고 누르면 그대로 전송되는 질문 */
   questions: string[];
 }
 
 export const suggestionCategories: SuggestionCategory[] = [
   {
     id: "freshman",
+    tabLabel: "새내기",
     label: "GIST 새내기에요!",
     questions: [
       "수강 신청은 어떻게 하나요?",
@@ -22,6 +25,7 @@ export const suggestionCategories: SuggestionCategory[] = [
   },
   {
     id: "campus-life",
+    tabLabel: "학교생활",
     label: "학교 생활이 궁금해요!",
     questions: [
       "23학번 졸업 요건이 궁금해요",
@@ -31,6 +35,7 @@ export const suggestionCategories: SuggestionCategory[] = [
   },
   {
     id: "career",
+    tabLabel: "진로",
     label: "진로를 고민 중이에요!",
     questions: [
       "학부 인턴은 어떻게 시작하나요?",

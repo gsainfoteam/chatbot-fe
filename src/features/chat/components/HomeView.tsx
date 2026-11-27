@@ -6,10 +6,9 @@ import TopBar from "./TopBar";
 import Composer from "./Composer";
 import ChatFooter from "./ChatFooter";
 import RepelHeading from "./RepelHeading";
-import SuggestionCategoryCard from "./SuggestionCategoryCard";
+import SuggestionTabsCard from "./SuggestionTabsCard";
 import TrendingQuestionsCard from "./TrendingQuestionsCard";
 import { hasActiveStream, sendMessage, setShowSources, useChatStore } from "../chatStore";
-import { suggestionCategories, type SuggestionCategoryId } from "../suggestions";
 import { useSuggestedQuestions } from "../useSuggestedQuestions";
 
 const FOCUS_RING =
@@ -22,8 +21,6 @@ export default function HomeView() {
   const navigate = useNavigate();
   const { showSources, streaming } = useChatStore();
   const [value, setValue] = useState("");
-  // 카테고리 카드는 한 번에 하나만 펼친다 (처음엔 모두 접힘)
-  const [openCategory, setOpenCategory] = useState<SuggestionCategoryId | null>(null);
   const trending = useSuggestedQuestions();
 
   // 위젯 세션이 하나라 다른 대화의 답변이 끝날 때까지는 새 질문을 보낼 수 없다
@@ -113,33 +110,23 @@ export default function HomeView() {
                 무엇부터 물어볼지 고민된다면
               </h2>
               {/*
-                데스크톱: [카테고리 카드 3개 세로, 320px] [요즘 뜨는 질문] (Figma '02 후')
-                모바일: 요즘 뜨는 질문이 맨 위, 그 아래 카테고리 카드 한 열
+                데스크톱: [새내기 · 학교생활 · 진로 탭 카드, 320px] [요즘 뜨는 질문]
+                탭을 바꿔도 질문 3개만 교체돼 탭 카드 높이가 고정이므로, 두 카드를 같은 높이로 늘려
+                하단을 맞추고 요즘 뜨는 질문 내용은 세로 가운데에 둔다
+                모바일: 요즘 뜨는 질문이 맨 위, 그 아래 탭 카드
               */}
-              {/* 두 열 모두 위쪽 정렬, 요즘 뜨는 질문 카드는 카테고리 카드가 펼쳐져도 제 높이를 유지한다 */}
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-4">
                 <TrendingQuestionsCard
                   state={trending}
                   disabled={blocked}
                   onPick={(item) => submit(item.question, item.prompt)}
-                  className="sm:order-2 sm:min-w-0 sm:flex-1"
+                  className="sm:order-2 sm:min-w-0 sm:flex-1 sm:justify-center"
                 />
-                <div className="flex flex-col gap-3 sm:order-1 sm:w-[320px] sm:shrink-0 sm:gap-4">
-                  {suggestionCategories.map((category) => (
-                    <SuggestionCategoryCard
-                      key={category.id}
-                      category={category}
-                      expanded={openCategory === category.id}
-                      onToggle={() =>
-                        setOpenCategory((current) =>
-                          current === category.id ? null : category.id,
-                        )
-                      }
-                      onPick={(question) => submit(question)}
-                      disabled={blocked}
-                    />
-                  ))}
-                </div>
+                <SuggestionTabsCard
+                  onPick={(question) => submit(question)}
+                  disabled={blocked}
+                  className="sm:order-1 sm:w-[320px] sm:shrink-0"
+                />
               </div>
             </section>
           </div>
