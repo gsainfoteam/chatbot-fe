@@ -164,19 +164,15 @@
 }
 
 /*
- * 홈 배경 (Figma 최종 01 '기존 배경'): 대각선 줄무늬 + 은은한 브랜드색 글로우.
- * 시안 레이어 불투명도 55%를 각 색의 알파에 곱해 둔 값입니다.
+ * 홈 배경 (Figma '02 후' 메인 화면): 흰 바탕 위 은은한 글로우 3개.
+ * 크기·위치는 시안의 radialGradient(1512×917 기준)를 영역 대비 비율로 옮긴 값입니다.
  */
 .chat-home-bg {
+  background-color: var(--chat-surface);
   background-image:
-    radial-gradient(1236px 349px at 20% 30%, rgb(223 51 38 / 0.044), transparent),
-    radial-gradient(1236px 349px at 80% 70%, rgb(255 152 0 / 0.044), transparent),
-    radial-gradient(866px 244px at 50% 50%, rgb(223 51 38 / 0.028), transparent),
-    repeating-linear-gradient(
-      36.57deg,
-      transparent 0 259px,
-      rgb(223 51 38 / 0.033) 259px 285px
-    );
+    radial-gradient(100% 38% at 20% 30%, rgb(255 53 22 / 0.08), transparent),
+    radial-gradient(100% 38% at 80% 70%, rgb(255 152 0 / 0.08), transparent),
+    radial-gradient(70% 27% at 50% 50%, rgb(255 122 103 / 0.08), transparent);
 }
 
 /* 툴팁 색상 (shadcn Tooltip 위에 프로젝트 테마 적용) */
