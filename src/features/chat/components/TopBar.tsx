@@ -15,7 +15,7 @@ export default function TopBar() {
   return (
     <div className="flex h-[76px] shrink-0 items-center justify-between gap-3 px-5 sm:px-6">
       <Link to="/" className={cn("flex min-w-0 items-center gap-[7px] rounded-chat-sm", FOCUS_RING)}>
-        <img src="/logo.svg" alt="" aria-hidden="true" className="size-7 shrink-0" />
+        <img src="/logo-mark.svg" alt="" aria-hidden="true" className="size-7 shrink-0 object-contain" />
         <span className="truncate text-[15.75px] leading-normal font-semibold text-chat-ink">
           GIST 챗봇
         </span>

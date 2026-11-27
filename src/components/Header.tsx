@@ -37,7 +37,7 @@ export default function Header() {
             to="/"
             className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity duration-200"
           >
-            <img src="/logo.svg" alt="logo" className="w-7 h-7 sm:w-8 sm:h-8" />
+            <img src="/logo-mark.svg" alt="" aria-hidden="true" className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
             <span className="text-base sm:text-lg font-semibold text-gray-900">
               GIST 챗봇
             </span>

@@ -39,10 +39,10 @@ export default function ChatSidebarRail({ onOpen }: ChatSidebarRailProps) {
             className={cn("group", RAIL_BUTTON)}
           >
             <img
-              src="/logo.svg"
+              src="/logo-mark.svg"
               alt=""
               aria-hidden="true"
-              className="size-7 group-hover:hidden group-focus-visible:hidden"
+              className="size-7 object-contain group-hover:hidden group-focus-visible:hidden"
             />
             <PanelLeftOpen
               className="hidden size-5 group-hover:block group-focus-visible:block"
