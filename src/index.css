@@ -73,11 +73,11 @@
  * Tailwind 유틸리티는 아래 @theme inline 블록을 통해 bg-chat-brand, text-chat-ink, rounded-chat-lg 형태로 노출됩니다.
  */
 :root {
-  --chat-brand: #ce4333;
-  --chat-brand-strong: #b83a2b;
-  --chat-brand-text: #ce4333;
-  --chat-brand-50: #fcf3f3;
-  --chat-brand-100: #f7dcd8;
+  --chat-brand: #df3326;
+  --chat-brand-strong: #c42b1f;
+  --chat-brand-text: #df3326;
+  --chat-brand-50: #fef2f2;
+  --chat-brand-100: #fcdcd8;
   --chat-bg: #fefcfc;
   --chat-surface: #ffffff;
   --chat-sidebar: #f9fafb;

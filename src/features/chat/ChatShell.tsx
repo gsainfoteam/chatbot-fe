@@ -23,9 +23,9 @@ function readCollapsed(): boolean {
 }
 
 /**
- * 홈(새 채팅)과 스레드 화면이 공유하는 레이아웃: 좌측 사이드바(272px) + 메인 영역.
+ * 홈(새 채팅)과 스레드 화면이 공유하는 레이아웃: 좌측 사이드바(280px) + 메인 영역.
  * lg 미만에서는 사이드바가 드로어로 바뀝니다. 라우트가 바뀌어도 이 셸은 유지됩니다.
- * - 데스크톱: 접으면 폭이 272px에서 64px 레일로 줄어든다. 레일과 사이드바의 아이콘 위치가 같으므로
+ * - 데스크톱: 접으면 폭이 280px에서 64px 레일로 줄어든다. 레일과 사이드바의 아이콘 위치가 같으므로
  *   두 층을 제자리에서 크로스페이드해 아이콘은 고정된 채 라벨만 나타나고 사라지는 것처럼 보인다
  * - 모바일: Base UI Dialog로 드로어를 띄워 슬라이드 인/아웃, 포커스 가둠, ESC·바깥 클릭 닫기를 맡긴다
  */
@@ -95,12 +95,12 @@ export default function ChatShell() {
   return (
     <ChatShellContext.Provider value={contextValue}>
       <div className="flex h-dvh w-full overflow-hidden bg-chat-bg font-chat text-chat-ink antialiased">
-        {/* 데스크톱: 펼치면 272px 사이드바, 접으면 64px 레일. 안 보이는 쪽은 inert로 포커스·스크린리더에서 제외 */}
+        {/* 데스크톱: 펼치면 280px 사이드바, 접으면 64px 레일. 안 보이는 쪽은 inert로 포커스·스크린리더에서 제외 */}
         <div
           className={cn(
             "relative hidden h-full shrink-0 overflow-hidden transition-[width] lg:block",
             SIDEBAR_MOTION,
-            collapsed ? "lg:w-16" : "lg:w-[272px]",
+            collapsed ? "lg:w-16" : "lg:w-[280px]",
           )}
         >
           <div
@@ -116,7 +116,7 @@ export default function ChatShell() {
           <div
             inert={collapsed}
             className={cn(
-              "absolute inset-y-0 left-0 w-[272px] transition-opacity",
+              "absolute inset-y-0 left-0 w-[280px] transition-opacity",
               SIDEBAR_MOTION,
               collapsed ? "opacity-0" : "opacity-100",
             )}
@@ -144,7 +144,7 @@ export default function ChatShell() {
               initialFocus={focusDrawerClose}
               finalFocus={menuButtonRef}
               className={cn(
-                "fixed inset-y-0 left-0 z-50 w-[min(272px,85vw)] font-chat text-chat-ink shadow-chat-menu outline-none antialiased lg:hidden",
+                "fixed inset-y-0 left-0 z-50 w-[min(280px,85vw)] font-chat text-chat-ink shadow-chat-menu outline-none antialiased lg:hidden",
                 "data-open:animate-in data-open:slide-in-from-left data-closed:animate-out data-closed:slide-out-to-left",
                 SIDEBAR_MOTION,
               )}
